@@ -1,0 +1,405 @@
+[
+  {
+    "phase": "Phase 1: Setup & Infrastructure",
+    "priority": "High",
+    "tasks": [
+      {
+        "id": "SETUP-001",
+        "title": "Initialize React + Next.js project",
+        "description": "Set up the base React application with Next.js framework, Tailwind CSS",
+        "status": "todo",
+        "effort": "2h"
+      },
+      {
+        "id": "SETUP-002",
+        "title": "Configure development environment",
+        "description": "Set up ESLint, Prettier, TypeScript configuration",
+        "status": "todo",
+        "effort": "1h"
+      },
+      {
+        "id": "SETUP-003",
+        "title": "Set up Supabase project",
+        "description": "Create Supabase project, configure Auth, set up database schema",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "SETUP-004",
+        "title": "Configure MongoDB Atlas",
+        "description": "Set up MongoDB cluster for dream documents storage",
+        "status": "todo",
+        "effort": "2h"
+      },
+      {
+        "id": "SETUP-005",
+        "title": "Set up backend server",
+        "description": "Initialize Node.js backend with Express/Fastify on Render",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "SETUP-006",
+        "title": "Configure environment variables",
+        "description": "Set up .env files for all API keys and configurations",
+        "status": "todo",
+        "effort": "1h"
+      }
+    ]
+  },
+  {
+    "phase": "Phase 2: Authentication & User Management",
+    "priority": "High",
+    "tasks": [
+      {
+        "id": "AUTH-001",
+        "title": "Implement Supabase Auth integration",
+        "description": "Set up sign up, login, logout, password reset flows",
+        "status": "todo",
+        "effort": "4h"
+      },
+      {
+        "id": "AUTH-002",
+        "title": "Create user profile system",
+        "description": "Implement user profiles with display_name, locale, preferences",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "AUTH-003",
+        "title": "Implement RBAC system",
+        "description": "Set up role-based access control for users and admins",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "AUTH-004",
+        "title": "Create protected routes",
+        "description": "Implement middleware for protecting API and frontend routes",
+        "status": "todo",
+        "effort": "2h"
+      }
+    ]
+  },
+  {
+    "phase": "Phase 3: Payment & Billing System",
+    "priority": "High",
+    "tasks": [
+      {
+        "id": "PAY-001",
+        "title": "Integrate Stripe",
+        "description": "Set up Stripe account, configure products and prices",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "PAY-002",
+        "title": "Implement subscription management",
+        "description": "Create subscription flows for Basic and Pro tiers",
+        "status": "todo",
+        "effort": "5h"
+      },
+      {
+        "id": "PAY-003",
+        "title": "Build credit system",
+        "description": "Implement credit purchase and consumption logic",
+        "status": "todo",
+        "effort": "4h"
+      },
+      {
+        "id": "PAY-004",
+        "title": "Create Stripe webhook handler",
+        "description": "Handle payment events, update subscriptions and credits",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "PAY-005",
+        "title": "Implement payment UI",
+        "description": "Build pricing page, checkout flow, payment management",
+        "status": "todo",
+        "effort": "4h"
+      }
+    ]
+  },
+  {
+    "phase": "Phase 4: Core Dream Interpretation",
+    "priority": "High",
+    "tasks": [
+      {
+        "id": "DREAM-001",
+        "title": "Integrate OpenRouter API",
+        "description": "Set up OpenRouter with Claude 3.5 Sonnet model",
+        "status": "todo",
+        "effort": "2h"
+      },
+      {
+        "id": "DREAM-002",
+        "title": "Create interpretation prompt system",
+        "description": "Implement structured prompt for dream analysis",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "DREAM-003",
+        "title": "Build dream submission API",
+        "description": "Create POST /api/dreams/interpret endpoint",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "DREAM-004",
+        "title": "Implement JSON schema validation",
+        "description": "Validate and repair AI responses",
+        "status": "todo",
+        "effort": "2h"
+      },
+      {
+        "id": "DREAM-005",
+        "title": "Create dream submission UI",
+        "description": "Build form for dream text input with character limits",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "DREAM-006",
+        "title": "Build interpretation display",
+        "description": "Create UI for showing themes, symbols, insights, guidance",
+        "status": "todo",
+        "effort": "4h"
+      }
+    ]
+  },
+  {
+    "phase": "Phase 5: Quota & Paywall System",
+    "priority": "High",
+    "tasks": [
+      {
+        "id": "QUOTA-001",
+        "title": "Implement server-side quota tracking",
+        "description": "Track free interpretations per user",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "QUOTA-002",
+        "title": "Create paywall triggers",
+        "description": "Show paywall after quota exhaustion",
+        "status": "todo",
+        "effort": "2h"
+      },
+      {
+        "id": "QUOTA-003",
+        "title": "Build upgrade prompts",
+        "description": "Create UI for subscription and credit purchase prompts",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "QUOTA-004",
+        "title": "Implement credit consumption",
+        "description": "Deduct credits for premium features",
+        "status": "todo",
+        "effort": "2h"
+      }
+    ]
+  },
+  {
+    "phase": "Phase 6: Data Storage & History",
+    "priority": "Medium",
+    "tasks": [
+      {
+        "id": "DATA-001",
+        "title": "Implement dream storage",
+        "description": "Store dreams in MongoDB with user association",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "DATA-002",
+        "title": "Create history API",
+        "description": "Build GET /api/dreams endpoint for user history",
+        "status": "todo",
+        "effort": "2h"
+      },
+      {
+        "id": "DATA-003",
+        "title": "Build history UI",
+        "description": "Create page to view past interpretations",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "DATA-004",
+        "title": "Implement data deletion",
+        "description": "Allow users to delete individual dreams or all data",
+        "status": "todo",
+        "effort": "2h"
+      },
+      {
+        "id": "DATA-005",
+        "title": "Add privacy controls",
+        "description": "Implement opt-in/opt-out for data storage",
+        "status": "todo",
+        "effort": "2h"
+      }
+    ]
+  },
+  {
+    "phase": "Phase 7: Admin Dashboard",
+    "priority": "Medium",
+    "tasks": [
+      {
+        "id": "ADMIN-001",
+        "title": "Create admin layout",
+        "description": "Build admin dashboard structure and navigation",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "ADMIN-002",
+        "title": "Build user management",
+        "description": "View users, roles, subscription status",
+        "status": "todo",
+        "effort": "4h"
+      },
+      {
+        "id": "ADMIN-003",
+        "title": "Implement payment management",
+        "description": "View payments, process refunds, add credits",
+        "status": "todo",
+        "effort": "4h"
+      },
+      {
+        "id": "ADMIN-004",
+        "title": "Create analytics dashboard",
+        "description": "Show KPIs: DAU, MRR, conversion rates",
+        "status": "todo",
+        "effort": "5h"
+      },
+      {
+        "id": "ADMIN-005",
+        "title": "Add dream moderation tools",
+        "description": "Optional viewing and management of submissions",
+        "status": "todo",
+        "effort": "3h"
+      }
+    ]
+  },
+  {
+    "phase": "Phase 8: Premium Features",
+    "priority": "Medium",
+    "tasks": [
+      {
+        "id": "PREM-001",
+        "title": "Implement PDF export",
+        "description": "Generate PDF reports for interpretations",
+        "status": "todo",
+        "effort": "4h"
+      },
+      {
+        "id": "PREM-002",
+        "title": "Build email delivery",
+        "description": "Send interpretation results via email",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "PREM-003",
+        "title": "Create symbol encyclopedia",
+        "description": "Build searchable dream symbol database",
+        "status": "todo",
+        "effort": "5h"
+      },
+      {
+        "id": "PREM-004",
+        "title": "Add deeper analysis mode",
+        "description": "Enhanced interpretation for premium users",
+        "status": "todo",
+        "effort": "3h"
+      }
+    ]
+  },
+  {
+    "phase": "Phase 9: Internationalization",
+    "priority": "Medium",
+    "tasks": [
+      {
+        "id": "I18N-001",
+        "title": "Set up i18n framework",
+        "description": "Configure next-i18next for translations",
+        "status": "todo",
+        "effort": "2h"
+      },
+      {
+        "id": "I18N-002",
+        "title": "Create English translations",
+        "description": "Extract and organize all UI strings",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "I18N-003",
+        "title": "Add Spanish translations",
+        "description": "Translate all UI strings to Spanish",
+        "status": "todo",
+        "effort": "4h"
+      },
+      {
+        "id": "I18N-004",
+        "title": "Implement language switcher",
+        "description": "Add UI for changing language preference",
+        "status": "todo",
+        "effort": "2h"
+      }
+    ]
+  },
+  {
+    "phase": "Phase 10: Testing & Deployment",
+    "priority": "High",
+    "tasks": [
+      {
+        "id": "TEST-001",
+        "title": "Write unit tests",
+        "description": "Test core business logic and utilities",
+        "status": "todo",
+        "effort": "6h"
+      },
+      {
+        "id": "TEST-002",
+        "title": "Create integration tests",
+        "description": "Test API endpoints and database operations",
+        "status": "todo",
+        "effort": "5h"
+      },
+      {
+        "id": "TEST-003",
+        "title": "Perform security audit",
+        "description": "Check for vulnerabilities, implement rate limiting",
+        "status": "todo",
+        "effort": "4h"
+      },
+      {
+        "id": "TEST-004",
+        "title": "Set up CI/CD pipeline",
+        "description": "Configure automated testing and deployment",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "TEST-005",
+        "title": "Deploy to production",
+        "description": "Deploy frontend to Vercel, backend to Render",
+        "status": "todo",
+        "effort": "3h"
+      },
+      {
+        "id": "TEST-006",
+        "title": "Configure monitoring",
+        "description": "Set up error tracking and performance monitoring",
+        "status": "todo",
+        "effort": "2h"
+      }
+    ]
+  }
+]
