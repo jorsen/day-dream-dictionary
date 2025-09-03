@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Dream Dictionary - API Test (Simple)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        hr {
+            margin: 30px 0;
+            border: none;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌙 Day Dream Dictionary API Test</h1>
+        
+        <div class="result info" id="status">
+            Checking server status...
+        </div>
+
+        <hr>
+
+        <h2>Test New User Signup</h2>
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="newEmail" value="">
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="newPassword" value="TestPassword123!">
+        </div>
+        <button onclick="testNewSignup()">Create New Account</button>
+        <div id="signupResult"></div>
+
+        <hr>
+
+        <h2>Test Login</h2>
+        <div class="form-group">
+            <label>Email:</label>
+            <input type="email" id="loginEmail" value="">
+        </div>
+        <div class="form-group">
+            <label>Password:</label>
+            <input type="password" id="loginPassword" value="">
+        </div>
+        <button onclick="testLogin()">Login</button>
+        <div id="loginResult"></div>
+
+        <hr>
+
+        <h2>Quick Test (Auto-generate credentials)</h2>
+        <button onclick="quickTest()">Run Quick Test</button>
+        <div id="quickResult"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/v1';
+        let lastCreatedEmail = '';
+        let lastCreatedPassword = 'TestPassword123!';
+
+        // Check server status on load
+        window.onload = async () => {
+            const statusDiv = document.getElementById('status');
+            try {
+                const response = await fetch('http://localhost:5000/health');
+                const data = await response.json();
+                if (response.ok) {
+                    statusDiv.className = 'result success';
+                    statusDiv.textContent = '✅ Server is online and ready!';
+                }
+            } catch (error) {
+                statusDiv.className = 'result error';
+                statusDiv.textContent = '❌ Cannot connect to server. Make sure it\'s running on port 5000.';
+            }
+        };
+
+        // Generate unique email
+        function generateEmail() {
+            return `user${Date.now()}@test.com`;
+        }
+
+        async function testNewSignup() {
+            const email = document.getElementById('newEmail').value || generateEmail();
+            const password = document.getElementById('newPassword').value;
+            const resultDiv = document.getElementById('signupResult');
+            
+            if (!email || !password) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Please enter email and password';
+                return;
+            }
+
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Creating account...';
+
+            try {
+                const response = await fetch(`${API_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        displayName: 'Test User',
+                        locale: 'en'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    lastCreatedEmail = email;
+                    lastCreatedPassword = password;
+                    
+                    // Save login data to localStorage
+                    localStorage.setItem('accessToken', data.accessToken);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Account created successfully!
+Email: ${email}
+User ID: ${data.user.id}
+
+Redirecting to your dashboard...`;
+                    
+                    // Redirect to profile dashboard after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = 'profile-dashboard.html';
+                    }, 2000);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Signup failed:
+${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const resultDiv = document.getElementById('loginResult');
+
+            if (!email || !password) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = 'Please enter email and password';
+                return;
+            }
+
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Save login data to localStorage
+                    localStorage.setItem('accessToken', data.accessToken);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Login successful!
+Email: ${data.user.email}
+User ID: ${data.user.id}
+Display Name: ${data.user.displayName}
+Role: ${data.user.role}
+
+Redirecting to your dashboard...`;
+                    
+                    // Redirect to profile dashboard after 2 seconds
+                    setTimeout(() => {
+                        window.location.href = 'profile-dashboard.html';
+                    }, 2000);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Login failed:
+${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function quickTest() {
+            const resultDiv = document.getElementById('quickResult');
+            const email = generateEmail();
+            const password = 'TestPassword123!';
+
+            resultDiv.className = 'result info';
+            resultDiv.textContent = `Testing with email: ${email}\n\n1. Creating account...`;
+
+            try {
+                // First signup
+                const signupResponse = await fetch(`${API_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        displayName: 'Quick Test User',
+                        locale: 'en'
+                    })
+                });
+
+                const signupData = await signupResponse.json();
+
+                if (!signupResponse.ok) {
+                    throw new Error(`Signup failed: ${signupData.message}`);
+                }
+
+                resultDiv.textContent += `\n✅ Account created!\n\n2. Testing login...`;
+
+                // Then login
+                const loginResponse = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email,
+                        password
+                    })
+                });
+
+                const loginData = await loginResponse.json();
+
+                if (!loginResponse.ok) {
+                    throw new Error(`Login failed: ${loginData.message}`);
+                }
+
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Quick test completed successfully!
+
+Test Account Created:
+- Email: ${email}
+- Password: ${password}
+
+Signup Result:
+- User ID: ${signupData.user.id}
+- Access Token received
+
+Login Result:
+- Authentication successful
+- User role: ${loginData.user.role}
+- Access Token received
+
+🎉 Your API is working perfectly!`;
+
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Quick test failed:\n${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,158 +1,202 @@
-# 🚀 Deploying Day Dream Dictionary to Render.com
+# 🚀 Quick Deploy to Render.com
 
-## Prerequisites
-- A GitHub account (to host your code)
-- A Render.com account (free tier available)
+## Step-by-Step Deployment
 
-## Step-by-Step Deployment Guide
-
-### Step 1: Prepare Your Repository
-
-1. Create a new GitHub repository for your project
-2. Push all your files to GitHub, including:
-   - `server.js`
-   - `package.json`
-   - `task-manager.html`
-   - `task-manager.js`
-   - `tasks.md`
-   - All other project files
-
-### Step 2: Create a New Web Service on Render
-
-1. Log in to [Render.com](https://render.com)
-2. Click **"New +"** button in the dashboard
-3. Select **"Web Service"**
-4. Connect your GitHub account if not already connected
-5. Select your Day Dream Dictionary repository
-
-### Step 3: Configure Your Web Service
-
-Fill in the following settings:
-
-#### Basic Settings:
-- **Name**: `day-dream-dictionary` (or your preferred name)
-- **Region**: Choose the closest to your users
-- **Branch**: `main` (or your default branch)
-- **Root Directory**: Leave blank (uses repository root)
-- **Runtime**: `Node`
-
-#### Build & Deploy Settings:
-
-**Build Command:**
+### 1. Prepare Your Code
 ```bash
-npm install
+# Initialize git if not already done
+git init
+git add .
+git commit -m "Ready for Render deployment - free mode enabled"
 ```
 
-**Start Command:** ⭐ **THIS IS WHAT YOU ASKED FOR**
+### 2. Create GitHub Repository
+1. Go to [GitHub](https://github.com/new)
+2. Create new repository: `day-dream-dictionary`
+3. Push your code:
 ```bash
-npm start
+git remote add origin https://github.com/YOUR_USERNAME/day-dream-dictionary.git
+git branch -M main
+git push -u origin main
 ```
 
-Or alternatively, you can use:
-```bash
-node server.js
+### 3. Deploy on Render
+
+1. **Go to [Render Dashboard](https://dashboard.render.com)**
+
+2. **Click "New +" → "Web Service"**
+
+3. **Connect GitHub repository**
+
+4. **Configure Service:**
+   - Name: `day-dream-dictionary-api`
+   - Environment: `Node`
+   - Build Command: `cd backend && npm install`
+   - Start Command: `cd backend && npm start`
+
+5. **Add Environment Variables** (click Advanced):
+
+```env
+# Required - Copy these exactly
+NODE_ENV=production
+PORT=5000
+API_VERSION=v1
+
+# Supabase - Get from your Supabase project
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SERVICE_KEY=your_service_key_here
+
+# OpenRouter - Get from OpenRouter.ai
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENROUTER_MODEL=anthropic/claude-3.5-sonnet:20241022
+OPENROUTER_TEMPERATURE=0.7
+OPENROUTER_MAX_TOKENS=2000
+
+# Security - Click "Generate" for each
+JWT_SECRET=[Generate]
+REFRESH_TOKEN_SECRET=[Generate]
+SESSION_SECRET=[Generate]
+
+# CORS - Allow all for now
+CORS_ORIGIN=*
+FRONTEND_URL=https://daydreamdictionary.com
+
+# Free Mode Settings
+FREE_DEEP_INTERPRETATIONS_MONTHLY=1000
+FREE_BASIC_INTERPRETATIONS_MONTHLY=1000
+
+# Leave MongoDB empty (using Supabase)
+MONGODB_URI=
 ```
 
-### Step 4: Environment Variables (Optional)
+6. **Click "Create Web Service"**
 
-If you need environment variables later (for API keys, etc.):
-1. Go to the **Environment** tab
-2. Add variables as needed:
-   - Example: `NODE_ENV` = `production`
-   - Example: `PORT` = `3000` (Render sets this automatically)
+### 4. Wait for Deployment
+- Takes 3-5 minutes
+- Watch the logs for any errors
+- Should see "Server running on port 5000"
 
-### Step 5: Choose Your Plan
+### 5. Test Your API
 
-- Select **Free** tier to start (perfect for testing)
-- You can upgrade later if needed
+Your API will be available at:
+```
+https://day-dream-dictionary-api.onrender.com
+```
 
-### Step 6: Create Web Service
+Test endpoints:
+- Health: `https://day-dream-dictionary-api.onrender.com/health`
+- API: `https://day-dream-dictionary-api.onrender.com/api/v1/test`
 
-Click **"Create Web Service"** button
+### 6. Create Supabase Tables
 
-### Step 7: Wait for Deployment
+Go to your Supabase SQL Editor and run:
 
-Render will:
-1. Clone your repository
-2. Run `npm install` to install dependencies
-3. Run `npm start` to start your application
-4. Provide you with a URL like: `https://day-dream-dictionary.onrender.com`
+```sql
+-- Dreams table
+CREATE TABLE IF NOT EXISTS dreams (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    dream_text TEXT NOT NULL,
+    interpretation JSONB,
+    metadata JSONB,
+    user_context JSONB,
+    tags TEXT[],
+    is_recurring BOOLEAN DEFAULT false,
+    is_deleted BOOLEAN DEFAULT false,
+    locale VARCHAR(5) DEFAULT 'en',
+    source VARCHAR(50),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-## 🎯 Important Notes
+-- Events table
+CREATE TABLE IF NOT EXISTS events (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id VARCHAR(255),
+    type VARCHAR(100),
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-### Start Command Explanation
-The start command for Render is: **`npm start`**
+-- Profiles table
+CREATE TABLE IF NOT EXISTS profiles (
+    user_id UUID REFERENCES auth.users(id) PRIMARY KEY,
+    display_name VARCHAR(255),
+    locale VARCHAR(5) DEFAULT 'en',
+    preferences JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-This command:
-- Executes the `start` script defined in `package.json`
-- Which runs `node server.js`
-- Starts an Express server on the port provided by Render
-- Serves your task management application
+-- Credits table
+CREATE TABLE IF NOT EXISTS credits (
+    user_id UUID REFERENCES auth.users(id) PRIMARY KEY,
+    balance INTEGER DEFAULT 0,
+    lifetime_earned INTEGER DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-### Alternative Start Commands
-If you prefer, you can use any of these as your start command:
-- `npm start` (recommended - uses package.json script)
-- `node server.js` (direct Node.js execution)
-- `npm run dev` (if you want to use the dev script)
+-- Subscriptions table
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id),
+    stripe_customer_id VARCHAR(255),
+    stripe_subscription_id VARCHAR(255),
+    plan VARCHAR(50),
+    status VARCHAR(50),
+    current_period_start TIMESTAMPTZ,
+    current_period_end TIMESTAMPTZ,
+    cancel_at_period_end BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-### Free Tier Limitations
-- Your app may sleep after 15 minutes of inactivity
-- First request after sleeping may take 30-50 seconds
-- Perfect for personal projects and testing
+-- Roles table
+CREATE TABLE IF NOT EXISTS roles (
+    user_id UUID REFERENCES auth.users(id) PRIMARY KEY,
+    role VARCHAR(50) DEFAULT 'user',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-## 🔧 Troubleshooting
+-- Create indexes
+CREATE INDEX idx_dreams_user_id ON dreams(user_id);
+CREATE INDEX idx_events_user_id ON events(user_id);
+CREATE INDEX idx_events_type ON events(type);
+```
 
-### If deployment fails:
+## ✅ Deployment Complete!
 
-1. **Check Build Logs**: Look for npm install errors
-2. **Verify Start Command**: Ensure it's `npm start`
-3. **Check Port Configuration**: Server should use `process.env.PORT`
-4. **Dependencies**: Ensure all required packages are in `package.json`
+Your Day Dream Dictionary API is now live and running in FREE MODE:
+- No payment restrictions
+- All dream interpretations are free
+- Ready for testing and development
 
-### Common Issues & Solutions:
+## 🧪 Test Your Deployment
 
-**Issue**: "Cannot find module 'express'"
-**Solution**: Make sure `package.json` includes all dependencies
+1. Open `test-dream-free.html` in your browser
+2. Update the API_BASE to your Render URL:
+   ```javascript
+   const API_BASE = 'https://day-dream-dictionary-api.onrender.com/api/v1';
+   ```
+3. Test dream interpretation
 
-**Issue**: "Port already in use"
-**Solution**: Use `process.env.PORT || 3000` in your server.js
+## 📝 Important Notes
 
-**Issue**: "Application failed to respond"
-**Solution**: Ensure server.js is listening on the correct port
+- **Free Tier**: Render free tier sleeps after 15 minutes of inactivity
+- **Cold Starts**: First request after sleep takes ~30 seconds
+- **Logs**: Check Render dashboard for server logs
+- **Errors**: Most common issue is missing environment variables
 
-## 📊 Monitoring Your App
+## 🆘 Troubleshooting
 
-After deployment:
-1. Check the **Logs** tab for real-time application logs
-2. Monitor the **Metrics** tab for performance data
-3. Set up **Health Checks** to ensure uptime
+If deployment fails:
+1. Check all environment variables are set
+2. Verify Supabase credentials are correct
+3. Ensure OpenRouter API key is valid
+4. Check build logs in Render dashboard
 
-## 🔄 Updating Your App
+## 🎉 Success!
 
-To update your deployed application:
-1. Push changes to your GitHub repository
-2. Render will automatically detect changes and redeploy
-3. Monitor the deployment in the Render dashboard
-
-## 🌐 Your Application URLs
-
-After successful deployment, you'll have:
-- **Main App**: `https://your-app-name.onrender.com`
-- **Task Manager**: `https://your-app-name.onrender.com/task-manager.html`
-- **Health Check**: `https://your-app-name.onrender.com/health`
-
-## 📝 Summary
-
-**The Start Command for Render.com is: `npm start`**
-
-This command starts your Node.js/Express server which serves your Day Dream Dictionary task management application.
-
-## Need Help?
-
-- [Render Documentation](https://render.com/docs)
-- [Node.js on Render](https://render.com/docs/deploy-node-express-app)
-- [Render Community](https://community.render.com)
-
----
-
-Happy Deploying! 🎉
+Your API is deployed and ready to use. The dream interpretation is completely free and unrestricted as requested!

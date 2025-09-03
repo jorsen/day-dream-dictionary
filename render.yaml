@@ -1,0 +1,76 @@
+# Render Blueprint Specification
+services:
+  # Backend API Service
+  - type: web
+    name: day-dream-dictionary-api
+    runtime: node
+    repo: https://github.com/YOUR_USERNAME/day-dream-dictionary # Update with your repo
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: API_VERSION
+        value: v1
+      
+      # Supabase Configuration
+      - key: SUPABASE_URL
+        sync: false # Set in Render dashboard
+      - key: SUPABASE_ANON_KEY
+        sync: false # Set in Render dashboard
+      - key: SUPABASE_SERVICE_KEY
+        sync: false # Set in Render dashboard
+      
+      # OpenRouter API
+      - key: OPENROUTER_API_KEY
+        sync: false # Set in Render dashboard
+      - key: OPENROUTER_MODEL
+        value: anthropic/claude-3.5-sonnet:20241022
+      - key: OPENROUTER_TEMPERATURE
+        value: "0.7"
+      - key: OPENROUTER_MAX_TOKENS
+        value: "2000"
+      
+      # JWT Secrets
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      
+      # Stripe (Optional for now since we're in free mode)
+      - key: STRIPE_SECRET_KEY
+        sync: false # Set in Render dashboard when ready
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false # Set in Render dashboard when ready
+      
+      # MongoDB (Optional - using Supabase primarily)
+      - key: MONGODB_URI
+        value: "" # Leave empty if not using MongoDB
+      
+      # CORS
+      - key: CORS_ORIGIN
+        value: "*" # Update with your frontend URL in production
+      - key: FRONTEND_URL
+        value: https://daydreamdictionary.com # Update with actual domain
+      
+      # Rate Limiting
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "100"
+      
+      # Free Tier Limits (Currently disabled but configurable)
+      - key: FREE_DEEP_INTERPRETATIONS_MONTHLY
+        value: "1000" # High number for free mode
+      - key: FREE_BASIC_INTERPRETATIONS_MONTHLY
+        value: "1000" # High number for free mode
+    
+    # Health check
+    healthCheckPath: /health
+    
+    # Auto-deploy on push to main branch
+    autoDeploy: true

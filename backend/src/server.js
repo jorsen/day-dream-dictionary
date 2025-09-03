@@ -1,0 +1,191 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
+const path = require('path');
+require('dotenv').config();
+
+// Import middleware
+const { errorHandler } = require('./middleware/errorHandler');
+const { requestLogger } = require('./middleware/logger');
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const dreamRoutes = require('./routes/dreams');
+const paymentRoutes = require('./routes/payments');
+const profileRoutes = require('./routes/profile');
+const adminRoutes = require('./routes/admin');
+const webhookRoutes = require('./routes/webhooks');
+
+// Import database connections
+const { connectMongoDB } = require('./config/mongodb');
+const { initSupabase } = require('./config/supabase');
+
+// Import i18n configuration
+const { i18nMiddleware } = require('./config/i18n');
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Initialize databases
+const initializeDatabases = async () => {
+  try {
+    await connectMongoDB();
+    await initSupabase();
+    console.log('✅ All databases connected successfully');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+    process.exit(1);
+  }
+};
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
+// CORS configuration - Allow all origins in development
+const corsOptions = {
+  origin: function (origin, callback) {
+    // In development, allow all origins
+    if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined) {
+      callback(null, true);
+    } else {
+      // In production, use the whitelist
+      const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'];
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
+
+// Stripe webhook needs raw body
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser(process.env.SESSION_SECRET));
+app.use(compression());
+
+// i18n middleware
+app.use(i18nMiddleware);
+
+// Request logging
+app.use(requestLogger);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    message: 'Day Dream Dictionary API is running',
+    version: process.env.API_VERSION || 'v1',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API Routes
+const apiPrefix = `/api/${process.env.API_VERSION || 'v1'}`;
+app.use(`${apiPrefix}/auth`, authRoutes);
+app.use(`${apiPrefix}/dreams`, dreamRoutes);
+app.use(`${apiPrefix}/payments`, paymentRoutes);
+app.use(`${apiPrefix}/profile`, profileRoutes);
+app.use(`${apiPrefix}/admin`, adminRoutes);
+app.use(`${apiPrefix}/webhooks`, webhookRoutes);
+
+// Static files for uploaded content (if needed)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `The requested resource ${req.originalUrl} was not found on this server.`,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Global error handler
+app.use(errorHandler);
+
+// Graceful shutdown
+const gracefulShutdown = () => {
+  console.log('\n🔄 Starting graceful shutdown...');
+  
+  // Close server
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+    
+    // Close database connections
+    // MongoDB and Supabase connections will be closed here
+    process.exit(0);
+  });
+
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('❌ Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+// Unhandled rejection handler
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit the process in production
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1);
+  }
+});
+
+// Start server
+const server = app.listen(PORT, async () => {
+  console.log(`
+╔══════════════════════════════════════════════════════╗
+║                                                      ║
+║     🌙 Day Dream Dictionary API Server 🌙           ║
+║                                                      ║
+║     Version: ${process.env.API_VERSION || 'v1'}                                    ║
+║     Port: ${PORT}                                   ║
+║     Environment: ${process.env.NODE_ENV || 'development'}                       ║
+║     API Base: http://localhost:${PORT}/api/${process.env.API_VERSION || 'v1'}       ║
+║                                                      ║
+╚══════════════════════════════════════════════════════╝
+  `);
+  
+  // Initialize databases
+  await initializeDatabases();
+});
+
+module.exports = app;

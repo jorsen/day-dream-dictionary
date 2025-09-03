@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Dream Dictionary - User Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Login Form Styles */
+        .auth-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .auth-container h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            margin-top: 10px;
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .toggle-form a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Dashboard Styles */
+        .dashboard {
+            display: none;
+        }
+
+        .dashboard.active {
+            display: block;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+        }
+
+        .header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .btn-logout {
+            padding: 10px 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            font-size: 24px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .badge-free {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-basic {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .badge-pro {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .dream-form {
+            margin-top: 20px;
+        }
+
+        .dream-form textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .dream-form button {
+            margin-top: 10px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .dreams-list {
+            margin-top: 20px;
+        }
+
+        .dream-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .dream-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .dream-date {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login/Signup Form -->
+    <div class="auth-container" id="authContainer">
+        <h2 id="authTitle">Login to Your Account</h2>
+        
+        <div id="alertBox"></div>
+
+        <form id="authForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required placeholder="Enter your email">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required placeholder="Enter your password">
+            </div>
+            
+            <div class="form-group hidden" id="displayNameGroup">
+                <label for="displayName">Display Name</label>
+                <input type="text" id="displayName" placeholder="Enter your name">
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">Login</button>
+        </form>
+        
+        <div class="toggle-form">
+            <span id="toggleText">Don't have an account?</span>
+            <a href="#" id="toggleLink" onclick="toggleAuthMode(event)">Sign up</a>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+        <div class="container">
+            <div class="header">
+                <h1>🌙 Day Dream Dictionary</h1>
+                <div class="user-info">
+                    <div class="avatar" id="userAvatar">U</div>
+                    <div>
+                        <div id="userName" style="font-weight: 600;">User</div>
+                        <div id="userEmail" style="color: #666; font-size: 14px;">email@example.com</div>
+                    </div>
+                    <button class="btn-logout" onclick="logout()">Logout</button>
+                </div>
+            </div>
+
+            <div class="grid">
+                <!-- Profile Information Card -->
+                <div class="card">
+                    <h3><span class="card-icon">👤</span> Profile Information</h3>
+                    <div class="info-row">
+                        <span class="info-label">User ID</span>
+                        <span class="info-value" id="userId">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span class="info-value" id="profileEmail">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Display Name</span>
+                        <span class="info-value" id="profileName">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Role</span>
+                        <span class="info-value" id="userRole">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email Verified</span>
+                        <span class="info-value" id="emailVerified">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Language</span>
+                        <span class="info-value" id="userLocale">-</span>
+                    </div>
+                </div>
+
+                <!-- Subscription Card -->
+                <div class="card">
+                    <h3><span class="card-icon">💎</span> Subscription Status</h3>
+                    <div class="info-row">
+                        <span class="info-label">Plan</span>
+                        <span class="info-value">
+                            <span class="badge badge-free" id="planBadge">Free</span>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Credits</span>
+                        <span class="info-value" id="userCredits">5</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Monthly Limit</span>
+                        <span class="info-value" id="monthlyLimit">5 basic / 3 deep</span>
+                    </div>
+                    <button class="btn" style="margin-top: 20px;">Upgrade to Pro</button>
+                </div>
+
+                <!-- Dream Statistics Card -->
+                <div class="card">
+                    <h3><span class="card-icon">📊</span> Dream Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" id="totalDreams">0</div>
+                            <div class="stat-label">Total Dreams</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="interpretations">0</div>
+                            <div class="stat-label">Interpretations</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="thisMonth">0</div>
+                            <div class="stat-label">This Month</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="creditsUsed">0</div>
+                            <div class="stat-label">Credits Used</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Dream Entry Card -->
+                <div class="card">
+                    <h3><span class="card-icon">✨</span> Quick Dream Entry</h3>
+                    <div class="dream-form">
+                        <textarea id="dreamContent" placeholder="Describe your dream..."></textarea>
+                        <button onclick="goToDreamInterpretation()">Get Full Interpretation</button>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center;">
+                        <a href="dream-interpretation.html" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                            Go to Dream Interpretation Page →
+                        </a>
+                    </div>
+                    <div id="dreamResult" style="margin-top: 20px;"></div>
+                </div>
+
+                <!-- Recent Dreams Card -->
+                <div class="card" style="grid-column: span 2;">
+                    <h3><span class="card-icon">📚</span> Recent Dreams</h3>
+                    <div class="dreams-list" id="dreamsList">
+                        <div class="loading">No dreams recorded yet. Start by entering your first dream above!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let authMode = 'login';
+        let currentUser = null;
+        let accessToken = null;
+
+        // Check if user is already logged in
+        window.onload = () => {
+            const savedToken = localStorage.getItem('accessToken');
+            const savedUser = localStorage.getItem('currentUser');
+            
+            if (savedToken && savedUser) {
+                accessToken = savedToken;
+                currentUser = JSON.parse(savedUser);
+                showDashboard();
+            }
+        };
+
+        // Toggle between login and signup
+        function toggleAuthMode(e) {
+            e.preventDefault();
+            authMode = authMode === 'login' ? 'signup' : 'login';
+            
+            const authTitle = document.getElementById('authTitle');
+            const submitBtn = document.getElementById('submitBtn');
+            const toggleText = document.getElementById('toggleText');
+            const toggleLink = document.getElementById('toggleLink');
+            const displayNameGroup = document.getElementById('displayNameGroup');
+            
+            if (authMode === 'signup') {
+                authTitle.textContent = 'Create Your Account';
+                submitBtn.textContent = 'Sign Up';
+                toggleText.textContent = 'Already have an account?';
+                toggleLink.textContent = 'Login';
+                displayNameGroup.classList.remove('hidden');
+            } else {
+                authTitle.textContent = 'Login to Your Account';
+                submitBtn.textContent = 'Login';
+                toggleText.textContent = "Don't have an account?";
+                toggleLink.textContent = 'Sign up';
+                displayNameGroup.classList.add('hidden');
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const displayName = document.getElementById('displayName').value;
+            const alertBox = document.getElementById('alertBox');
+            
+            try {
+                let response;
+                
+                if (authMode === 'signup') {
+                    response = await fetch(`${API_URL}/auth/signup`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            email,
+                            password,
+                            displayName: displayName || email.split('@')[0],
+                            locale: 'en'
+                        })
+                    });
+                } else {
+                    response = await fetch(`${API_URL}/auth/login`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            email,
+                            password
+                        })
+                    });
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentUser = data.user;
+                    accessToken = data.accessToken;
+                    
+                    // Save to localStorage
+                    localStorage.setItem('accessToken', accessToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    showDashboard();
+                } else {
+                    alertBox.className = 'alert alert-error';
+                    alertBox.textContent = data.message || 'Authentication failed';
+                }
+            } catch (error) {
+                alertBox.className = 'alert alert-error';
+                alertBox.textContent = 'Connection error. Please check if the server is running.';
+            }
+        });
+
+        // Show dashboard
+        function showDashboard() {
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('dashboard').classList.add('active');
+            
+            // Update user information
+            document.getElementById('userName').textContent = currentUser.displayName || currentUser.email.split('@')[0];
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userAvatar').textContent = (currentUser.displayName || currentUser.email)[0].toUpperCase();
+            
+            // Update profile card
+            document.getElementById('userId').textContent = currentUser.id;
+            document.getElementById('profileEmail').textContent = currentUser.email;
+            document.getElementById('profileName').textContent = currentUser.displayName || 'Not set';
+            document.getElementById('userRole').textContent = currentUser.role || 'user';
+            document.getElementById('emailVerified').textContent = currentUser.emailVerified ? '✅ Verified' : '❌ Not verified';
+            document.getElementById('userLocale').textContent = currentUser.locale || 'en';
+            
+            // Load additional user data
+            loadUserProfile();
+            loadUserStats();
+        }
+
+        // Load user profile data
+        async function loadUserProfile() {
+            try {
+                const response = await fetch(`${API_URL}/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    // Update profile information if needed
+                    if (data.subscription) {
+                        const planBadge = document.getElementById('planBadge');
+                        planBadge.textContent = data.subscription.plan_type;
+                        planBadge.className = `badge badge-${data.subscription.plan_type}`;
+                    }
+                    if (data.credits !== undefined) {
+                        document.getElementById('userCredits').textContent = data.credits;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+            }
+        }
+
+        // Load user statistics
+        async function loadUserStats() {
+            try {
+                const response = await fetch(`${API_URL}/dreams/stats/summary`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const stats = data.stats || {};
+                    document.getElementById('totalDreams').textContent = stats.totalDreams || 0;
+                    document.getElementById('interpretations').textContent = stats.totalDreams || 0;
+                    document.getElementById('thisMonth').textContent = stats.thisMonth || 0;
+                    document.getElementById('creditsUsed').textContent = stats.creditsUsed || 0;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Go to dream interpretation page with pre-filled content
+        function goToDreamInterpretation() {
+            const content = document.getElementById('dreamContent').value;
+            if (content) {
+                // Save the dream content to localStorage to pre-fill on the interpretation page
+                localStorage.setItem('pendingDream', content);
+            }
+            window.location.href = 'dream-interpretation.html';
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+            accessToken = null;
+            
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('authContainer').style.display = 'block';
+            
+            // Reset form
+            document.getElementById('authForm').reset();
+            document.getElementById('alertBox').className = 'hidden';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+{
+  "title": "Dreams",
+  "submit": {
+    "title": "Share Your Dream",
+    "placeholder": "Describe your dream in detail...",
+    "minLength": "Please provide at least 10 characters",
+    "maxLength": "Maximum 5000 characters",
+    "interpretationType": {
+      "label": "Interpretation Type",
+      "basic": "Basic Analysis",
+      "deep": "Deep Analysis (3 credits)",
+      "premium": "Premium Analysis (5 credits)"
+    },
+    "context": {
+      "title": "Additional Context (Optional)",
+      "mood": "How were you feeling?",
+      "sleepQuality": "Sleep quality (1-10)",
+      "stressLevel": "Stress level (1-10)",
+      "recentEvents": "Any significant recent events?"
+    },
+    "recurring": "This is a recurring dream",
+    "tags": "Tags (comma separated)",
+    "submit": "Interpret My Dream",
+    "submitting": "Analyzing your dream..."
+  },
+  "interpretation": {
+    "title": "Dream Interpretation",
+    "mainThemes": "Main Themes",
+    "emotionalTone": "Emotional Tone",
+    "symbols": "Dream Symbols",
+    "symbolMeaning": "Meaning",
+    "symbolSignificance": "Significance",
+    "personalInsight": "Personal Insight",
+    "guidance": "Guidance",
+    "actions": {
+      "save": "Save to Journal",
+      "export": "Export as PDF",
+      "share": "Share",
+      "rate": "Rate Interpretation"
+    }
+  },
+  "history": {
+    "title": "Dream Journal",
+    "empty": "You haven't recorded any dreams yet",
+    "search": "Search dreams...",
+    "filters": {
+      "all": "All Dreams",
+      "recurring": "Recurring Dreams",
+      "thisWeek": "This Week",
+      "thisMonth": "This Month"
+    },
+    "dreamCard": {
+      "interpreted": "Interpreted on",
+      "themes": "Themes",
+      "viewDetails": "View Details",
+      "delete": "Delete"
+    }
+  },
+  "statistics": {
+    "title": "Dream Analytics",
+    "totalDreams": "Total Dreams",
+    "recurringDreams": "Recurring Dreams",
+    "averageLength": "Average Length",
+    "topThemes": "Top Themes",
+    "emotionalTrends": "Emotional Trends",
+    "symbolFrequency": "Symbol Frequency"
+  },
+  "quota": {
+    "remaining": "{{count}} interpretations remaining",
+    "unlimited": "Unlimited interpretations",
+    "exceeded": "You've reached your free limit",
+    "upgrade": "Upgrade for unlimited access"
+  },
+  "errors": {
+    "submitFailed": "Failed to submit dream. Please try again.",
+    "loadFailed": "Failed to load dreams. Please refresh.",
+    "deleteFailed": "Failed to delete dream. Please try again.",
+    "insufficientCredits": "Insufficient credits for this interpretation type"
+  }
+}

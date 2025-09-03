@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dream Interpretation - Free Mode</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        textarea, input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f7f7f7;
+            border-radius: 5px;
+            display: none;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            background: #fee;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .success {
+            color: green;
+            padding: 10px;
+            background: #efe;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .interpretation-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-left: 4px solid #667eea;
+        }
+        .interpretation-section h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .symbol-item {
+            background: #f9f9f9;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 18px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌙 Dream Interpretation Test (Free Mode)</h1>
+        
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" value="test@example.com" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="Test123!" required>
+        </div>
+        
+        <button onclick="login()">Login First</button>
+        
+        <div id="loginStatus"></div>
+        
+        <div id="dreamForm" style="display: none; margin-top: 30px;">
+            <h2>Submit Your Dream</h2>
+            
+            <div class="form-group">
+                <label for="dreamText">Describe your dream:</label>
+                <textarea id="dreamText" rows="5" placeholder="I had a dream where I was flying over a beautiful ocean...">I had a dream where I was flying over a beautiful ocean. The water was crystal clear and I could see dolphins swimming below. Suddenly, I found myself in a garden full of colorful flowers and butterflies.</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="interpretationType">Interpretation Type:</label>
+                <select id="interpretationType">
+                    <option value="basic">Basic</option>
+                    <option value="deep" selected>Deep</option>
+                    <option value="premium">Premium</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="locale">Language:</label>
+                <select id="locale">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                </select>
+            </div>
+            
+            <button onclick="interpretDream()">Interpret Dream (FREE)</button>
+        </div>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        let authToken = 'test-token-free-mode'; // In test mode, we can use a dummy token
+        const API_BASE = 'http://localhost:5000';
+        
+        async function login() {
+            const statusDiv = document.getElementById('loginStatus');
+            
+            // Test server doesn't require real authentication
+            // Just check if the server is running
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.innerHTML = '<div class="success">✅ Test server is running! You can now test dream interpretation (FREE MODE).</div>';
+                    document.getElementById('dreamForm').style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = '<div class="error">Server is not responding properly.</div>';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">Cannot connect to server. Make sure it\'s running on port 5000.<br>Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function signup(email, password) {
+            const statusDiv = document.getElementById('loginStatus');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.accessToken;
+                    statusDiv.innerHTML = '<div class="success">✅ Account created and logged in! You can now submit dreams.</div>';
+                    document.getElementById('dreamForm').style.display = 'block';
+                } else {
+                    statusDiv.innerHTML = `<div class="error">Signup failed: ${data.message || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function interpretDream() {
+            const dreamText = document.getElementById('dreamText').value;
+            const interpretationType = document.getElementById('interpretationType').value;
+            const locale = document.getElementById('locale').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!dreamText || dreamText.length < 10) {
+                alert('Please enter a dream description (at least 10 characters)');
+                return;
+            }
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="loading">🔮 Generating mock interpretation (test server)...</div>';
+            
+            // Since this is a test server, we'll simulate the interpretation
+            setTimeout(() => {
+                const mockInterpretation = {
+                    dream: {
+                        id: Date.now().toString(),
+                        dreamText: dreamText,
+                        interpretation: {
+                            mainThemes: [
+                                "Freedom and Liberation",
+                                "Connection with Nature",
+                                "Transformation and Growth"
+                            ],
+                            emotionalTone: "The dream carries a positive and uplifting emotional tone, suggesting feelings of freedom, joy, and wonder. The transition from flying to the garden indicates a journey from liberation to grounding in beauty.",
+                            symbols: [
+                                {
+                                    symbol: "Flying",
+                                    meaning: "Represents freedom, ambition, and rising above challenges",
+                                    significance: "high"
+                                },
+                                {
+                                    symbol: "Ocean",
+                                    meaning: "Symbolizes emotions, the unconscious mind, and vast possibilities",
+                                    significance: "high"
+                                },
+                                {
+                                    symbol: "Dolphins",
+                                    meaning: "Represent playfulness, intelligence, and spiritual guidance",
+                                    significance: "medium"
+                                },
+                                {
+                                    symbol: "Garden",
+                                    meaning: "Symbolizes growth, nurturing, and inner peace",
+                                    significance: "high"
+                                },
+                                {
+                                    symbol: "Butterflies",
+                                    meaning: "Represent transformation, rebirth, and the soul",
+                                    significance: "medium"
+                                }
+                            ],
+                            personalInsight: "This dream suggests you are in a phase of personal liberation and transformation. The ability to fly over the ocean indicates you have overcome emotional challenges and gained a new perspective on life. The transition to the garden represents finding beauty and peace after a period of exploration.",
+                            guidance: "Embrace the freedom and transformation you're experiencing. Like the dolphins below the surface, trust your intuition to guide you. The garden of flowers and butterflies suggests it's time to appreciate the beauty around you and allow yourself to undergo positive changes. Consider what areas of your life are ready for transformation."
+                        },
+                        metadata: {
+                            interpretationType: interpretationType,
+                            creditsUsed: 0,
+                            processingTime: 1234
+                        }
+                    },
+                    creditsRemaining: "unlimited",
+                    message: "Dream interpreted successfully (TEST MODE - FREE)"
+                };
+                
+                displayInterpretation(mockInterpretation);
+            }, 2000);
+        }
+        
+        function displayInterpretation(data) {
+            const resultDiv = document.getElementById('result');
+            const dream = data.dream;
+            const interpretation = dream.interpretation;
+            
+            let html = '<h2>✨ Dream Interpretation Results</h2>';
+            
+            html += '<div class="success">Dream interpreted successfully! (FREE MODE - No credits deducted)</div>';
+            
+            html += '<div class="interpretation-section">';
+            html += '<h3>📋 Main Themes</h3>';
+            html += '<ul>';
+            interpretation.mainThemes.forEach(theme => {
+                html += `<li>${theme}</li>`;
+            });
+            html += '</ul>';
+            html += '</div>';
+            
+            html += '<div class="interpretation-section">';
+            html += '<h3>💭 Emotional Tone</h3>';
+            html += `<p>${interpretation.emotionalTone}</p>`;
+            html += '</div>';
+            
+            html += '<div class="interpretation-section">';
+            html += '<h3>🔮 Dream Symbols</h3>';
+            interpretation.symbols.forEach(symbol => {
+                html += `<div class="symbol-item">
+                    <strong>${symbol.symbol}</strong> (${symbol.significance} significance)<br>
+                    ${symbol.meaning}
+                </div>`;
+            });
+            html += '</div>';
+            
+            html += '<div class="interpretation-section">';
+            html += '<h3>💡 Personal Insight</h3>';
+            html += `<p>${interpretation.personalInsight}</p>`;
+            html += '</div>';
+            
+            html += '<div class="interpretation-section">';
+            html += '<h3>🌟 Guidance</h3>';
+            html += `<p>${interpretation.guidance}</p>`;
+            html += '</div>';
+            
+            html += '<div class="interpretation-section">';
+            html += '<h3>📊 Metadata</h3>';
+            html += `<p>Dream ID: ${dream.id}</p>`;
+            html += `<p>Credits Remaining: ${data.creditsRemaining}</p>`;
+            html += `<p>Processing Time: ${dream.metadata?.processingTime}ms</p>`;
+            html += '</div>';
+            
+            resultDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

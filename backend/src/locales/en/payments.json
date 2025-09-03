@@ -1,0 +1,11 @@
+{
+  "subscription": {
+    "created": "Subscription created successfully",
+    "cancelled": "Subscription will be cancelled at the end of the billing period",
+    "resumed": "Subscription resumed successfully"
+  },
+  "credits": {
+    "purchased": "Credits purchased successfully",
+    "insufficient": "Insufficient credits"
+  }
+}

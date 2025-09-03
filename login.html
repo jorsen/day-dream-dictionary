@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Dream Dictionary - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .logo {
+            text-align: center;
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .toggle-form a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .toggle-form a:hover {
+            text-decoration: underline;
+        }
+
+        .test-account {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .test-account strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .test-account code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🌙</div>
+        <h2 id="formTitle">Login to Your Account</h2>
+        
+        <div id="message" class="message"></div>
+
+        <form id="authForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required placeholder="Enter your email">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required placeholder="Enter your password">
+            </div>
+            
+            <div class="form-group" id="nameGroup" style="display: none;">
+                <label for="displayName">Display Name</label>
+                <input type="text" id="displayName" placeholder="Enter your name">
+            </div>
+            
+            <button type="submit" id="submitBtn">Login</button>
+        </form>
+        
+        <div class="toggle-form">
+            <span id="toggleText">Don't have an account?</span>
+            <a href="#" id="toggleLink" onclick="toggleMode(event)">Sign up</a>
+        </div>
+
+        <div class="test-account">
+            <strong>Quick Test:</strong>
+            Click "Sign up" to create a new account, or use these test credentials if you already created one:
+            <br><br>
+            Email: <code>jorsenmejia@gmail.com</code><br>
+            Password: <code>[your password]</code>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/v1';
+        let isSignup = false;
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message show ${type}`;
+        }
+
+        function toggleMode(e) {
+            e.preventDefault();
+            isSignup = !isSignup;
+            
+            const formTitle = document.getElementById('formTitle');
+            const submitBtn = document.getElementById('submitBtn');
+            const toggleText = document.getElementById('toggleText');
+            const toggleLink = document.getElementById('toggleLink');
+            const nameGroup = document.getElementById('nameGroup');
+            
+            if (isSignup) {
+                formTitle.textContent = 'Create Your Account';
+                submitBtn.textContent = 'Sign Up';
+                toggleText.textContent = 'Already have an account?';
+                toggleLink.textContent = 'Login';
+                nameGroup.style.display = 'block';
+            } else {
+                formTitle.textContent = 'Login to Your Account';
+                submitBtn.textContent = 'Login';
+                toggleText.textContent = "Don't have an account?";
+                toggleLink.textContent = 'Sign up';
+                nameGroup.style.display = 'none';
+            }
+            
+            // Clear any messages
+            document.getElementById('message').className = 'message';
+        }
+
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const displayName = document.getElementById('displayName').value;
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // Disable button during request
+            submitBtn.disabled = true;
+            submitBtn.textContent = isSignup ? 'Creating Account...' : 'Logging in...';
+            
+            try {
+                const endpoint = isSignup ? '/auth/signup' : '/auth/login';
+                const body = isSignup 
+                    ? { email, password, displayName: displayName || email.split('@')[0], locale: 'en' }
+                    : { email, password };
+                
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(body)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Save to localStorage
+                    localStorage.setItem('accessToken', data.accessToken);
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    
+                    // Show success message
+                    showMessage(
+                        isSignup ? '✅ Account created! Redirecting...' : '✅ Login successful! Redirecting...',
+                        'success'
+                    );
+                    
+                    // Redirect after 1.5 seconds
+                    setTimeout(() => {
+                        window.location.href = 'profile-dashboard.html';
+                    }, 1500);
+                } else {
+                    // Show error message
+                    showMessage(data.message || 'Authentication failed', 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = isSignup ? 'Sign Up' : 'Login';
+                }
+            } catch (error) {
+                showMessage('Connection error. Is the server running?', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = isSignup ? 'Sign Up' : 'Login';
+            }
+        });
+
+        // Check if already logged in
+        window.onload = () => {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                showMessage('You are already logged in. Redirecting...', 'info');
+                setTimeout(() => {
+                    window.location.href = 'profile-dashboard.html';
+                }, 1500);
+            }
+        };
+    </script>
+</body>
+</html>

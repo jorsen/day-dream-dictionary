@@ -1,173 +1,266 @@
 # 🌙 Day Dream Dictionary
 
-A comprehensive dream interpretation application with an integrated task management system for development tracking.
+> AI-powered dream interpretation platform with personalized insights, symbol analysis, and psychological guidance.
 
-## 🎯 Project Overview
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green)](https://nodejs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-6.0-green)](https://www.mongodb.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-Auth-orange)](https://supabase.com/)
+[![Stripe](https://img.shields.io/badge/Stripe-Payments-blue)](https://stripe.com/)
 
-Day Dream Dictionary is a web application that combines:
-- **Task Management System** - Track development progress across 49 tasks in 10 phases
-- **Dream Interpretation** (Coming Soon) - AI-powered dream analysis using Claude 3.5 Sonnet
-- **User Management** (Coming Soon) - Authentication and user profiles
-- **Payment System** (Coming Soon) - Subscription tiers and credit system
+## ✨ Features
+
+### Core Functionality
+- 🤖 **AI-Powered Interpretations** - Using Claude 3.5 Sonnet for deep, meaningful dream analysis
+- 📊 **Structured Analysis** - Main themes, emotional tone, symbol meanings, personal insights, and actionable guidance
+- 🌍 **Multi-Language Support** - Available in English and Spanish
+- 📱 **Responsive Design** - Works seamlessly on desktop, tablet, and mobile devices
+
+### User Features
+- 📔 **Dream Journal** - Save and organize all your dream interpretations
+- 🔄 **Recurring Dream Tracking** - Identify patterns in recurring dreams
+- 📈 **Analytics Dashboard** - Track themes, emotions, and symbols over time
+- 🏷️ **Tagging System** - Organize dreams with custom tags
+- 📄 **PDF Export** - Download professional reports for therapy or personal records
+- 🔍 **Search & Filter** - Find specific dreams quickly
+
+### Monetization
+- 💳 **Flexible Pricing** - Freemium model with subscription tiers and credit packs
+- 🎁 **Free Tier** - 3 deep interpretations per month
+- ⭐ **Basic Plan** ($7.99/mo) - 50 interpretations, PDF export, history
+- 🚀 **Pro Plan** ($19.99/mo) - Unlimited interpretations, advanced analytics, voice journaling
+- 💰 **Credit Packs** - One-time purchases for occasional users
+
+### Admin Features
+- 👥 **User Management** - View, edit, and moderate users
+- 💵 **Revenue Analytics** - Track MRR, conversions, and growth
+- 📊 **System Metrics** - Monitor usage, performance, and errors
+- 💸 **Refund Management** - Process refunds and add credits
+- 📝 **Audit Logs** - Track all admin actions
 
 ## 🚀 Quick Start
 
-### For Render.com Deployment
+### Prerequisites
+- Node.js 18+
+- MongoDB (local or Atlas)
+- Supabase account
+- Stripe account
+- OpenRouter API key
 
-**Start Command:** `npm start`
+### Installation
 
-This is the command Render.com uses to start your application.
-
-### Local Development
-
-1. **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/day-dream-dictionary.git
+# Clone the repository
+git clone <repository-url>
 cd day-dream-dictionary
-```
 
-2. **Install dependencies:**
-```bash
+# Install backend dependencies
+cd backend
 npm install
+cp .env.example .env
+# Edit .env with your credentials
+
+# Start backend server
+npm run dev
+
+# In a new terminal, set up frontend
+cd ../frontend
+npm install
+# Create .env.local with your credentials
+npm run dev
 ```
 
-3. **Start the server:**
-```bash
-npm start
-```
+Visit `http://localhost:3000` to see the application.
 
-4. **Open in browser:**
-```
-http://localhost:3000
-```
+For detailed setup instructions, see [SETUP_GUIDE.md](./SETUP_GUIDE.md).
 
 ## 📁 Project Structure
 
 ```
 day-dream-dictionary/
-├── server.js              # Express server (entry point)
-├── package.json           # Node.js dependencies and scripts
-├── task-manager.html      # Task management interface
-├── task-manager.js        # Task management logic
-├── tasks.md              # Development tasks data
-├── PRD.md                # Product Requirements Document
-├── DEPLOY-TO-RENDER.md   # Render deployment guide
-├── .env.example          # Environment variables template
-└── .gitignore            # Git ignore rules
+├── backend/                 # Express.js API server
+│   ├── src/
+│   │   ├── config/         # Database & service configs
+│   │   ├── middleware/     # Auth, quota, logging
+│   │   ├── models/         # MongoDB schemas
+│   │   ├── routes/         # API endpoints
+│   │   └── locales/        # i18n translations
+│   └── package.json
+├── frontend/               # Next.js React app
+│   ├── app/               # App router pages
+│   ├── components/        # React components
+│   └── package.json
+└── docs/                  # Documentation
 ```
 
-## 🛠️ Technology Stack
+## 🛠️ Tech Stack
 
-- **Backend:** Node.js, Express.js
-- **Frontend:** Vanilla JavaScript, HTML5, CSS3
-- **Deployment:** Render.com
-- **Storage:** Browser localStorage (currently), MongoDB Atlas (planned)
-- **Future:** React, Next.js, Supabase, Stripe, OpenRouter API
+### Backend
+- **Runtime**: Node.js with Express.js
+- **Databases**: MongoDB (dreams), Supabase PostgreSQL (users, payments)
+- **Authentication**: Supabase Auth with JWT
+- **AI**: OpenRouter API (Claude 3.5 Sonnet)
+- **Payments**: Stripe (subscriptions & one-time)
+- **Email**: SendGrid/Postmark
+- **Logging**: Winston
+- **Security**: Helmet, CORS, rate limiting
 
-## 📊 Current Features
+### Frontend
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **State**: Zustand
+- **Forms**: React Hook Form
+- **API Client**: Axios
+- **Auth**: Supabase JS Client
+- **Payments**: Stripe.js
 
-### Task Management System ✅
-- View all 49 development tasks across 10 phases
-- Update task status (To Do, In Progress, Done, Blocked)
-- Real-time progress tracking
-- Filter by phase, status, or priority
-- Search functionality
-- Export to Markdown or JSON
-- Data persistence with localStorage
+## 📚 API Documentation
 
-## 🔮 Planned Features
-
-Based on the PRD, upcoming features include:
-
-### Phase 1-3: Foundation
-- [ ] React + Next.js migration
-- [ ] Supabase authentication
-- [ ] Stripe payment integration
-
-### Phase 4-5: Core Features
-- [ ] OpenRouter API integration
-- [ ] Dream interpretation engine
-- [ ] Quota and paywall system
-
-### Phase 6-10: Advanced Features
-- [ ] MongoDB dream storage
-- [ ] Admin dashboard
-- [ ] PDF export
-- [ ] Email delivery
-- [ ] Internationalization (English/Spanish)
-
-## 🚀 Deployment
-
-### Render.com Configuration
-
-**Build Command:**
-```bash
-npm install
+### Authentication
+```http
+POST /api/v1/auth/signup
+POST /api/v1/auth/login
+POST /api/v1/auth/logout
+POST /api/v1/auth/refresh
+POST /api/v1/auth/forgot-password
+POST /api/v1/auth/reset-password
 ```
 
-**Start Command:**
-```bash
-npm start
+### Dreams
+```http
+POST /api/v1/dreams/interpret
+GET  /api/v1/dreams/history
+GET  /api/v1/dreams/:id
+PATCH /api/v1/dreams/:id
+DELETE /api/v1/dreams/:id
+GET  /api/v1/dreams/stats/summary
 ```
 
-**Environment:** Node
+### Payments
+```http
+POST /api/v1/payments/create-subscription-checkout
+POST /api/v1/payments/create-credits-checkout
+GET  /api/v1/payments/subscription
+POST /api/v1/payments/cancel-subscription
+GET  /api/v1/payments/credits
+```
 
-**Port:** Application uses `process.env.PORT || 3000`
+### Profile
+```http
+GET  /api/v1/profile
+PUT  /api/v1/profile
+GET  /api/v1/profile/stats
+GET  /api/v1/profile/export
+```
 
-For detailed deployment instructions, see [DEPLOY-TO-RENDER.md](./DEPLOY-TO-RENDER.md)
+For complete API documentation, see [API.md](./docs/API.md).
 
-## 🔧 Environment Variables
+## 🔐 Environment Variables
 
-Copy `.env.example` to `.env` and configure:
-
+### Required Backend Variables
 ```env
-PORT=3000
-NODE_ENV=production
-# Add other variables as needed
+# Database
+MONGODB_URI=mongodb://localhost:27017/daydreamdictionary
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_ANON_KEY=xxx
+SUPABASE_SERVICE_KEY=xxx
+
+# Authentication
+JWT_SECRET=xxx
+REFRESH_TOKEN_SECRET=xxx
+
+# AI
+OPENROUTER_API_KEY=xxx
+
+# Payments
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# Email
+SENDGRID_API_KEY=xxx
 ```
 
-## 📝 Development Tasks
+### Required Frontend Variables
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+```
 
-Track development progress at `/task-manager.html`
+## 🧪 Testing
 
-**Summary:**
-- Total Phases: 10
-- Total Tasks: 49
-- Estimated Effort: 150 hours
+```bash
+# Run backend tests
+cd backend
+npm test
+
+# Run frontend tests
+cd frontend
+npm test
+
+# E2E tests
+npm run test:e2e
+```
+
+## 📦 Deployment
+
+### Backend (Render)
+1. Create new Web Service on Render
+2. Connect GitHub repository
+3. Set environment variables
+4. Deploy
+
+### Frontend (Vercel)
+1. Import project to Vercel
+2. Configure environment variables
+3. Deploy
+
+See [DEPLOYMENT.md](./docs/DEPLOYMENT.md) for detailed instructions.
 
 ## 🤝 Contributing
 
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+### Development Workflow
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Write/update tests
+5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see [LICENSE](./LICENSE) file for details.
 
-## 🌟 Acknowledgments
+## 🙏 Acknowledgments
 
-- Built with Node.js and Express
-- Deployed on Render.com
-- Task management system for tracking development progress
+- OpenRouter for AI API access
+- Supabase for authentication and database
+- Stripe for payment processing
+- The open-source community
 
 ## 📞 Support
 
-For deployment issues, refer to:
-- [DEPLOY-TO-RENDER.md](./DEPLOY-TO-RENDER.md) - Deployment guide
-- [README-TaskManager.md](./README-TaskManager.md) - Task manager documentation
+- 📧 Email: support@daydreamdictionary.com
+- 📖 Documentation: [docs.daydreamdictionary.com](https://docs.daydreamdictionary.com)
+- 💬 Discord: [Join our community](https://discord.gg/daydreamdictionary)
 
-## 🎯 Start Command for Render
+## 🚦 Project Status
 
-**The start command for Render.com is:**
-```bash
-npm start
-```
+- ✅ Backend API: **90% Complete**
+- 🚧 Frontend UI: **In Development**
+- 📝 Documentation: **80% Complete**
+- 🧪 Testing: **Pending**
+- 🚀 Production: **Not Deployed**
 
-This executes `node server.js` which starts the Express server on the port provided by Render.
+See [PROJECT_SUMMARY.md](./PROJECT_SUMMARY.md) for detailed progress.
 
 ---
 
-**Current Status:** Task Management System Complete ✅ | Dream Interpretation In Development 🚧
+<p align="center">
+  Made with ❤️ by the Day Dream Dictionary Team
+  <br>
+  © 2024 Day Dream Dictionary. All rights reserved.
+</p>
