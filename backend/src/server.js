@@ -58,34 +58,39 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// CORS configuration - Allow all origins in development and production
+// CORS configuration - Allow specific origins for production
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow all origins in development
     if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined) {
       callback(null, true);
     } else {
-      // In production, check CORS_ORIGIN setting
-      const corsOrigin = process.env.CORS_ORIGIN || '*';
+      // In production, use specific allowed origins
+      const allowedOrigins = [
+        'https://day-dream-dictionary.onrender.com',
+        'https://daydreamdictionary.com',
+        'http://localhost:3000',
+        'http://localhost:5000',
+        'http://localhost:5173'
+      ];
 
-      // If CORS_ORIGIN is '*' or empty, allow all origins
-      if (corsOrigin === '*' || !corsOrigin) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        // Otherwise, check against whitelist
-        const allowedOrigins = corsOrigin.split(',');
-        if (!origin || allowedOrigins.includes(origin.trim())) {
-          callback(null, true);
-        } else {
-          console.log(`CORS blocked: Origin ${origin} not in allowed list: ${allowedOrigins.join(', ')}`);
-          callback(new Error('Not allowed by CORS'));
-        }
+        console.log(`CORS blocked: Origin ${origin} not in allowed list: ${allowedOrigins.join(', ')}`);
+        callback(new Error('Not allowed by CORS'));
       }
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'X-Source'],
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
