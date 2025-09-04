@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
     <title>Day Dream Dictionary - User Dashboard</title>
     <style>
         * {
@@ -565,11 +565,16 @@
                 if (response.ok) {
                     currentUser = data.user;
                     accessToken = data.accessToken;
-                    
+
                     // Save to localStorage
                     localStorage.setItem('accessToken', accessToken);
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    
+
+                    // Update credits display immediately
+                    if (currentUser.credits !== undefined) {
+                        document.getElementById('userCredits').textContent = currentUser.credits;
+                    }
+
                     showDashboard();
                 } else {
                     alertBox.className = 'alert alert-error';
@@ -598,6 +603,11 @@
             document.getElementById('userRole').textContent = currentUser.role || 'user';
             document.getElementById('emailVerified').textContent = currentUser.emailVerified ? '✅ Verified' : '❌ Not verified';
             document.getElementById('userLocale').textContent = currentUser.locale || 'en';
+
+            // Update credits display
+            if (currentUser.credits !== undefined) {
+                document.getElementById('userCredits').textContent = currentUser.credits;
+            }
             
             // Load additional user data
             loadUserProfile();
@@ -607,38 +617,32 @@
         // Load user profile data
         async function loadUserProfile() {
             try {
-                const response = await fetch(`${API_URL}/profile`, {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                });
-                
+                // TEMPORARY: Remove authorization header for free mode
+                const response = await fetch(`${API_URL}/profile`);
+
                 if (response.ok) {
                     const data = await response.json();
                     // Update profile information if needed
-                    if (data.subscription) {
-                        const planBadge = document.getElementById('planBadge');
-                        planBadge.textContent = data.subscription.plan_type;
-                        planBadge.className = `badge badge-${data.subscription.plan_type}`;
-                    }
-                    if (data.credits !== undefined) {
-                        document.getElementById('userCredits').textContent = data.credits;
+                    if (data.profile) {
+                        const profile = data.profile;
+                        if (profile.credits !== undefined) {
+                            document.getElementById('userCredits').textContent = profile.credits;
+                        }
                     }
                 }
             } catch (error) {
                 console.error('Error loading profile:', error);
+                // Set default values if profile fails to load
+                document.getElementById('userCredits').textContent = 'Unlimited';
             }
         }
 
         // Load user statistics
         async function loadUserStats() {
             try {
-                const response = await fetch(`${API_URL}/dreams/stats/summary`, {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    }
-                });
-                
+                // TEMPORARY: Remove authorization header for free mode
+                const response = await fetch(`${API_URL}/dreams/stats/summary`);
+
                 if (response.ok) {
                     const data = await response.json();
                     const stats = data.stats || {};
@@ -649,6 +653,11 @@
                 }
             } catch (error) {
                 console.error('Error loading stats:', error);
+                // Set default values if stats fail to load
+                document.getElementById('totalDreams').textContent = '0';
+                document.getElementById('interpretations').textContent = '0';
+                document.getElementById('thisMonth').textContent = '0';
+                document.getElementById('creditsUsed').textContent = '0';
             }
         }
 

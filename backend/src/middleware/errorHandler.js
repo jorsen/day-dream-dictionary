@@ -1,4 +1,4 @@
-const { logger } = require('../config/mongodb');
+
 
 class AppError extends Error {
   constructor(message, statusCode, isOperational = true) {
@@ -70,7 +70,7 @@ const handleStripeError = (err) => {
 
 const sendErrorDev = (err, req, res) => {
   // API
-  if (req.originalUrl.startsWith('/api')) {
+  if (req && req.originalUrl && req.originalUrl.startsWith('/api')) {
     return res.status(err.statusCode).json({
       status: err.status,
       error: err,
@@ -78,9 +78,9 @@ const sendErrorDev = (err, req, res) => {
       stack: err.stack
     });
   }
-  
+
   // RENDERED WEBSITE
-  logger.error('ERROR 💥', err);
+  console.error('ERROR 💥', err);
   return res.status(err.statusCode).json({
     title: 'Something went wrong!',
     msg: err.message
@@ -89,7 +89,7 @@ const sendErrorDev = (err, req, res) => {
 
 const sendErrorProd = (err, req, res) => {
   // API
-  if (req.originalUrl.startsWith('/api')) {
+  if (req && req.originalUrl && req.originalUrl.startsWith('/api')) {
     // Operational, trusted error: send message to client
     if (err.isOperational) {
       return res.status(err.statusCode).json({
@@ -97,15 +97,15 @@ const sendErrorProd = (err, req, res) => {
         message: err.message
       });
     }
-    
+
     // Programming or other unknown error: don't leak error details
-    logger.error('ERROR 💥', err);
+    console.error('ERROR 💥', err);
     return res.status(500).json({
       status: 'error',
       message: 'Something went wrong!'
     });
   }
-  
+
   // RENDERED WEBSITE
   if (err.isOperational) {
     return res.status(err.statusCode).json({
@@ -113,9 +113,9 @@ const sendErrorProd = (err, req, res) => {
       msg: err.message
     });
   }
-  
+
   // Programming or other unknown error: don't leak error details
-  logger.error('ERROR 💥', err);
+  console.error('ERROR 💥', err);
   return res.status(err.statusCode).json({
     title: 'Something went wrong!',
     msg: 'Please try again later.'

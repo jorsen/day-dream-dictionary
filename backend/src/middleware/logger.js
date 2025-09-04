@@ -58,47 +58,27 @@ logger.stream = {
 // Request logger middleware
 const requestLogger = (req, res, next) => {
   const start = Date.now();
-  
+
   // Log request
-  logger.info({
-    type: 'request',
-    method: req.method,
-    url: req.originalUrl,
-    ip: req.ip || req.connection.remoteAddress,
-    userAgent: req.get('user-agent'),
-    timestamp: new Date().toISOString()
-  });
-  
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+
   // Capture response
   const originalSend = res.send;
   res.send = function(data) {
     res.send = originalSend;
-    
+
     // Log response
     const duration = Date.now() - start;
-    logger.info({
-      type: 'response',
-      method: req.method,
-      url: req.originalUrl,
-      statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      timestamp: new Date().toISOString()
-    });
-    
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`);
+
     // Log slow requests
     if (duration > 1000) {
-      logger.warn({
-        type: 'slow-request',
-        method: req.method,
-        url: req.originalUrl,
-        duration: `${duration}ms`,
-        timestamp: new Date().toISOString()
-      });
+      console.log(`[${new Date().toISOString()}] SLOW REQUEST: ${req.method} ${req.originalUrl} (${duration}ms)`);
     }
-    
+
     return res.send(data);
   };
-  
+
   next();
 };
 

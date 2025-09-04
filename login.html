@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
     <title>Day Dream Dictionary - Login</title>
     <style>
         * {
@@ -190,10 +190,13 @@
 
         <div class="test-account">
             <strong>Quick Test:</strong>
-            Click "Sign up" to create a new account, or use these test credentials if you already created one:
+            <button onclick="fillTestCredentials()" style="margin: 10px 0; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                🚀 Auto-Fill Test Credentials
+            </button>
             <br><br>
-            Email: <code>jorsenmejia@gmail.com</code><br>
-            Password: <code>[your password]</code>
+            Or manually enter:<br>
+            Email: <code>test@example.com</code><br>
+            Password: <code>test</code>
         </div>
     </div>
 
@@ -318,6 +321,13 @@
             }
         });
 
+        // Fill test credentials
+        function fillTestCredentials() {
+            document.getElementById('email').value = 'test@example.com';
+            document.getElementById('password').value = 'test';
+            showMessage('✅ Test credentials filled! Click "Login" to continue.', 'success');
+        }
+
         // Check if already logged in
         window.onload = () => {
             const token = localStorage.getItem('accessToken');
@@ -326,6 +336,13 @@
                 setTimeout(() => {
                     window.location.href = 'profile-dashboard.html';
                 }, 1500);
+            } else {
+                // Check if test mode was requested from homepage
+                const useTestCredentials = localStorage.getItem('useTestCredentials');
+                if (useTestCredentials === 'true') {
+                    localStorage.removeItem('useTestCredentials');
+                    fillTestCredentials();
+                }
             }
         };
     </script>

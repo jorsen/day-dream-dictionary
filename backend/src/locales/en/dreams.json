@@ -76,5 +76,6 @@
     "loadFailed": "Failed to load dreams. Please refresh.",
     "deleteFailed": "Failed to delete dream. Please try again.",
     "insufficientCredits": "Insufficient credits for this interpretation type"
-  }
+  },
+  "interpretedSuccess": "Dream interpreted successfully"
 }

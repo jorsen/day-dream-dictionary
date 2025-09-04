@@ -5,36 +5,74 @@ const { body, validationResult } = require('express-validator');
 const { authenticate } = require('../middleware/auth');
 const { AppError, catchAsync } = require('../middleware/errorHandler');
 const { paymentLog, auditLog } = require('../middleware/logger');
-const { 
+const {
   getSupabase,
   getUserProfile,
   updateUserCredits,
-  getUserSubscription 
+  getUserSubscription
 } = require('../config/supabase');
+const {
+  DYNAMIC_CREDIT_CONFIG,
+  getUserLoyaltyTier,
+  getUserSubscriptionMultiplier,
+  calculateDynamicPricing,
+  getTotalDynamicCredits,
+  applyDynamicCredits
+} = require('../config/dynamic-credits');
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Credit pack configurations
-const CREDIT_PACKS = {
+// Base credit pack configurations (before dynamic pricing)
+const BASE_CREDIT_PACKS = {
   'pack_10': {
     credits: 10,
-    price: 999, // $9.99 in cents
+    basePrice: 999, // $9.99 in cents
     name: 'Starter Pack',
     description: '10 credits for dream interpretations'
   },
   'pack_25': {
     credits: 25,
-    price: 1999, // $19.99 in cents
+    basePrice: 1999, // $19.99 in cents
     name: 'Value Pack',
     description: '25 credits for dream interpretations'
   },
   'pack_60': {
     credits: 60,
-    price: 3999, // $39.99 in cents
+    basePrice: 3999, // $39.99 in cents
     name: 'Premium Pack',
     description: '60 credits for dream interpretations'
   }
+};
+
+// Get dynamic credit packs for user
+const getDynamicCreditPacks = async (userId) => {
+  const packs = {};
+
+  for (const [packId, pack] of Object.entries(BASE_CREDIT_PACKS)) {
+    const dynamicPrice = await calculateDynamicPricing(userId, pack.basePrice, pack.credits);
+    const subscriptionMultiplier = await getUserSubscriptionMultiplier(userId);
+    const loyaltyTier = await getUserLoyaltyTier(userId);
+    const loyaltyMultiplier = DYNAMIC_CREDIT_CONFIG.loyaltyTiers[loyaltyTier].multiplier;
+
+    // Calculate effective credits (including multipliers)
+    const effectiveCredits = Math.round(pack.credits * subscriptionMultiplier * loyaltyMultiplier);
+
+    packs[packId] = {
+      ...pack,
+      price: dynamicPrice,
+      originalPrice: pack.basePrice,
+      effectiveCredits,
+      discount: pack.basePrice > dynamicPrice,
+      discountPercent: pack.basePrice > dynamicPrice
+        ? Math.round(((pack.basePrice - dynamicPrice) / pack.basePrice) * 100)
+        : 0,
+      loyaltyTier,
+      subscriptionMultiplier
+    };
+  }
+
+  return packs;
 };
 
 // Create Stripe customer
@@ -143,7 +181,7 @@ router.post('/create-subscription-checkout',
 // Create checkout session for credit pack
 router.post('/create-credits-checkout',
   authenticate,
-  body('packId').isIn(Object.keys(CREDIT_PACKS)),
+  body('packId').isIn(Object.keys(BASE_CREDIT_PACKS)),
   body('successUrl').isURL(),
   body('cancelUrl').isURL(),
   catchAsync(async (req, res, next) => {
@@ -151,10 +189,13 @@ router.post('/create-credits-checkout',
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    
+
     const userId = req.user.id;
     const { packId, successUrl, cancelUrl } = req.body;
-    const pack = CREDIT_PACKS[packId];
+
+    // Get dynamic credit packs for this user
+    const dynamicPacks = await getDynamicCreditPacks(userId);
+    const pack = dynamicPacks[packId];
     
     try {
       // Get or create Stripe customer
@@ -398,25 +439,57 @@ router.get('/history', authenticate, catchAsync(async (req, res, next) => {
   }
 }));
 
-// Get credit balance
+// Get dynamic credit packs for user
+router.get('/credit-packs', authenticate, catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
+
+  try {
+    const dynamicPacks = await getDynamicCreditPacks(userId);
+    const totalDynamicCredits = await getTotalDynamicCredits(userId);
+
+    res.json({
+      packs: dynamicPacks,
+      userInfo: {
+        loyaltyTier: totalDynamicCredits.loyaltyTier,
+        subscriptionMultiplier: totalDynamicCredits.subscriptionMultiplier,
+        loyaltyMultiplier: totalDynamicCredits.loyaltyMultiplier,
+        totalBonusCredits: totalDynamicCredits.totalBonus
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}));
+
+// Get credit balance with dynamic info
 router.get('/credits', authenticate, catchAsync(async (req, res, next) => {
   const userId = req.user.id;
-  
+
   try {
     const supabase = getSupabase();
-    
+
     const { data: credits, error } = await supabase
       .from('credits')
       .select('balance')
       .eq('user_id', userId)
       .single();
-    
+
     if (error && error.code !== 'PGRST116') throw error;
-    
+
+    // Get dynamic credit information
+    const totalDynamicCredits = await getTotalDynamicCredits(userId);
+
     res.json({
-      balance: credits?.balance || 0
+      balance: credits?.balance || 0,
+      dynamicInfo: {
+        loyaltyTier: totalDynamicCredits.loyaltyTier,
+        subscriptionMultiplier: totalDynamicCredits.subscriptionMultiplier,
+        loyaltyMultiplier: totalDynamicCredits.loyaltyMultiplier,
+        availableBonusCredits: totalDynamicCredits.totalBonus
+      }
     });
-    
+
   } catch (error) {
     next(error);
   }

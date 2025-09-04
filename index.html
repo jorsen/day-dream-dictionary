@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
     <title>Day Dream Dictionary - Welcome</title>
     <style>
         * {
@@ -146,7 +146,7 @@
         
         <div class="buttons">
             <a href="login.html" class="btn btn-primary">Login / Sign Up</a>
-            <a href="dream-interpretation.html" class="btn btn-secondary">Try Demo</a>
+            <a href="login.html" onclick="setTestMode()" class="btn btn-secondary">🚀 Quick Test Login</a>
         </div>
 
         <div class="features">
@@ -195,6 +195,11 @@
                 statusEl.textContent = '❌ Cannot connect to backend API';
                 statusEl.style.display = 'block';
             }
+        }
+
+        // Set test mode flag for quick login
+        function setTestMode() {
+            localStorage.setItem('useTestCredentials', 'true');
         }
 
         // Check backend on load

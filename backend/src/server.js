@@ -5,14 +5,16 @@ const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 // Import middleware
 const { errorHandler } = require('./middleware/errorHandler');
 const { requestLogger } = require('./middleware/logger');
 
 // Import routes
+console.log('Loading auth routes...');
 const authRoutes = require('./routes/auth');
+console.log('Auth routes loaded successfully');
 const dreamRoutes = require('./routes/dreams');
 const paymentRoutes = require('./routes/payments');
 const profileRoutes = require('./routes/profile');
@@ -27,7 +29,7 @@ const { initSupabase } = require('./config/supabase');
 const { i18nMiddleware } = require('./config/i18n');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Initialize databases
 const initializeDatabases = async () => {
@@ -49,7 +51,8 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://day-dream-dictionary-api.onrender.com"],
+      connectSrc: ["'self'", "http://localhost:5000", "https://day-dream-dictionary-api.onrender.com"],
+      scriptSrcAttr: ["'unsafe-inline'"],
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -106,8 +109,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser(process.env.SESSION_SECRET));
 app.use(compression());
 
-// i18n middleware
-app.use(i18nMiddleware);
+// i18n middleware - DISABLED for free mode
+// app.use(i18nMiddleware);
 
 // Request logging
 app.use(requestLogger);
@@ -219,10 +222,11 @@ const server = app.listen(PORT, async () => {
 ║     Port: ${PORT}                                   ║
 ║     Environment: ${process.env.NODE_ENV || 'development'}                       ║
 ║     API Base: http://localhost:${PORT}/api/${process.env.API_VERSION || 'v1'}       ║
+║     JWT_SECRET: ${process.env.JWT_SECRET ? '✅ Loaded' : '❌ Missing'}           ║
 ║                                                      ║
 ╚══════════════════════════════════════════════════════╝
   `);
-  
+
   // Initialize databases
   await initializeDatabases();
 });
