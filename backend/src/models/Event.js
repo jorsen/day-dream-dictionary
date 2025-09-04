@@ -14,6 +14,11 @@ class Event {
   static async trackEvent(userId, type, metadata = {}) {
     try {
       const supabase = getSupabase();
+      if (!supabase) {
+        console.log('Supabase not available, skipping event tracking');
+        return;
+      }
+
       const { error } = await supabase
         .from('events')
         .insert([{

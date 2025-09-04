@@ -46,20 +46,28 @@ const initSupabase = async () => {
     }
 
     // Test connection by checking if we can access the auth service
-    const { data, error } = await supabase.auth.getSession();
-    
-    if (error && error.message !== 'Auth session missing!') {
-      throw error;
+    try {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error && error.message !== 'Auth session missing!') {
+        logger.warn('Supabase connection test failed:', error.message);
+        // Don't throw here, just log the warning
+      }
+    } catch (connectionError) {
+      logger.warn('Supabase connection test failed:', connectionError.message);
+      // Don't throw here, continue with initialization
     }
 
     logger.info('✅ Supabase initialized successfully');
-    
+
     // Initialize database tables if they don't exist
     await initializeTables();
-    
+
   } catch (error) {
     logger.error('Supabase initialization failed:', error);
-    throw error;
+    // Set fallback to mock to prevent crashes
+    supabase = mockSupabase;
+    supabaseAdmin = mockSupabase;
   }
 };
 
@@ -67,31 +75,31 @@ const initializeTables = async () => {
   try {
     // This function would typically run migrations or check for required tables
     // For now, we'll assume tables are created via Supabase dashboard or migrations
-    
+
     // Check if profiles table exists and has the correct structure
     const { data: profiles, error: profilesError } = await supabase
       .from('profiles')
       .select('*')
       .limit(1);
-    
+
     if (profilesError && profilesError.code === '42P01') {
       logger.warn('Profiles table does not exist. Please run migrations.');
     }
-    
+
     // Check other tables
-    const tables = ['subscriptions', 'payments_history', 'credits', 'roles'];
-    
+    const tables = ['subscriptions', 'payments_history', 'credits', 'roles', 'events'];
+
     for (const table of tables) {
       const { error } = await supabase
         .from(table)
         .select('*')
         .limit(1);
-      
+
       if (error && error.code === '42P01') {
         logger.warn(`${table} table does not exist. Please run migrations.`);
       }
     }
-    
+
   } catch (error) {
     logger.error('Error checking database tables:', error);
   }

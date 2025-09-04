@@ -186,7 +186,7 @@ router.post('/login', validateLogin, catchAsync(async (req, res, next) => {
     // Get user role
     const role = await checkUserRole(user.id);
     
-    // Track login event (optional - skip if MongoDB is not available)
+    // Track login event (optional - skip if not available)
     try {
       const Event = require('../models/Event');
       await Event.trackEvent(user.id, 'user_login', {
@@ -195,7 +195,7 @@ router.post('/login', validateLogin, catchAsync(async (req, res, next) => {
         ip: req.ip
       });
     } catch (eventError) {
-      console.log('Event tracking skipped (MongoDB not available)');
+      console.log('Event tracking skipped:', eventError.message);
     }
     
     // Audit log
