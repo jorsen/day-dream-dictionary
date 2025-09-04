@@ -53,25 +53,33 @@ NODE_ENV=production
 PORT=5000
 API_VERSION=v1
 
-# Supabase (Get from your Supabase project settings)
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_KEY=your_supabase_service_key
+# Supabase Configuration
+SUPABASE_URL=https://gwgjckczyscpaozlevpe.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3Z2pja2N6eXNjcGFvemxldnBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MTExNzMsImV4cCI6MjA3MjQ4NzE3M30.gKKl8PoJ7vDt9UWwY9yQv_V3Qr_hA5KsrwjK__XU1Bo
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3Z2pja2N6eXNjcGFvemxldnBlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjkxMTE3MywiZXhwIjoyMDcyNDg3MTczfQ.YW8MY5qNLKMwfeSrIHjIDTN42HgeiQ6YRBZ-McyPXGM
 
-# OpenRouter (Get from OpenRouter dashboard)
-OPENROUTER_API_KEY=your_openrouter_api_key
+# OpenRouter API Configuration
+OPENROUTER_API_KEY=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
 OPENROUTER_MODEL=anthropic/claude-3.5-sonnet:20241022
 OPENROUTER_TEMPERATURE=0.7
 OPENROUTER_MAX_TOKENS=2000
 
-# Security (Render can generate these)
-JWT_SECRET=click_generate_random
-REFRESH_TOKEN_SECRET=click_generate_random
-SESSION_SECRET=click_generate_random
+# JWT Security Keys
+JWT_SECRET=vEgPP8X0829L1LFilcySFPM2Bhc0kDd2Mrd90uhREZyFy5rc+gY8/JFbWtrfadS46JDIGxzhbCuu1F5gaQOMBQ==
+REFRESH_TOKEN_SECRET=452757dc9928f8adc6c6c1b598b544ad
+SESSION_SECRET=f6a39ad7f121015434b6a6256a5712e9
 
-# CORS (Update with your frontend URL)
-CORS_ORIGIN=*
-FRONTEND_URL=https://your-frontend-url.com
+# JWT Expiration Times
+JWT_EXPIRES_IN=7d
+REFRESH_TOKEN_EXPIRES_IN=30d
+
+# CORS Configuration (CRITICAL - Update with your actual frontend URL)
+CORS_ORIGIN=https://day-dream-dictionary.onrender.com,https://daydreamdictionary.com
+FRONTEND_URL=https://day-dream-dictionary.onrender.com
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
 
 # Free Mode Settings
 FREE_DEEP_INTERPRETATIONS_MONTHLY=1000
@@ -80,14 +88,35 @@ FREE_BASIC_INTERPRETATIONS_MONTHLY=1000
 
 #### Optional Variables (for future):
 ```
-# Stripe (when ready for payments)
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
-STRIPE_BASIC_PRICE_ID=price_xxx
-STRIPE_PRO_PRICE_ID=price_xxx
+# Stripe Configuration (when ready for payments)
+STRIPE_PUBLISHABLE_KEY=sb_publishable_IgmN5IMAsp39Hy-yWMokuA_t51PLLNt
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 
-# MongoDB (if using)
-MONGODB_URI=mongodb+srv://...
+# Alternative AI Providers
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-4
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+
+# MongoDB (if using instead of Supabase)
+MONGODB_URI=
+
+# Email Configuration
+EMAIL_FROM=noreply@daydreamdictionary.com
+EMAIL_PROVIDER=sendgrid
+SENDGRID_API_KEY=
+
+# Analytics
+GOOGLE_ANALYTICS_ID=
+MIXPANEL_TOKEN=
+
+# Feature Flags
+ENABLE_PREMIUM_FEATURES=false
+ENABLE_EMAIL_VERIFICATION=false
+ENABLE_RATE_LIMITING=true
+ENABLE_LOGGING=true
+TEST_MODE=false
 ```
 
 ## Step 4: Deploy
