@@ -476,8 +476,9 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script>
-        const API_URL = 'http://localhost:5000/api';
+        const API_URL = API_CONFIG.API_BASE_URL;
         let authMode = 'login';
         let currentUser = null;
         let accessToken = null;

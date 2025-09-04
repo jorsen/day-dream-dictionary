@@ -382,8 +382,9 @@
         <a href="profile-dashboard.html" class="nav-link">← Back to Dashboard</a>
     </div>
 
+    <script src="config.js"></script>
     <script>
-        const API_URL = 'http://localhost:5000/api';
+        const API_URL = API_CONFIG.API_BASE_URL;
         let userCredits = 0;
         let hasSubscription = false;
 
