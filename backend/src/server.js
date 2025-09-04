@@ -69,6 +69,7 @@ const corsOptions = {
       const allowedOrigins = [
         'https://day-dream-dictionary.onrender.com',
         'https://daydreamdictionary.com',
+        'https://day-dream-dictionary-api.onrender.com',
         'http://localhost:3000',
         'http://localhost:5000',
         'http://localhost:5173'
@@ -88,10 +89,11 @@ const corsOptions = {
       }
     }
   },
-  credentials: true,
+  credentials: false, // Set to false for preflight requests
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'X-Source'],
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 app.use(cors(corsOptions));
 
