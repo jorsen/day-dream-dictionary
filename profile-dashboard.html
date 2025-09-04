@@ -424,7 +424,7 @@
                         <span class="info-label">Monthly Limit</span>
                         <span class="info-value" id="monthlyLimit">5 basic / 3 deep</span>
                     </div>
-                    <button class="btn" style="margin-top: 20px;">Upgrade to Pro</button>
+                    <button class="btn" style="margin-top: 20px;" onclick="upgradeToPro()">Upgrade to Pro</button>
                 </div>
 
                 <!-- Dream Statistics Card -->
@@ -661,16 +661,26 @@
             window.location.href = 'dream-interpretation.html';
         }
 
+        // Upgrade to Pro
+        function upgradeToPro() {
+            // For now, show a message that Pro features are coming soon
+            // In a real implementation, this would redirect to a payment page
+            alert('🚀 Pro features coming soon! This will include unlimited interpretations, advanced analytics, and priority support.');
+
+            // You can uncomment and modify this when you have payment integration ready:
+            // window.location.href = 'payment.html?plan=pro';
+        }
+
         // Logout
         function logout() {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('currentUser');
             currentUser = null;
             accessToken = null;
-            
+
             document.getElementById('dashboard').classList.remove('active');
             document.getElementById('authContainer').style.display = 'block';
-            
+
             // Reset form
             document.getElementById('authForm').reset();
             document.getElementById('alertBox').className = 'hidden';

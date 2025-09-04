@@ -12,10 +12,10 @@ const API_CONFIG = (() => {
             API_BASE_URL: 'http://localhost:5000/api/v1'
         };
     } else {
-        // Production - Use the same domain but with /api/v1 path
-        // This assumes your frontend and backend are on the same domain
+        // Production - Backend is on a separate Render service
+        // Update this URL with your actual backend Render URL
         return {
-            API_BASE_URL: `${window.location.protocol}//${window.location.hostname}/api/v1`
+            API_BASE_URL: 'https://day-dream-dictionary-api.onrender.com/api/v1'
         };
     }
 })();
