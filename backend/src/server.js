@@ -124,7 +124,36 @@ app.use(`${apiPrefix}/webhooks`, webhookRoutes);
 // Static files for uploaded content (if needed)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// 404 handler
+// Serve frontend static files (HTML, CSS, JS)
+// This serves all files from the root directory (where index.html is)
+app.use(express.static(path.join(__dirname, '../../')));
+
+// Serve index.html for root route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../index.html'));
+});
+
+// Catch-all route to serve index.html for client-side routing (if needed)
+app.get('*', (req, res, next) => {
+  // Only serve index.html for non-API routes
+  if (!req.path.startsWith('/api')) {
+    const filePath = path.join(__dirname, '../../', req.path);
+    // Check if the requested file exists
+    if (require('fs').existsSync(filePath) && !require('fs').statSync(filePath).isDirectory()) {
+      res.sendFile(filePath);
+    } else if (!req.path.includes('.')) {
+      // If no file extension, might be a route, serve index.html
+      res.sendFile(path.join(__dirname, '../../index.html'));
+    } else {
+      // Let it fall through to 404 handler
+      next();
+    }
+  } else {
+    next();
+  }
+});
+
+// 404 handler for API routes
 app.use((req, res) => {
   res.status(404).json({
     error: 'Not Found',
