@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        .info { background: #d1ecf1; }
+        pre { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>CORS & API Test</h1>
+    
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'https://day-dream-dictionary.onrender.com';
+        const results = document.getElementById('results');
+        
+        function addResult(title, content, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test ${type}`;
+            div.innerHTML = `<h3>${title}</h3><pre>${content}</pre>`;
+            results.appendChild(div);
+        }
+
+        async function runTests() {
+            // Test 1: Health Check
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                addResult('✅ Health Check', JSON.stringify(data, null, 2), 'success');
+            } catch (error) {
+                addResult('❌ Health Check', error.toString(), 'error');
+            }
+
+            // Test 2: OPTIONS request to auth endpoint
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Status': response.status,
+                    'Allow-Origin': response.headers.get('access-control-allow-origin'),
+                    'Allow-Methods': response.headers.get('access-control-allow-methods'),
+                    'Allow-Headers': response.headers.get('access-control-allow-headers'),
+                    'Allow-Credentials': response.headers.get('access-control-allow-credentials')
+                };
+                
+                addResult('CORS Preflight Check', JSON.stringify(corsHeaders, null, 2), 
+                    response.status === 200 || response.status === 204 ? 'success' : 'error');
+            } catch (error) {
+                addResult('❌ CORS Preflight', error.toString(), 'error');
+            }
+
+            // Test 3: Actual POST to login (will fail with wrong credentials, but tests CORS)
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'test@test.com',
+                        password: 'wrongpassword'
+                    })
+                });
+                
+                const data = await response.json();
+                addResult(`Login Endpoint Test (Status: ${response.status})`, 
+                    JSON.stringify(data, null, 2), 
+                    response.status === 401 ? 'success' : 'error');
+                
+                if (response.status === 401) {
+                    addResult('✅ Auth endpoint is working!', 
+                        'The 401 error is expected for wrong credentials.\nThis means the endpoint is reachable and processing requests.', 
+                        'success');
+                }
+            } catch (error) {
+                addResult('❌ Login Endpoint Error', 
+                    `${error.toString()}\n\nThis usually means:\n1. CORS is blocking the request\n2. Network error\n3. Backend is down`, 
+                    'error');
+            }
+
+            // Test 4: Check if frontend files are being served
+            try {
+                const response = await fetch(`${API_BASE}/login.html`, {
+                    method: 'HEAD'
+                });
+                addResult('Frontend Files Check', 
+                    `login.html: ${response.status === 200 ? '✅ Available' : '❌ Not found (Status: ' + response.status + ')'}`,
+                    response.status === 200 ? 'success' : 'error');
+            } catch (error) {
+                addResult('Frontend Files Check', error.toString(), 'error');
+            }
+
+            // Summary
+            addResult('📋 Summary', `
+API Base URL: ${API_BASE}
+Current Origin: ${window.location.origin}
+Browser: ${navigator.userAgent.substring(0, 50)}...
+
+Next Steps:
+1. If CORS errors: Check CORS_ORIGIN env variable on Render
+2. If 404 errors: Check API_VERSION env variable
+3. If network errors: Check if backend is running
+            `, 'info');
+        }
+
+        // Run tests on load
+        runTests();
+    </script>
+</body>
+</html>
