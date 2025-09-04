@@ -249,10 +249,12 @@
             
             try {
                 const endpoint = isSignup ? '/auth/signup' : '/auth/login';
-                const body = isSignup 
+                const body = isSignup
                     ? { email, password, displayName: displayName || email.split('@')[0], locale: 'en' }
                     : { email, password };
-                
+
+                console.log('Making request to:', `${API_URL}${endpoint}`);
+
                 const response = await fetch(`${API_URL}${endpoint}`, {
                     method: 'POST',
                     headers: {
@@ -260,32 +262,56 @@
                     },
                     body: JSON.stringify(body)
                 });
-                
-                const data = await response.json();
-                
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+                let data;
+                try {
+                    data = await response.json();
+                    console.log('Response data:', data);
+                } catch (parseError) {
+                    console.error('Failed to parse response as JSON:', parseError);
+                    data = { message: 'Invalid response from server' };
+                }
+
                 if (response.ok) {
                     // Save to localStorage
                     localStorage.setItem('accessToken', data.accessToken);
                     localStorage.setItem('currentUser', JSON.stringify(data.user));
-                    
+
                     // Show success message
                     showMessage(
                         isSignup ? '✅ Account created! Redirecting...' : '✅ Login successful! Redirecting...',
                         'success'
                     );
-                    
+
                     // Redirect after 1.5 seconds
                     setTimeout(() => {
                         window.location.href = 'profile-dashboard.html';
                     }, 1500);
                 } else {
                     // Show error message
-                    showMessage(data.message || 'Authentication failed', 'error');
+                    const errorMessage = data.message || `Server error (${response.status}): ${response.statusText}`;
+                    showMessage(errorMessage, 'error');
                     submitBtn.disabled = false;
                     submitBtn.textContent = isSignup ? 'Sign Up' : 'Login';
                 }
             } catch (error) {
-                showMessage('Connection error. Is the server running?', 'error');
+                console.error('Fetch error:', error);
+                let errorMessage = 'Connection error. ';
+
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage += 'Unable to connect to server. Check your internet connection and API URL.';
+                } else if (error.message.includes('CORS')) {
+                    errorMessage += 'CORS error: The server is blocking requests from this domain.';
+                } else if (error.message.includes('NetworkError')) {
+                    errorMessage += 'Network error: Unable to reach the server.';
+                } else {
+                    errorMessage += error.message;
+                }
+
+                showMessage(errorMessage, 'error');
                 submitBtn.disabled = false;
                 submitBtn.textContent = isSignup ? 'Sign Up' : 'Login';
             }

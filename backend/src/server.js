@@ -54,25 +54,34 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-// CORS configuration - Allow all origins in development
+// CORS configuration - Allow all origins in development and production
 const corsOptions = {
   origin: function (origin, callback) {
-    // In development, allow all origins
+    // Allow all origins in development
     if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === undefined) {
       callback(null, true);
     } else {
-      // In production, use the whitelist
-      const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'];
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      // In production, check CORS_ORIGIN setting
+      const corsOrigin = process.env.CORS_ORIGIN || '*';
+
+      // If CORS_ORIGIN is '*' or empty, allow all origins
+      if (corsOrigin === '*' || !corsOrigin) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        // Otherwise, check against whitelist
+        const allowedOrigins = corsOrigin.split(',');
+        if (!origin || allowedOrigins.includes(origin.trim())) {
+          callback(null, true);
+        } else {
+          console.log(`CORS blocked: Origin ${origin} not in allowed list: ${allowedOrigins.join(', ')}`);
+          callback(new Error('Not allowed by CORS'));
+        }
       }
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));

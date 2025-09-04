@@ -33,13 +33,13 @@ services:
       - key: OPENROUTER_MAX_TOKENS
         value: "2000"
       
-      # JWT Secrets
+      # JWT Secrets (Using your production values from render.com)
       - key: JWT_SECRET
-        generateValue: true
+        value: vEgPP8X0829L1LFilcySFPM2Bhc0kDd2Mrd90uhREZyFy5rc+gY8/JFbWtrfadS46JDIGxzhbCuu1F5gaQOMBQ==
       - key: REFRESH_TOKEN_SECRET
-        generateValue: true
+        value: 452757dc9928f8adc6c6c1b598b544ad
       - key: SESSION_SECRET
-        generateValue: true
+        value: f6a39ad7f121015434b6a6256a5712e9
       
       # Stripe (Optional for now since we're in free mode)
       - key: STRIPE_SECRET_KEY
@@ -53,9 +53,9 @@ services:
       
       # CORS
       - key: CORS_ORIGIN
-        value: "*" # Update with your frontend URL in production
+        value: https://day-dream-dictionary.onrender.com
       - key: FRONTEND_URL
-        value: https://daydreamdictionary.com # Update with actual domain
+        value: https://day-dream-dictionary.onrender.com
       
       # Rate Limiting
       - key: RATE_LIMIT_WINDOW_MS
