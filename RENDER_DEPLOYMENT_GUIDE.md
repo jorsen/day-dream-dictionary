@@ -141,9 +141,30 @@ Once deployed, test your API:
    https://your-app.onrender.com/health
    ```
 
-2. **Test Endpoints**:
+2. **Test Signup Endpoint**:
+   ```bash
+   curl -X POST https://your-app.onrender.com/api/v1/auth/signup \
+     -H "Content-Type: application/json" \
+     -d '{
+       "email": "sample1@gmail.com",
+       "password": "sample",
+       "displayName": "Sample User",
+       "locale": "en"
+     }'
    ```
-   https://your-app.onrender.com/api/v1/test
+
+3. **Test Dream Interpretation**:
+   ```bash
+   curl -X POST https://your-app.onrender.com/api/v1/dreams/interpret \
+     -H "Content-Type: application/json" \
+     -d '{
+       "dreamText": "I dreamed I was flying high in the sky",
+       "interpretationType": "basic",
+       "userContext": {},
+       "locale": "en",
+       "tags": [],
+       "isRecurring": false
+     }'
    ```
 
 ## Step 6: Set Up Supabase Tables
