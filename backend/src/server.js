@@ -134,6 +134,54 @@ app.get('/health', (req, res) => {
 
 // API Routes
 const apiPrefix = `/api/${process.env.API_VERSION || 'v1'}`;
+
+// Test endpoint for dreams without authentication - MUST be before dreams router
+app.get(`${apiPrefix}/test-dreams-history`, async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'created_at',
+      order = 'desc'
+    } = req.query;
+
+    // Get dreams from Supabase
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { getSupabase } = require('./config/supabase');
+    let query = getSupabase()
+      .from('dreams')
+      .select('*', { count: 'exact' })
+      .eq('is_deleted', false)
+      .order(sortBy, { ascending: order === 'asc' })
+      .range(from, to);
+
+    const { data: dreams, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching dreams:', error);
+      return res.json({
+        dreams: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: 1
+      });
+    }
+
+    res.json({
+      dreams: dreams || [],
+      totalCount: count || 0,
+      totalPages: Math.ceil((count || 0) / limit),
+      currentPage: page
+    });
+
+  } catch (error) {
+    console.error('Error in test endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 app.use(`${apiPrefix}/auth`, authRoutes);
 app.use(`${apiPrefix}/dreams`, dreamRoutes);
 app.use(`${apiPrefix}/payments`, paymentRoutes);

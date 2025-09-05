@@ -489,10 +489,12 @@
 
             // TEMPORARY: Skip authentication for free mode
             try {
+                const token = localStorage.getItem('accessToken');
                 const response = await fetch(`${API_URL}/dreams/interpret`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
                         dreamText,

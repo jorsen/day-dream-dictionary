@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dream Statistics</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Dream Statistics</h1>
+
+    <div class="test-section">
+        <h2>1. Login Test</h2>
+        <input type="email" id="email" placeholder="Email" value="test@example.com">
+        <input type="password" id="password" placeholder="Password" value="password123">
+        <button onclick="login()">Login</button>
+        <div id="loginResult" class="result">Not logged in</div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Submit Dream</h2>
+        <textarea id="dreamText" rows="4" placeholder="Describe your dream...">I dreamed I was flying over a beautiful ocean with dolphins jumping around me.</textarea>
+        <button onclick="submitDream()">Submit Dream</button>
+        <div id="dreamResult" class="result">No dream submitted yet</div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Get Statistics</h2>
+        <button onclick="getStats()">Get Dream Statistics</button>
+        <div id="statsResult" class="result">No stats loaded yet</div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Get Dream History</h2>
+        <button onclick="getHistory()">Get Dream History</button>
+        <div id="historyResult" class="result">No history loaded yet</div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const API_URL = API_CONFIG.API_BASE_URL;
+        let accessToken = null;
+        let currentUser = null;
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    accessToken = data.accessToken;
+                    currentUser = data.user;
+                    document.getElementById('loginResult').textContent =
+                        `✅ Logged in as: ${currentUser.email}\nToken: ${accessToken.substring(0, 50)}...`;
+                } else {
+                    document.getElementById('loginResult').textContent =
+                        `❌ Login failed: ${data.message}`;
+                }
+            } catch (error) {
+                document.getElementById('loginResult').textContent =
+                    `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function submitDream() {
+            if (!accessToken) {
+                document.getElementById('dreamResult').textContent = '❌ Please login first';
+                return;
+            }
+
+            const dreamText = document.getElementById('dreamText').value;
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/dreams/interpret`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dreamText,
+                        interpretationType: 'basic',
+                        locale: 'en'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('dreamResult').textContent =
+                        `✅ Dream submitted successfully!\nID: ${data.dream.id}\nCredits remaining: ${data.creditsRemaining}`;
+                } else {
+                    document.getElementById('dreamResult').textContent =
+                        `❌ Dream submission failed: ${data.message}`;
+                }
+            } catch (error) {
+                document.getElementById('dreamResult').textContent =
+                    `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function getStats() {
+            if (!accessToken) {
+                document.getElementById('statsResult').textContent = '❌ Please login first';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/dreams/stats/summary`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('statsResult').textContent =
+                        `✅ Statistics loaded:\n${JSON.stringify(data.stats, null, 2)}`;
+                } else {
+                    document.getElementById('statsResult').textContent =
+                        `❌ Stats failed (${response.status}): ${data.message}`;
+                }
+            } catch (error) {
+                document.getElementById('statsResult').textContent =
+                    `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function getHistory() {
+            if (!accessToken) {
+                document.getElementById('historyResult').textContent = '❌ Please login first';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/dreams/history`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('historyResult').textContent =
+                        `✅ History loaded (${data.totalCount} dreams):\n${JSON.stringify(data.dreams.slice(0, 2), null, 2)}`;
+                } else {
+                    document.getElementById('historyResult').textContent =
+                        `❌ History failed (${response.status}): ${data.message}`;
+                }
+            } catch (error) {
+                document.getElementById('historyResult').textContent =
+                    `❌ Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

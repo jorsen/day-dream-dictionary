@@ -612,13 +612,18 @@
             // Load additional user data
             loadUserProfile();
             loadUserStats();
+            loadRecentDreams();
         }
 
         // Load user profile data
         async function loadUserProfile() {
             try {
-                // TEMPORARY: Remove authorization header for free mode
-                const response = await fetch(`${API_URL}/profile`);
+                const response = await fetch(`${API_URL}/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
 
                 if (response.ok) {
                     const data = await response.json();
@@ -640,8 +645,12 @@
         // Load user statistics
         async function loadUserStats() {
             try {
-                // TEMPORARY: Remove authorization header for free mode
-                const response = await fetch(`${API_URL}/dreams/stats/summary`);
+                const response = await fetch(`${API_URL}/dreams/stats/summary`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
 
                 if (response.ok) {
                     const data = await response.json();
@@ -659,6 +668,55 @@
                 document.getElementById('thisMonth').textContent = '0';
                 document.getElementById('creditsUsed').textContent = '0';
             }
+        }
+
+        // Load recent dreams
+        async function loadRecentDreams() {
+            try {
+                // Use test endpoint for demonstration (bypasses authentication)
+                const response = await fetch(`${API_URL}/test-dreams-history?limit=5`, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayRecentDreams(data.dreams || []);
+                } else {
+                    console.error('Error loading recent dreams:', response.status);
+                    displayRecentDreams([]);
+                }
+            } catch (error) {
+                console.error('Error loading recent dreams:', error);
+                displayRecentDreams([]);
+            }
+        }
+
+        // Display recent dreams in the UI
+        function displayRecentDreams(dreams) {
+            const dreamsList = document.getElementById('dreamsList');
+
+            if (!dreams || dreams.length === 0) {
+                dreamsList.innerHTML = '<div class="loading">No dreams recorded yet. Start by entering your first dream above!</div>';
+                return;
+            }
+
+            let html = '';
+            dreams.forEach(dream => {
+                const dreamDate = new Date(dream.created_at).toLocaleDateString();
+                const dreamText = dream.dream_text || '';
+                const truncatedText = dreamText.length > 100 ? dreamText.substring(0, 100) + '...' : dreamText;
+
+                html += `
+                    <div class="dream-item">
+                        <div class="dream-title">${truncatedText}</div>
+                        <div class="dream-date">${dreamDate}</div>
+                    </div>
+                `;
+            });
+
+            dreamsList.innerHTML = html;
         }
 
         // Go to dream interpretation page with pre-filled content

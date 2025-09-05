@@ -21,17 +21,17 @@ const authenticate = catchAsync(async (req, res, next) => {
       throw new AppError('Invalid token type', 401);
     }
 
-    // For test mode, create mock user data
-    const { testMode } = require('../config/test-mode');
-    if (testMode && decoded.userId === 'test-user-id') {
-      req.user = {
-        id: 'test-user-id',
-        email: 'test@example.com',
-        emailVerified: true,
-        role: 'user'
-      };
-      return next();
-    }
+    // Skip test mode logic for real authentication
+    // const { testMode } = require('../config/test-mode');
+    // if (testMode && decoded.userId === 'test-user-id') {
+    //   req.user = {
+    //     id: 'test-user-id',
+    //     email: 'test@example.com',
+    //     emailVerified: true,
+    //     role: 'user'
+    //   };
+    //   return next();
+    // }
 
     // Get user from Supabase
     const user = await getUserById(decoded.userId);

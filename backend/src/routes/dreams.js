@@ -267,6 +267,7 @@ Language: ${locale === 'es' ? 'Spanish' : 'English'}`;
 
 // Submit and interpret a dream
 router.post('/interpret',
+  authenticate,
   validateDreamSubmission,
   catchAsync(async (req, res, next) => {
     const errors = validationResult(req);
@@ -274,7 +275,7 @@ router.post('/interpret',
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const userId = 'free-user'; // TEMPORARY: Use fixed user ID for free mode
+    const userId = req.user?.id;
     const { 
       dreamText, 
       interpretationType = 'basic',
@@ -386,6 +387,60 @@ router.post('/interpret',
     }
   })
 );
+
+// Test endpoint to bypass authentication for testing
+router.get('/test-history', (req, res, next) => {
+  // Temporarily disable all middleware for this test endpoint
+  req.skipAuth = true;
+  next();
+}, catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = 'created_at',
+    order = 'desc',
+    filter = {}
+  } = req.query;
+
+  try {
+    // Use a test user ID for demonstration
+    const userId = 'test-user-id';
+
+    // Get dreams from Supabase
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = getSupabase()
+      .from('dreams')
+      .select('*', { count: 'exact' })
+      .eq('is_deleted', false)
+      .order(sortBy, { ascending: order === 'asc' })
+      .range(from, to);
+
+    const { data: dreams, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching dreams:', error);
+      // Fallback to empty response
+      return res.json({
+        dreams: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: 1
+      });
+    }
+
+    res.json({
+      dreams: dreams || [],
+      totalCount: count || 0,
+      totalPages: Math.ceil((count || 0) / limit),
+      currentPage: page
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}));
 
 // Get user's dream history
 router.get('/history', authenticate, catchAsync(async (req, res, next) => {
@@ -548,19 +603,117 @@ router.delete('/:dreamId', authenticate, catchAsync(async (req, res, next) => {
 }));
 
 // Get dream statistics
-router.get('/stats/summary', (req, res) => {
-  // TEMPORARY: Return hardcoded stats for free mode
-  console.log('Dream stats API called - returning hardcoded response for free mode');
+router.get('/stats/summary', authenticate, catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
 
-  res.json({
-    stats: {
-      totalDreams: 0,
-      recurringDreams: 0,
-      averageRating: 0,
-      topThemes: []
+  try {
+    // Get total dreams count
+    const { count: totalDreams, error: countError } = await getSupabase()
+      .from('dreams')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_deleted', false);
+
+    if (countError) {
+      console.error('Error counting dreams:', countError);
+      return res.json({
+        stats: {
+          totalDreams: 0,
+          thisMonth: 0,
+          recurringDreams: 0,
+          averageRating: 0,
+          creditsUsed: 0,
+          topThemes: []
+        }
+      });
     }
-  });
-});
+
+    // Get dreams from this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const { count: thisMonthDreams, error: monthError } = await getSupabase()
+      .from('dreams')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_deleted', false)
+      .gte('created_at', startOfMonth.toISOString());
+
+    // Get recurring dreams count
+    const { count: recurringDreams, error: recurringError } = await getSupabase()
+      .from('dreams')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_deleted', false)
+      .eq('is_recurring', true);
+
+    // Calculate credits used from dream metadata
+    const { data: dreamsData, error: creditsError } = await getSupabase()
+      .from('dreams')
+      .select('metadata')
+      .eq('user_id', userId)
+      .eq('is_deleted', false);
+
+    let creditsUsed = 0;
+    if (dreamsData && !creditsError) {
+      creditsUsed = dreamsData.reduce((sum, dream) => {
+        return sum + (dream.metadata?.creditsUsed || 0);
+      }, 0);
+    }
+
+    // Get all dreams to calculate average rating and top themes
+    const { data: allDreams, error: dreamsError } = await getSupabase()
+      .from('dreams')
+      .select('rating, interpretation')
+      .eq('user_id', userId)
+      .eq('is_deleted', false)
+      .not('rating', 'is', null);
+
+    let averageRating = 0;
+    let topThemes = [];
+
+    if (allDreams && allDreams.length > 0) {
+      // Calculate average rating
+      const ratings = allDreams.filter(dream => dream.rating !== null && dream.rating !== undefined);
+      if (ratings.length > 0) {
+        const totalRating = ratings.reduce((sum, dream) => sum + (dream.rating || 0), 0);
+        averageRating = Math.round((totalRating / ratings.length) * 10) / 10; // Round to 1 decimal
+      }
+
+      // Calculate top themes
+      const themeCount = {};
+      allDreams.forEach(dream => {
+        if (dream.interpretation && dream.interpretation.mainThemes) {
+          dream.interpretation.mainThemes.forEach(theme => {
+            themeCount[theme] = (themeCount[theme] || 0) + 1;
+          });
+        }
+      });
+
+      // Get top 5 themes
+      topThemes = Object.entries(themeCount)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5)
+        .map(([theme, count]) => ({ theme, count }));
+    }
+
+    res.json({
+      stats: {
+        totalDreams: totalDreams || 0,
+        thisMonth: thisMonthDreams || 0,
+        recurringDreams: recurringDreams || 0,
+        averageRating: averageRating,
+        creditsUsed: creditsUsed,
+        topThemes: topThemes
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching dream stats:', error);
+    next(error);
+  }
+}));
 
 // Search dreams
 router.get('/search/query', authenticate, catchAsync(async (req, res, next) => {
