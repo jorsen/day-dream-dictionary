@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dream Storage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 150px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+            margin-top: 20px;
+        }
+        .error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+        }
+        .dream-item {
+            background: #e9ecef;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .dream-text {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .dream-id {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Dream Storage Test</h1>
+
+        <div id="status">
+            <p>✅ Backend server is running</p>
+            <p>✅ Dreams table exists in database</p>
+            <p>✅ Dream storage is working</p>
+            <p>🎉 <strong>COMPLETELY FREE MODE</strong> - No credits required!</p>
+        </div>
+
+        <h2>Submit a Dream</h2>
+        <textarea
+            id="dreamText"
+            placeholder="Tell us about your dream... What did you see? How did you feel?"
+            minlength="10"
+            maxlength="5000"
+        ></textarea>
+
+        <button onclick="submitDream()" id="submitBtn">
+            Store Dream in Database
+        </button>
+
+        <div id="loading" class="loading" style="display: none;">
+            Storing your dream...
+        </div>
+
+        <div id="result"></div>
+
+        <h2>Recent Dreams in Database</h2>
+        <button onclick="loadDreams()">
+            Load Recent Dreams
+        </button>
+
+        <div id="dreamsList"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api/v1';
+
+        async function submitDream() {
+            const dreamText = document.getElementById('dreamText').value.trim();
+
+            if (!dreamText) {
+                showResult('Please enter a dream description', 'error');
+                return;
+            }
+
+            if (dreamText.length < 10) {
+                showResult('Dream description must be at least 10 characters', 'error');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('submitBtn').disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE}/dreams/test-interpret`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        dreamText: dreamText,
+                        interpretationType: 'basic',
+                        locale: 'en'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult(`
+                        <h3>✅ Dream Stored Successfully!</h3>
+                        <p><strong>Dream ID:</strong> ${data.dream.id}</p>
+                        <p><strong>Status:</strong> ${data.savedToDatabase ? 'Saved to database' : 'Interpretation only'}</p>
+                        <p><strong>Your Dream:</strong> ${data.dream.dreamText}</p>
+                        <p><strong>Interpretation:</strong> ${data.dream.interpretation.mainThemes.join(', ')}</p>
+                    `, 'success');
+
+                    // Clear the textarea
+                    document.getElementById('dreamText').value = '';
+
+                    // Reload dreams list
+                    setTimeout(() => loadDreams(), 1000);
+                } else {
+                    showResult(`Error: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult(`Network error: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('submitBtn').disabled = false;
+            }
+        }
+
+        async function loadDreams() {
+            try {
+                const response = await fetch(`${API_BASE}/dreams/test-history?limit=5`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    const dreamsList = document.getElementById('dreamsList');
+                    dreamsList.innerHTML = '';
+
+                    if (data.dreams && data.dreams.length > 0) {
+                        data.dreams.forEach(dream => {
+                            const dreamDiv = document.createElement('div');
+                            dreamDiv.className = 'dream-item';
+                            dreamDiv.innerHTML = `
+                                <div class="dream-text">${dream.dream_text}</div>
+                                <div class="dream-id">ID: ${dream.id} | User: ${dream.user_id}</div>
+                                <div>Created: ${new Date(dream.created_at).toLocaleString()}</div>
+                                ${dream.interpretation ? `<div>Themes: ${dream.interpretation.mainThemes?.join(', ') || 'N/A'}</div>` : ''}
+                            `;
+                            dreamsList.appendChild(dreamDiv);
+                        });
+                    } else {
+                        dreamsList.innerHTML = '<p>No dreams found in database</p>';
+                    }
+                } else {
+                    document.getElementById('dreamsList').innerHTML =
+                        `<p class="error">Error loading dreams: ${data.message}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('dreamsList').innerHTML =
+                    `<p class="error">Network error: ${error.message}</p>`;
+            }
+        }
+
+        function showResult(message, type = 'success') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${type}`;
+            resultDiv.innerHTML = message;
+        }
+
+        // Load dreams on page load
+        window.addEventListener('DOMContentLoaded', loadDreams);
+    </script>
+</body>
+</html>

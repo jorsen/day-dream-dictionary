@@ -286,8 +286,8 @@
         <p class="subtitle">Unlock the hidden meanings in your dreams</p>
 
         <div class="credits-info">
-            <div>Your Credits: <span class="credits-count" id="creditsCount">Loading...</span></div>
-            <small id="subscriptionStatus"></small>
+            <div>🎉 <strong>COMPLETELY FREE</strong> - Unlimited Dream Interpretations!</div>
+            <small>✨ Powered by AI - No credits required</small>
         </div>
 
         <div class="message" id="message"></div>
@@ -308,9 +308,9 @@
             <div class="form-group">
                 <label for="interpretationType">Interpretation Type</label>
                 <select id="interpretationType" name="interpretationType">
-                    <option value="basic">Basic (1 credit)</option>
-                    <option value="deep">Deep Analysis (3 credits)</option>
-                    <option value="premium">Premium Insights (5 credits)</option>
+                    <option value="basic">Basic Analysis</option>
+                    <option value="deep">Deep Analysis</option>
+                    <option value="premium">Premium Insights</option>
                 </select>
             </div>
 
@@ -389,13 +389,10 @@
         let userCredits = 0;
         let hasSubscription = false;
 
-        // TEMPORARY: Skip authentication for free mode
+        // FREE MODE: No authentication required
         window.addEventListener('DOMContentLoaded', async () => {
-            // Set unlimited credits for free mode
-            userCredits = 'unlimited';
-            hasSubscription = true;
-            document.getElementById('creditsCount').textContent = 'Unlimited';
-            document.getElementById('subscriptionStatus').textContent = '✨ Free Mode';
+            // Load user credits and data (FREE MODE)
+            await loadUserCredits();
 
             // Check if there's a pending dream from the dashboard
             const pendingDream = localStorage.getItem('pendingDream');
@@ -405,66 +402,11 @@
             }
         });
 
-        // Load user credits and subscription status
+        // FREE MODE: No credit loading needed
         async function loadUserCredits() {
-            const token = localStorage.getItem('accessToken');
-            const savedUser = localStorage.getItem('currentUser');
-
-            // First, try to get credits from saved user data
-            if (savedUser) {
-                try {
-                    const userData = JSON.parse(savedUser);
-                    userCredits = userData.credits || 0;
-                    document.getElementById('creditsCount').textContent = userCredits;
-                    document.getElementById('subscriptionStatus').textContent =
-                        userCredits === 0 ? '⚠️ No credits remaining' : '';
-                } catch (error) {
-                    console.error('Error parsing saved user data:', error);
-                }
-            }
-
-            try {
-                // Get user profile to check subscription and update credits
-                const profileResponse = await fetch(`${API_URL}/profile`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (profileResponse.ok) {
-                    const profileData = await profileResponse.json();
-                    userCredits = profileData.credits || userCredits; // Use profile credits if available
-                    hasSubscription = profileData.subscription?.status === 'active';
-
-                    document.getElementById('creditsCount').textContent =
-                        hasSubscription ? 'Unlimited' : userCredits;
-
-                    if (hasSubscription) {
-                        document.getElementById('subscriptionStatus').textContent =
-                            '✨ Premium Subscriber';
-                    } else {
-                        document.getElementById('subscriptionStatus').textContent =
-                            userCredits === 0 ? '⚠️ No credits remaining' : '';
-                    }
-
-                    // Update localStorage with latest credits
-                    if (savedUser) {
-                        try {
-                            const userData = JSON.parse(savedUser);
-                            userData.credits = userCredits;
-                            localStorage.setItem('currentUser', JSON.stringify(userData));
-                        } catch (error) {
-                            console.error('Error updating localStorage:', error);
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading profile:', error);
-                // Keep the credits from localStorage if profile fails
-                if (userCredits === undefined) {
-                    document.getElementById('creditsCount').textContent = 'Error';
-                }
-            }
+            // Just set unlimited status
+            hasSubscription = true; // FREE MODE
+            userCredits = 'unlimited';
         }
 
         // Handle form submission
@@ -479,22 +421,19 @@
                 .filter(tag => tag);
             const isRecurring = document.getElementById('isRecurring').checked;
 
-            // TEMPORARY: Skip credits check for free mode
-            const creditsNeeded = 0; // No credits needed in free mode
+            // FREE MODE: No credit checks needed
 
             // Show loading
             document.getElementById('loading').style.display = 'block';
             document.getElementById('submitBtn').disabled = true;
             hideMessage();
 
-            // TEMPORARY: Skip authentication for free mode
             try {
-                const token = localStorage.getItem('accessToken');
-                const response = await fetch(`${API_URL}/dreams/interpret`, {
+                // FREE MODE: Use test endpoint (no authentication required)
+                const response = await fetch(`${API_URL}/dreams/test-interpret`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
                         dreamText,
@@ -508,11 +447,8 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    showMessage('success', 'Dream interpreted successfully!');
+                    showMessage('success', 'Dream interpreted and saved successfully!');
                     displayInterpretation(data.dream);
-
-                    // TEMPORARY: Skip credits update for free mode
-                    // Credits remain unlimited
                 } else {
                     showMessage('error', data.message || 'Failed to interpret dream');
                 }

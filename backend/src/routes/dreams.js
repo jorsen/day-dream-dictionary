@@ -286,9 +286,7 @@ router.post('/interpret',
     } = req.body;
 
     try {
-      // TEMPORARY: Skip credits check - make interpretations free
-      const hasActiveSubscription = true; // Pretend user has subscription
-      const creditsNeeded = 0; // No credits needed
+      // FREE MODE: No credits or subscription checks needed
 
       // Start interpretation timer
       const startTime = Date.now();
@@ -306,7 +304,7 @@ router.post('/interpret',
         interpretation,
         metadata: {
           interpretationType,
-          creditsUsed: creditsNeeded,
+          creditsUsed: 0, // FREE MODE
           processingTime,
           modelUsed: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet:20241022',
           temperature: parseFloat(process.env.OPENROUTER_TEMPERATURE) || 0.7,
@@ -331,45 +329,36 @@ router.post('/interpret',
         // Continue without saving - interpretation still works
       }
       
-      // TEMPORARY: Skip credits deduction - interpretations are free
-      let creditsRemaining = 'unlimited';
-      
+      // FREE MODE: No credit deductions or tracking needed
+
       // Track events (optional - skip if MongoDB not available)
       try {
         const Event = require('../models/Event');
         await Event.trackEvent(userId, 'dream_submitted', {
           dreamId: dream?.id || 'temp-id',
           interpretationType,
-          creditsUsed: creditsNeeded,
+          creditsUsed: 0, // FREE MODE
           processingTime
         });
-        
+
         await Event.trackEvent(userId, 'dream_interpreted', {
           dreamId: dream?.id || 'temp-id',
           interpretationType,
-          hasSubscription: hasActiveSubscription
+          hasSubscription: true // FREE MODE
         });
-        
-        if (!hasActiveSubscription) {
-          await Event.trackEvent(userId, 'credits_used', {
-            amount: creditsNeeded,
-            purpose: 'dream_interpretation',
-            dreamId: dream?.id || 'temp-id'
-          });
-        }
       } catch (eventError) {
         console.log('Event tracking skipped (MongoDB not available)');
       }
-      
+
       // Log dream interpretation
       dreamLog(userId, dream?.id || 'temp-id', {
         interpretationType,
-        creditsUsed: creditsNeeded,
+        creditsUsed: 0, // FREE MODE
         processingTime
       });
-      
+
       res.status(201).json({
-        message: 'Dream interpreted successfully',
+        message: 'Dream interpreted successfully (FREE MODE)',
         dream: {
           id: dream?.id || Date.now().toString(),
           dreamText: dreamText,
@@ -379,7 +368,7 @@ router.post('/interpret',
           isRecurring: isRecurring,
           createdAt: dream?.created_at || new Date().toISOString()
         },
-        creditsRemaining: hasActiveSubscription ? 'unlimited' : creditsRemaining
+        creditsRemaining: 'unlimited' // FREE MODE
       });
       
     } catch (error) {
@@ -435,6 +424,88 @@ router.get('/test-history', (req, res, next) => {
       totalCount: count || 0,
       totalPages: Math.ceil((count || 0) / limit),
       currentPage: page
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}));
+
+// Test endpoint for dream interpretation (bypasses authentication)
+router.post('/test-interpret', (req, res, next) => {
+  // Temporarily disable all middleware for this test endpoint
+  req.skipAuth = true;
+  next();
+}, validateDreamSubmission, catchAsync(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const userId = 'test-user-id'; // Use test user ID
+  const {
+    dreamText,
+    interpretationType = 'basic',
+    userContext = {},
+    locale = 'en',
+    tags = [],
+    isRecurring = false
+  } = req.body;
+
+  try {
+    // Start interpretation timer
+    const startTime = Date.now();
+
+    // Call AI interpretation function
+    const interpretation = await interpretDream(dreamText, locale, interpretationType);
+
+    // Calculate processing time
+    const processingTime = Date.now() - startTime;
+
+    // Save dream to Supabase
+    const dreamData = {
+      user_id: userId,
+      dream_text: dreamText,
+      interpretation,
+      metadata: {
+        interpretationType,
+        creditsUsed: 0, // No credits for test
+        processingTime,
+        modelUsed: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet:20241022',
+        temperature: parseFloat(process.env.OPENROUTER_TEMPERATURE) || 0.7,
+        maxTokens: parseInt(process.env.OPENROUTER_MAX_TOKENS) || 2000
+      },
+      user_context: userContext,
+      tags,
+      is_recurring: isRecurring,
+      locale,
+      source: req.headers['x-source'] || 'test'
+    };
+
+    // Try to save to Supabase dreams table
+    const { data: dream, error: dreamError } = await getSupabase()
+      .from('dreams')
+      .insert([dreamData])
+      .select()
+      .single();
+
+    if (dreamError) {
+      console.warn('Could not save dream to database:', dreamError);
+      // Continue without saving - interpretation still works
+    }
+
+    res.status(201).json({
+      message: 'Dream interpreted and stored successfully (test mode)',
+      dream: {
+        id: dream?.id || Date.now().toString(),
+        dreamText: dreamText,
+        interpretation: interpretation,
+        metadata: dreamData.metadata,
+        tags: tags,
+        isRecurring: isRecurring,
+        createdAt: dream?.created_at || new Date().toISOString()
+      },
+      savedToDatabase: !dreamError
     });
 
   } catch (error) {
