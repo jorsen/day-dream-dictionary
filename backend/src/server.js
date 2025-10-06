@@ -145,11 +145,13 @@ app.get(`${apiPrefix}/test-dreams-history`, async (req, res) => {
       order = 'desc'
     } = req.query;
 
+    // Get dreams from real Supabase database
+    const { getSupabase } = require('./config/supabase');
+
     // Get dreams from Supabase
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { getSupabase } = require('./config/supabase');
     let query = getSupabase()
       .from('dreams')
       .select('*', { count: 'exact' })
@@ -168,6 +170,8 @@ app.get(`${apiPrefix}/test-dreams-history`, async (req, res) => {
         currentPage: 1
       });
     }
+
+    console.log('Found dreams in Supabase:', dreams?.length || 0);
 
     res.json({
       dreams: dreams || [],

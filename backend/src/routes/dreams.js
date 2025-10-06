@@ -12,7 +12,8 @@ const {
 const { AppError, catchAsync } = require('../middleware/errorHandler');
 const { dreamLog } = require('../middleware/logger');
 const { authenticate } = require('../middleware/auth');
-// const { checkQuota } = require('../middleware/quota'); // disabled for free mode
+// Enable quota system for freemium model
+const { checkQuota } = require('../middleware/quota');
 
 // Import AI provider system (not used in this file)
 
@@ -268,6 +269,7 @@ Language: ${locale === 'es' ? 'Spanish' : 'English'}`;
 // Submit and interpret a dream
 router.post('/interpret',
   authenticate,
+  checkQuota,
   validateDreamSubmission,
   catchAsync(async (req, res, next) => {
     const errors = validationResult(req);
@@ -286,25 +288,32 @@ router.post('/interpret',
     } = req.body;
 
     try {
-      // FREE MODE: No credits or subscription checks needed
-
       // Start interpretation timer
       const startTime = Date.now();
 
       // Call AI interpretation function
       const interpretation = await interpretDream(dreamText, locale, interpretationType);
-      
+
       // Calculate processing time
       const processingTime = Date.now() - startTime;
-      
-      // Save dream to Supabase instead of MongoDB
+
+      // Calculate credits needed based on interpretation type
+      let creditsNeeded = 1;
+      if (interpretationType === 'deep') creditsNeeded = 3;
+      if (interpretationType === 'premium') creditsNeeded = 5;
+
+      // Check if user has subscription (quota middleware already checked this)
+      const subscription = await getUserSubscription(userId);
+      const hasActiveSubscription = subscription && subscription.status === 'active';
+
+      // Save dream to Supabase
       const dreamData = {
         user_id: userId,
         dream_text: dreamText,
         interpretation,
         metadata: {
           interpretationType,
-          creditsUsed: 0, // FREE MODE
+          creditsUsed: hasActiveSubscription ? 0 : creditsNeeded,
           processingTime,
           modelUsed: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet:20241022',
           temperature: parseFloat(process.env.OPENROUTER_TEMPERATURE) || 0.7,
@@ -316,35 +325,54 @@ router.post('/interpret',
         locale,
         source: req.headers['x-source'] || 'web'
       };
-      
-      // Try to save to Supabase dreams table (create table if it doesn't exist)
+
+      // Try to save to Supabase dreams table
       const { data: dream, error: dreamError } = await getSupabase()
         .from('dreams')
         .insert([dreamData])
         .select()
         .single();
-      
+
       if (dreamError) {
         console.warn('Could not save dream to database:', dreamError);
         // Continue without saving - interpretation still works
       }
-      
-      // FREE MODE: No credit deductions or tracking needed
 
-      // Track events (optional - skip if MongoDB not available)
+      // Deduct credits if not on subscription
+      if (!hasActiveSubscription && creditsNeeded > 0) {
+        try {
+          await updateUserCredits(userId, -creditsNeeded);
+        } catch (creditError) {
+          console.error('Error deducting credits:', creditError);
+          // Continue - credits will be deducted later or handled by quota system
+        }
+      }
+
+      // Get remaining credits for response
+      let creditsRemaining = 'unlimited';
+      if (!hasActiveSubscription) {
+        try {
+          const currentCredits = await getUserCredits(userId);
+          creditsRemaining = Math.max(0, currentCredits);
+        } catch (error) {
+          creditsRemaining = 'unknown';
+        }
+      }
+
+      // Track events
       try {
         const Event = require('../models/Event');
         await Event.trackEvent(userId, 'dream_submitted', {
           dreamId: dream?.id || 'temp-id',
           interpretationType,
-          creditsUsed: 0, // FREE MODE
-          processingTime
+          creditsUsed: hasActiveSubscription ? 0 : creditsNeeded,
+          processingTime,
         });
 
         await Event.trackEvent(userId, 'dream_interpreted', {
           dreamId: dream?.id || 'temp-id',
           interpretationType,
-          hasSubscription: true // FREE MODE
+          hasSubscription: hasActiveSubscription
         });
       } catch (eventError) {
         console.log('Event tracking skipped (MongoDB not available)');
@@ -353,12 +381,12 @@ router.post('/interpret',
       // Log dream interpretation
       dreamLog(userId, dream?.id || 'temp-id', {
         interpretationType,
-        creditsUsed: 0, // FREE MODE
-        processingTime
+        creditsUsed: hasActiveSubscription ? 0 : creditsNeeded,
+        processingTime,
       });
 
       res.status(201).json({
-        message: 'Dream interpreted successfully (FREE MODE)',
+        message: `Dream interpreted successfully${hasActiveSubscription ? ' (Subscription)' : ` (${creditsNeeded} credits used)`}`,
         dream: {
           id: dream?.id || Date.now().toString(),
           dreamText: dreamText,
@@ -368,7 +396,12 @@ router.post('/interpret',
           isRecurring: isRecurring,
           createdAt: dream?.created_at || new Date().toISOString()
         },
-        creditsRemaining: 'unlimited' // FREE MODE
+        quota: {
+          hasSubscription: hasActiveSubscription,
+          creditsUsed: hasActiveSubscription ? 0 : creditsNeeded,
+          creditsRemaining: creditsRemaining,
+          subscriptionTier: subscription?.plan_type || null
+        }
       });
       
     } catch (error) {
@@ -431,6 +464,57 @@ router.get('/test-history', (req, res, next) => {
   }
 }));
 
+// Get all dreams from database (admin endpoint)
+router.get('/all-dreams', (req, res, next) => {
+  // Skip authentication for this admin endpoint
+  req.skipAuth = true;
+  next();
+}, catchAsync(async (req, res, next) => {
+  const {
+    page = 1,
+    limit = 50,
+    sortBy = 'created_at',
+    order = 'desc'
+  } = req.query;
+
+  try {
+    // Get all dreams from Supabase (no user filter)
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = getSupabase()
+      .from('dreams')
+      .select('*', { count: 'exact' })
+      .eq('is_deleted', false)
+      .order(sortBy, { ascending: order === 'asc' })
+      .range(from, to);
+
+    const { data: dreams, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching all dreams:', error);
+      return res.json({
+        dreams: [],
+        totalCount: 0,
+        totalPages: 0,
+        currentPage: page,
+        error: error.message
+      });
+    }
+
+    res.json({
+      dreams: dreams || [],
+      totalCount: count || 0,
+      totalPages: Math.ceil((count || 0) / limit),
+      currentPage: page,
+      message: `Retrieved ${dreams?.length || 0} dreams from database`
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}));
+
 // Test endpoint for dream interpretation (bypasses authentication)
 router.post('/test-interpret', (req, res, next) => {
   // Temporarily disable all middleware for this test endpoint
@@ -462,7 +546,7 @@ router.post('/test-interpret', (req, res, next) => {
     // Calculate processing time
     const processingTime = Date.now() - startTime;
 
-    // Save dream to Supabase
+    // Save dream to real Supabase database
     const dreamData = {
       user_id: userId,
       dream_text: dreamText,

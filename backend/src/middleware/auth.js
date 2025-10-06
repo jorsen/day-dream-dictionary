@@ -4,6 +4,11 @@ const { AppError, catchAsync } = require('./errorHandler');
 
 // Authenticate user middleware
 const authenticate = catchAsync(async (req, res, next) => {
+  // Skip authentication if req.skipAuth is set
+  if (req.skipAuth) {
+    return next();
+  }
+
   // Get token from header
   const authHeader = req.headers.authorization;
 
