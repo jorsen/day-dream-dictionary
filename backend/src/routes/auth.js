@@ -189,33 +189,44 @@ router.post('/login', validateLogin, catchAsync(async (req, res, next) => {
     const { testMode } = require('../config/test-mode');
     console.log('Login attempt - Test mode:', testMode, 'Email:', email);
 
-    if (testMode && email === 'test@example.com' && password === 'test') {
-      console.log('Using test mode authentication');
+    // Support multiple test credentials for easier testing
+    const testCredentials = [
+      { email: 'test@example.com', password: 'test' },
+      { email: 'sample1@gmail.com', password: 'sample' },
+      { email: 'demo@example.com', password: 'demo123' }
+    ];
 
-      // Generate tokens for test user
-      const { accessToken, refreshToken } = generateTokens('test-user-id');
+    if (testMode) {
+      const validCredentials = testCredentials.find(cred => cred.email === email && cred.password === password);
 
-      // Set refresh token as httpOnly cookie
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-      });
+      if (validCredentials) {
+        console.log('Using test mode authentication for:', email);
 
-      return res.json({
-        message: 'Login successful',
-        user: {
-          id: 'test-user-id',
-          email: 'test@example.com',
-          displayName: 'Test User',
-          locale: 'en',
-          role: 'user',
-          emailVerified: true,
-          credits: 5
-        },
-        accessToken
-      });
+        // Generate tokens for test user
+        const { accessToken, refreshToken } = generateTokens('test-user-id');
+
+        // Set refresh token as httpOnly cookie
+        res.cookie('refreshToken', refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
+
+        return res.json({
+          message: 'Login successful',
+          user: {
+            id: 'test-user-id',
+            email: email,
+            displayName: 'Test User',
+            locale: 'en',
+            role: 'user',
+            emailVerified: true,
+            credits: 5
+          },
+          accessToken
+        });
+      }
     }
 
     // Sign in with Supabase Auth
