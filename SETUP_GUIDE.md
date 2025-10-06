@@ -263,8 +263,8 @@ curl http://localhost:5000/health
 curl -X POST http://localhost:5000/api/v1/auth/signup \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "sample1@gmail.com",
-    "password": "sample",
+    "email": "test@example.com",
+    "password": "Test123!",
     "displayName": "Test User"
   }'
 ```
@@ -275,7 +275,7 @@ curl -X POST http://localhost:5000/api/v1/auth/signup \
 # First login to get token
 TOKEN=$(curl -X POST http://localhost:5000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"sample1@gmail.com","password":"sample"}' \
+  -d '{"email":"test@example.com","password":"Test123!"}' \
   | jq -r '.accessToken')
 
 # Submit dream
