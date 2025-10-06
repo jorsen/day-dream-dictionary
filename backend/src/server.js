@@ -22,7 +22,7 @@ const adminRoutes = require('./routes/admin');
 const webhookRoutes = require('./routes/webhooks');
 
 // Import database connections
-const { connectMongoDB } = require('./config/mongodb');
+// const { connectMongoDB } = require('./config/mongodb'); // MongoDB disabled
 const { initSupabase } = require('./config/supabase');
 
 // Import i18n configuration
@@ -34,12 +34,16 @@ const PORT = process.env.PORT || 5001;
 // Initialize databases
 const initializeDatabases = async () => {
   try {
-    await connectMongoDB();
+    // MongoDB connection disabled
+    // await connectMongoDB();
     await initSupabase();
     console.log('✅ All databases connected successfully');
   } catch (error) {
     console.error('❌ Database connection failed:', error);
-    process.exit(1);
+    // Don't exit in production if Supabase fails, just log the error
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
   }
 };
 
@@ -96,6 +100,9 @@ const corsOptions = {
   preflightContinue: false
 };
 app.use(cors(corsOptions));
+
+// Trust proxy for rate limiting (important for render.com)
+app.set('trust proxy', 1);
 
 // Rate limiting
 const limiter = rateLimit({
