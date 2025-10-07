@@ -1,7 +1,6 @@
 // Test mode configuration for running without external dependencies
 const testMode = process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'test' ||
-  process.env.SUPABASE_URL === 'https://your-project-id.supabase.co' ||
-  process.env.SUPABASE_URL?.includes('gwgjckczyscpaozlevpe.supabase.co');
+  (process.env.TEST_MODE !== 'false' && process.env.SUPABASE_URL === 'https://your-project-id.supabase.co');
 
 const mockSupabase = {
   auth: {

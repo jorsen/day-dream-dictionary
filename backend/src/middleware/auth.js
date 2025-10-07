@@ -19,24 +19,24 @@ const authenticate = catchAsync(async (req, res, next) => {
   const token = authHeader.substring(7);
 
   try {
+    // Check if we're in test mode and using test token
+    const { testMode } = require('../config/test-mode');
+    if (testMode && token === 'test-token') {
+      req.user = {
+        id: 'test-user-id',
+        email: 'test@example.com',
+        emailVerified: true,
+        role: 'user'
+      };
+      return next();
+    }
+
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     if (decoded.type !== 'access') {
       throw new AppError('Invalid token type', 401);
     }
-
-    // Skip test mode logic for real authentication
-    // const { testMode } = require('../config/test-mode');
-    // if (testMode && decoded.userId === 'test-user-id') {
-    //   req.user = {
-    //     id: 'test-user-id',
-    //     email: 'test@example.com',
-    //     emailVerified: true,
-    //     role: 'user'
-    //   };
-    //   return next();
-    // }
 
     // Get user from Supabase
     const user = await getUserById(decoded.userId);
