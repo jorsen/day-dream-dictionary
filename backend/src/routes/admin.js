@@ -64,33 +64,37 @@ router.get('/dashboard', catchAsync(async (req, res, next) => {
       console.log('Could not get dream statistics');
     }
     
-    // Get event statistics for engagement (optional - skip if MongoDB not available)
-    let dailyActiveUsers = [], weeklyActiveUsers = [], monthlyActiveUsers = [];
-    let conversionFunnel = {};
-    
-    try {
-      const Event = require('../models/Event');
-      dailyActiveUsers = await Event.distinct('userId', {
-        createdAt: { $gte: new Date(now.setHours(0, 0, 0, 0)) }
-      });
-      
-      weeklyActiveUsers = await Event.distinct('userId', {
-        createdAt: { $gte: startOfWeek }
-      });
-      
-      monthlyActiveUsers = await Event.distinct('userId', {
-        createdAt: { $gte: startOfMonth }
-      });
-      
-      // Get conversion funnel
-      conversionFunnel = await Event.getConversionFunnel(
-        ['user_signup', 'dream_submitted', 'subscription_created'],
-        startOfMonth,
-        now
-      );
-    } catch (error) {
-      console.log('Could not get event statistics');
-    }
+      // Get event statistics for engagement (optional - skip if MongoDB not available)
+      let dailyActiveUsers = [], weeklyActiveUsers = [], monthlyActiveUsers = [];
+      let conversionFunnel = {};
+
+      try {
+        const Event = require('../models/Event');
+        if (Event && Event.distinct) {
+          dailyActiveUsers = await Event.distinct('userId', {
+            createdAt: { $gte: new Date(now.setHours(0, 0, 0, 0)) }
+          });
+
+          weeklyActiveUsers = await Event.distinct('userId', {
+            createdAt: { $gte: startOfWeek }
+          });
+
+          monthlyActiveUsers = await Event.distinct('userId', {
+            createdAt: { $gte: startOfMonth }
+          });
+
+          // Get conversion funnel
+          if (Event.getConversionFunnel) {
+            conversionFunnel = await Event.getConversionFunnel(
+              ['user_signup', 'dream_submitted', 'subscription_created'],
+              startOfMonth,
+              now
+            );
+          }
+        }
+      } catch (error) {
+        console.log('Could not get event statistics - MongoDB not available');
+      }
     
     res.json({
       users: {
@@ -284,12 +288,14 @@ router.get('/users/:userId', catchAsync(async (req, res, next) => {
     let recentActivity = [];
     try {
       const Event = require('../models/Event');
-      recentActivity = await Event.find({ userId })
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .select('type createdAt metadata');
+      if (Event && Event.find) {
+        recentActivity = await Event.find({ userId })
+          .sort({ createdAt: -1 })
+          .limit(10)
+          .select('type createdAt metadata');
+      }
     } catch (error) {
-      console.log('Could not get recent activity');
+      console.log('Could not get recent activity - MongoDB not available');
     }
     
     // Get payment history
@@ -356,13 +362,15 @@ router.patch('/users/:userId',
           // Track event (optional - skip if MongoDB not available)
           try {
             const Event = require('../models/Event');
-            await Event.trackEvent(userId, 'admin_credits_added', {
-              amount: credits,
-              adminId,
-              reason
-            });
+            if (Event && Event.trackEvent) {
+              await Event.trackEvent(userId, 'admin_credits_added', {
+                amount: credits,
+                adminId,
+                reason
+              });
+            }
           } catch (error) {
-            console.log('Event tracking skipped');
+            console.log('Event tracking skipped - MongoDB not available');
           }
           
           auditLog('admin_credits_added', adminId, {
@@ -665,12 +673,14 @@ router.get('/logs',
       let logs = [];
       try {
         const Event = require('../models/Event');
-        logs = await Event.find(query)
-          .sort({ createdAt: -1 })
-          .limit(parseInt(limit))
-          .select('type userId metadata createdAt');
+        if (Event && Event.find) {
+          logs = await Event.find(query)
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .select('type userId metadata createdAt');
+        }
       } catch (error) {
-        console.log('Could not get logs');
+        console.log('Could not get logs - MongoDB not available');
       }
       
       res.json({

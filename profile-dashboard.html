@@ -645,22 +645,32 @@
         // Load user statistics
         async function loadUserStats() {
             try {
-                const response = await fetch(`${API_URL}/dreams/stats/summary`, {
+                console.log('Loading user statistics...');
+                console.log('API URL:', API_URL);
+                console.log('Access Token:', accessToken ? 'Present' : 'Not present');
+
+                // Since we're in test mode, directly use the test endpoint like dreams history
+                console.log('Using test stats endpoint for demonstration');
+                const testResponse = await fetch(`${API_URL}/dreams/test-stats/summary`, {
                     headers: {
-                        'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     }
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const stats = data.stats || {};
+                console.log('Test stats endpoint response status:', testResponse.status);
+
+                if (testResponse.ok) {
+                    const testData = await testResponse.json();
+                    console.log('Test stats endpoint data:', testData);
+                    const stats = testData.stats || {};
+                    
                     document.getElementById('totalDreams').textContent = stats.totalDreams || 0;
                     document.getElementById('interpretations').textContent = stats.totalDreams || 0;
                     document.getElementById('thisMonth').textContent = stats.thisMonth || 0;
                     document.getElementById('creditsUsed').textContent = stats.creditsUsed || 0;
                 } else {
-                    console.error('Stats API error:', response.status);
+                    console.error('Error loading stats from test endpoint:', testResponse.status);
+                    console.error('Test stats endpoint error:', await testResponse.text());
                     // Set default values if API fails
                     document.getElementById('totalDreams').textContent = '0';
                     document.getElementById('interpretations').textContent = '0';

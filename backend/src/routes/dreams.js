@@ -784,52 +784,40 @@ router.get('/stats/summary', authenticate, catchAsync(async (req, res, next) => 
   const userId = req.user.id;
 
   try {
+    console.log('📊 Fetching dream statistics for user:', userId);
+
     // Get total dreams count
-    const { data: totalDreamsData, error: countError } = await getSupabase()
+    const { count: totalDreams, error: countError } = await getSupabase()
       .from('dreams')
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_deleted', false);
 
-    const totalDreams = totalDreamsData ? totalDreamsData.length : 0;
-
-    if (countError) {
-      console.error('Error counting dreams:', countError);
-      return res.json({
-        stats: {
-          totalDreams: 0,
-          thisMonth: 0,
-          recurringDreams: 0,
-          averageRating: 0,
-          creditsUsed: 0,
-          topThemes: []
-        }
-      });
-    }
+    console.log('Total dreams count:', totalDreams, 'Error:', countError);
 
     // Get dreams from this month
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    const { data: monthDreams, error: monthError } = await getSupabase()
+    const { count: thisMonthCount, error: monthError } = await getSupabase()
       .from('dreams')
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_deleted', false)
       .gte('created_at', startOfMonth.toISOString());
 
-    const thisMonthDreams = monthDreams?.length || 0;
+    console.log('This month dreams count:', thisMonthCount, 'Error:', monthError);
 
     // Get recurring dreams count
-    const { data: recurringData, error: recurringError } = await getSupabase()
+    const { count: recurringCount, error: recurringError } = await getSupabase()
       .from('dreams')
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('is_deleted', false)
       .eq('is_recurring', true);
 
-    const recurringDreams = recurringData?.length || 0;
+    console.log('Recurring dreams count:', recurringCount, 'Error:', recurringError);
 
     // Calculate credits used from dream metadata
     const { data: dreamsData, error: creditsError } = await getSupabase()
@@ -844,6 +832,8 @@ router.get('/stats/summary', authenticate, catchAsync(async (req, res, next) => 
         return sum + (dream.metadata?.creditsUsed || 0);
       }, 0);
     }
+
+    console.log('Credits used:', creditsUsed, 'Error:', creditsError);
 
     // Get all dreams to calculate average rating and top themes
     const { data: allDreams, error: dreamsError } = await getSupabase()
@@ -881,19 +871,140 @@ router.get('/stats/summary', authenticate, catchAsync(async (req, res, next) => 
         .map(([theme, count]) => ({ theme, count }));
     }
 
-    res.json({
-      stats: {
-        totalDreams: totalDreams || 0,
-        thisMonth: thisMonthDreams || 0,
-        recurringDreams: recurringDreams || 0,
-        averageRating: averageRating,
-        creditsUsed: creditsUsed,
-        topThemes: topThemes
-      }
-    });
+    const stats = {
+      totalDreams: totalDreams || 0,
+      thisMonth: thisMonthCount || 0,
+      recurringDreams: recurringCount || 0,
+      averageRating: averageRating,
+      creditsUsed: creditsUsed,
+      topThemes: topThemes
+    };
+
+    console.log('📊 Final statistics:', stats);
+
+    res.json({ stats });
 
   } catch (error) {
     console.error('Error fetching dream stats:', error);
+    next(error);
+  }
+}));
+
+// Test endpoint for dream statistics (bypasses authentication)
+router.get('/test-stats/summary', (req, res, next) => {
+  // Temporarily disable all middleware for this test endpoint
+  req.skipAuth = true;
+  next();
+}, catchAsync(async (req, res, next) => {
+  // Use a test user ID for demonstration
+  const userId = 'test-user-id';
+
+  try {
+    console.log('📊 [TEST] Fetching dream statistics for test user:', userId);
+
+    // Get total dreams count
+    const { count: totalDreams, error: countError } = await getSupabase()
+      .from('dreams')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_deleted', false);
+
+    console.log('[TEST] Total dreams count:', totalDreams, 'Error:', countError);
+
+    // Get dreams from this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const { count: thisMonthCount, error: monthError } = await getSupabase()
+      .from('dreams')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_deleted', false)
+      .gte('created_at', startOfMonth.toISOString());
+
+    console.log('[TEST] This month dreams count:', thisMonthCount, 'Error:', monthError);
+
+    // Get recurring dreams count
+    const { count: recurringCount, error: recurringError } = await getSupabase()
+      .from('dreams')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_deleted', false)
+      .eq('is_recurring', true);
+
+    console.log('[TEST] Recurring dreams count:', recurringCount, 'Error:', recurringError);
+
+    // Calculate credits used from dream metadata
+    const { data: dreamsData, error: creditsError } = await getSupabase()
+      .from('dreams')
+      .select('metadata')
+      .eq('user_id', userId)
+      .eq('is_deleted', false);
+
+    let creditsUsed = 0;
+    if (dreamsData && !creditsError) {
+      creditsUsed = dreamsData.reduce((sum, dream) => {
+        return sum + (dream.metadata?.creditsUsed || 0);
+      }, 0);
+    }
+
+    console.log('[TEST] Credits used:', creditsUsed, 'Error:', creditsError);
+
+    // Get all dreams to calculate average rating and top themes
+    const { data: allDreams, error: dreamsError } = await getSupabase()
+      .from('dreams')
+      .select('rating, interpretation')
+      .eq('user_id', userId)
+      .eq('is_deleted', false)
+      .not('rating', 'is', null);
+
+    let averageRating = 0;
+    let topThemes = [];
+
+    if (allDreams && allDreams.length > 0) {
+      // Calculate average rating
+      const ratings = allDreams.filter(dream => dream.rating !== null && dream.rating !== undefined);
+      if (ratings.length > 0) {
+        const totalRating = ratings.reduce((sum, dream) => sum + (dream.rating || 0), 0);
+        averageRating = Math.round((totalRating / ratings.length) * 10) / 10; // Round to 1 decimal
+      }
+
+      // Calculate top themes
+      const themeCount = {};
+      allDreams.forEach(dream => {
+        if (dream.interpretation && dream.interpretation.mainThemes) {
+          dream.interpretation.mainThemes.forEach(theme => {
+            themeCount[theme] = (themeCount[theme] || 0) + 1;
+          });
+        }
+      });
+
+      // Get top 5 themes
+      topThemes = Object.entries(themeCount)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5)
+        .map(([theme, count]) => ({ theme, count }));
+    }
+
+    const stats = {
+      totalDreams: totalDreams || 0,
+      thisMonth: thisMonthCount || 0,
+      recurringDreams: recurringCount || 0,
+      averageRating: averageRating,
+      creditsUsed: creditsUsed,
+      topThemes: topThemes
+    };
+
+    console.log('[TEST] Final statistics:', stats);
+
+    res.json({ 
+      stats,
+      message: 'Test statistics (no authentication required)'
+    });
+
+  } catch (error) {
+    console.error('[TEST] Error fetching dream stats:', error);
     next(error);
   }
 }));

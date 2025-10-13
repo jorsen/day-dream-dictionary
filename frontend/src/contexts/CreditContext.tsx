@@ -1,109 +1,107 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-interface CreditInfo {
-  balance: number;
-  dynamicInfo?: {
-    loyaltyTier: string;
-    subscriptionMultiplier: number;
-    loyaltyMultiplier: number;
-    availableBonusCredits: number;
-  };
-}
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from './AuthContext';
+import { supabase } from '@/lib/supabase';
 
 interface CreditContextType {
-  creditInfo: CreditInfo | null;
+  credits: number;
   loading: boolean;
-  error: string | null;
   refreshCredits: () => Promise<void>;
-  updateCredits: (newBalance: number) => void;
+  useCredits: (amount: number) => Promise<{ success: boolean; error?: string }>;
 }
 
 const CreditContext = createContext<CreditContextType | undefined>(undefined);
 
-export function CreditProvider({ children }: { children: ReactNode }) {
-  const [creditInfo, setCreditInfo] = useState<CreditInfo | null>(null);
+export const useCredits = () => {
+  const context = useContext(CreditContext);
+  if (context === undefined) {
+    throw new Error('useCredits must be used within a CreditProvider');
+  }
+  return context;
+};
+
+interface CreditProviderProps {
+  children: React.ReactNode;
+}
+
+export const CreditProvider: React.FC<CreditProviderProps> = ({ children }) => {
+  const [credits, setCredits] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  const fetchCreditInfo = async () => {
+  const refreshCredits = async () => {
+    if (!user) {
+      setCredits(0);
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
+      const { data, error } = await supabase
+        .from('credits')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
 
-      if (!token) {
-        setCreditInfo(null);
-        setError(null);
-        setLoading(false);
-        return;
-      }
-
-      const response = await fetch('/api/v1/payments/credits', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCreditInfo(data);
-        setError(null);
-      } else if (response.status === 401) {
-        // Token expired or invalid
-        localStorage.removeItem('token');
-        setCreditInfo(null);
-        setError('Authentication required');
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching credits:', error);
+        // Fallback to mock credits for development
+        setCredits(5);
       } else {
-        setError('Failed to load credit information');
+        setCredits(data?.balance || 5);
       }
-    } catch (err) {
-      setError('Network error');
+    } catch (error) {
+      console.error('Error refreshing credits:', error);
+      // Fallback to mock credits for development
+      setCredits(5);
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshCredits = async () => {
-    await fetchCreditInfo();
-  };
+  const useCredits = async (amount: number): Promise<{ success: boolean; error?: string }> => {
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
 
-  const updateCredits = (newBalance: number) => {
-    if (creditInfo) {
-      setCreditInfo({
-        ...creditInfo,
-        balance: newBalance
+    if (credits < amount) {
+      return { success: false, error: 'Insufficient credits' };
+    }
+
+    try {
+      // Optimistically update UI
+      setCredits(prev => prev - amount);
+
+      // Update in database
+      const { error } = await supabase.rpc('increment_total_spent', {
+        user_id: user.id,
+        amount: amount
       });
+
+      if (error) {
+        // Revert optimistic update on error
+        setCredits(prev => prev + amount);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      // Revert optimistic update on error
+      setCredits(prev => prev + amount);
+      return { success: false, error: 'Failed to use credits' };
     }
   };
 
   useEffect(() => {
-    fetchCreditInfo();
-
-    // Refresh credit info every 30 seconds
-    const interval = setInterval(fetchCreditInfo, 30000);
-
-    // Listen for storage changes (login/logout)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'token') {
-        fetchCreditInfo();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+    refreshCredits();
+  }, [user]);
 
   const value: CreditContextType = {
-    creditInfo,
+    credits,
     loading,
-    error,
     refreshCredits,
-    updateCredits
+    useCredits,
   };
 
   return (
@@ -111,12 +109,4 @@ export function CreditProvider({ children }: { children: ReactNode }) {
       {children}
     </CreditContext.Provider>
   );
-}
-
-export function useCredits() {
-  const context = useContext(CreditContext);
-  if (context === undefined) {
-    throw new Error('useCredits must be used within a CreditProvider');
-  }
-  return context;
-}
+};

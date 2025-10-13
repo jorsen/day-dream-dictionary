@@ -2,6 +2,22 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+
+// Load local task-master config if present
+function loadConfig() {
+  const cfgPath = path.resolve(process.cwd(), 'task-master.json');
+  try {
+    if (fs.existsSync(cfgPath)) {
+      const raw = fs.readFileSync(cfgPath, 'utf8');
+      return raw ? JSON.parse(raw) : {};
+    }
+  } catch (err) {
+    // ignore malformed config
+    console.warn(`Warning: failed to read config ${cfgPath}: ${err.message}`);
+  }
+  return {};
+}
 
 class PRDParser {
   constructor(filePath) {
@@ -243,6 +259,208 @@ class PRDParser {
 // CLI interface
 function main() {
   const args = process.argv.slice(2);
+  // Support a simple "add-task" subcommand to add a single task to tasks.json
+  if (args[0] === 'add-task') {
+    if (args.length === 1) {
+      console.log('Usage: task-master add-task --prompt "Your task description"');
+      console.log('   or: node parse-prd.js add-task --prompt "Your task description"');
+      console.log('Options:');
+      console.log('  --prompt "..."    The task description to add');
+      console.log('  --help             Show this help');
+      return;
+    }
+
+    let prompt = null;
+    let tag = null;
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === '--prompt' && args[i + 1]) {
+        prompt = args[i + 1];
+        i++;
+      } else if (args[i] === '--tag' && args[i + 1]) {
+        tag = args[i + 1];
+        i++;
+      } else if (args[i] === '--help') {
+        console.log('Usage: task-master add-task --prompt "Your task description"');
+        console.log('Adds a single task to tasks.json in the repository root.');
+        return;
+      }
+    }
+
+    if (!prompt) {
+      console.error('Error: missing --prompt "Your task description"');
+      process.exit(1);
+    }
+    const cfg = loadConfig();
+    const defaultTag = cfg.defaultTag || 'master';
+    if (!tag) tag = defaultTag;
+
+    const tasksFile = path.resolve(process.cwd(), cfg.tasksFile || 'tasks.json');
+    let tasks = [];
+    try {
+      if (fs.existsSync(tasksFile)) {
+        const raw = fs.readFileSync(tasksFile, 'utf8');
+        tasks = raw ? JSON.parse(raw) : [];
+      }
+    } catch (err) {
+      console.warn(`Warning: could not read existing ${tasksFile}: ${err.message}`);
+      tasks = [];
+    }
+
+    const id = `TASK-${Date.now()}`;
+    // Simple AI enrichment (heuristic). Use config.aiAssist or --ai flag to enable.
+    const useAI = cfg.aiAssist || args.includes('--ai');
+
+    function heuristicEstimate(text) {
+      const wc = text.trim().split(/\s+/).filter(Boolean).length;
+      if (wc <= 8) return '0.5h';
+      if (wc <= 40) return '1h';
+      if (wc <= 150) return '3h';
+      return '5h';
+    }
+
+    let title = prompt.length > 60 ? prompt.slice(0, 60).trim() + '...' : prompt;
+    let effort = null;
+    if (useAI) {
+      // simple heuristics: title is first sentence, effort from word count
+      title = prompt.split(/[\.\n]/)[0].trim();
+      if (!title) title = prompt.slice(0, 60).trim();
+      if (title.length > 60) title = title.slice(0, 57).trim() + '...';
+      effort = heuristicEstimate(prompt);
+    }
+
+    const newTask = {
+      id,
+      title,
+      description: prompt,
+      status: 'todo',
+      effort,
+      created_at: new Date().toISOString(),
+      tag
+    };
+
+    tasks.push(newTask);
+
+    try {
+      fs.writeFileSync(tasksFile, JSON.stringify(tasks, null, 2), 'utf8');
+      console.log(`✅ Task added to ${tasksFile}: ${id}`);
+      console.log(JSON.stringify(newTask, null, 2));
+    } catch (err) {
+      console.error(`Error writing tasks file: ${err.message}`);
+      process.exit(1);
+    }
+
+    return;
+  }
+
+  // Support `init` subcommand to create a default configuration for task-master
+  if (args[0] === 'init') {
+    const configFile = path.resolve(process.cwd(), 'task-master.json');
+    const defaultConfig = {
+      tasksFile: 'tasks.json',
+      defaultFormat: 'markdown',
+      aiAssist: false,
+      created_at: new Date().toISOString()
+    };
+
+    if (fs.existsSync(configFile)) {
+      console.log(`Config already exists: ${configFile}`);
+      try {
+        const cfg = fs.readFileSync(configFile, 'utf8');
+        console.log(cfg);
+      } catch (err) {
+        console.error(`Could not read existing config: ${err.message}`);
+      }
+      return;
+    }
+
+    try {
+      fs.writeFileSync(configFile, JSON.stringify(defaultConfig, null, 2), 'utf8');
+      console.log(`✅ Created default config: ${configFile}`);
+    } catch (err) {
+      console.error(`Failed to create config: ${err.message}`);
+      process.exit(1);
+    }
+
+    // Ensure tasks file exists (empty array) when it doesn't exist yet
+    const tasksFilePath = path.resolve(process.cwd(), defaultConfig.tasksFile);
+    if (!fs.existsSync(tasksFilePath)) {
+      try {
+        fs.writeFileSync(tasksFilePath, JSON.stringify([], null, 2), 'utf8');
+        console.log(`✅ Created tasks file: ${tasksFilePath}`);
+      } catch (err) {
+        console.warn(`Could not create tasks file: ${err.message}`);
+      }
+    } else {
+      console.log(`Tasks file already exists: ${tasksFilePath}`);
+    }
+
+    return;
+  }
+
+  // Support `list-tasks` subcommand to list tasks filtered by tag
+  if (args[0] === 'list-tasks') {
+    // usage: task-master list-tasks --tag master
+    let tag = null;
+    let asJson = false;
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === '--tag' && args[i + 1]) { tag = args[i + 1]; i++; }
+      else if (args[i] === '--json') { asJson = true; }
+    }
+
+    const cfg = loadConfig();
+    const tasksFile = path.resolve(process.cwd(), cfg.tasksFile || 'tasks.json');
+    try {
+      if (!fs.existsSync(tasksFile)) {
+        console.log(`No tasks file found at ${tasksFile}`);
+        return;
+      }
+      const raw = fs.readFileSync(tasksFile, 'utf8');
+      const list = raw ? JSON.parse(raw) : [];
+      const filtered = tag ? list.filter(t => t.tag === tag) : list;
+      if (!filtered.length) {
+        console.log(`No tasks found${tag ? ' in tag ' + tag : ''}.`);
+        return;
+      }
+      if (asJson) {
+        console.log(JSON.stringify(filtered, null, 2));
+        return;
+      }
+      filtered.forEach(t => console.log(`${t.id} [${t.tag || 'untagged'}] ${t.title} — ${t.effort || '??'}\n  ${t.description}\n`));
+    } catch (err) {
+      console.error(`Error reading tasks: ${err.message}`);
+    }
+    return;
+  }
+
+  // export-kanban: write simplified JSON for Kanban import
+  if (args[0] === 'export-kanban') {
+    // usage: task-master export-kanban --tag master --out open-kanban.json
+    let tag = null;
+    let outFile = path.resolve(process.cwd(), 'open-kanban.json');
+    for (let i = 1; i < args.length; i++) {
+      if (args[i] === '--tag' && args[i + 1]) { tag = args[i + 1]; i++; }
+      else if (args[i] === '--out' && args[i + 1]) { outFile = path.resolve(process.cwd(), args[i + 1]); i++; }
+    }
+
+    const cfg = loadConfig();
+    const tasksFile = path.resolve(process.cwd(), cfg.tasksFile || 'tasks.json');
+    try {
+      if (!fs.existsSync(tasksFile)) {
+        console.log(`No tasks file found at ${tasksFile}`);
+        return;
+      }
+      const raw = fs.readFileSync(tasksFile, 'utf8');
+      const list = raw ? JSON.parse(raw) : [];
+      const filtered = tag ? list.filter(t => t.tag === tag) : list;
+      // Convert to kanban-friendly shape
+      const kanban = filtered.map(t => ({ id: t.id, title: t.title, description: t.description, status: t.status, effort: t.effort, phase: t.phase || null }));
+      fs.writeFileSync(outFile, JSON.stringify(kanban, null, 2), 'utf8');
+      console.log(`✅ Wrote ${kanban.length} tasks to ${outFile}`);
+    } catch (err) {
+      console.error(`Error exporting kanban: ${err.message}`);
+    }
+    return;
+  }
   
   // Handle "parse-prd" command syntax
   let startIndex = 0;
@@ -288,10 +506,54 @@ function main() {
   
   if (outputFile) {
     if (append && fs.existsSync(outputFile)) {
-      const existingContent = fs.readFileSync(outputFile, 'utf8');
-      const newContent = parser.generateOutput(format);
-      fs.writeFileSync(outputFile, existingContent + '\n\n' + newContent);
-      console.log(`✅ Tasks appended to ${outputFile}`);
+      // Read existing file and append in a format-aware way
+      const existingRaw = fs.readFileSync(outputFile, 'utf8');
+      const existingNormalized = existingRaw.replace(/\r?\n/g, os.EOL);
+      try {
+        if (format === 'json') {
+          // Try to merge JSON arrays if possible; allow setting tag for appended tasks
+          const cfg = loadConfig();
+          const defaultTag = cfg.defaultTag || 'master';
+          // check if user passed --tag
+          let passedTag = null;
+          for (let i = startIndex + 1; i < args.length; i++) {
+            if (args[i] === '--tag' && args[i + 1]) { passedTag = args[i + 1]; i++; }
+          }
+          const tagToApply = passedTag || defaultTag;
+
+          // Try to parse generated tasks and attach tag
+          const newJson = JSON.parse(parser.generateOutput('json'));
+          if (Array.isArray(newJson)) {
+            newJson.forEach(t => { if (!t.tag) t.tag = tagToApply; });
+          }
+          try {
+            const existingJson = existingRaw.trim() ? JSON.parse(existingRaw) : null;
+            if (Array.isArray(existingJson) && Array.isArray(newJson)) {
+              const merged = existingJson.concat(newJson);
+              fs.writeFileSync(outputFile, JSON.stringify(merged, null, 2) + os.EOL, 'utf8');
+              console.log(`✅ JSON tasks merged into ${outputFile}`);
+            } else {
+              // Fallback: append raw JSON block separated by blank line
+              fs.writeFileSync(outputFile, existingNormalized + os.EOL + os.EOL + JSON.stringify(newJson, null, 2) + os.EOL, 'utf8');
+              console.log(`⚠️ Appended raw JSON to ${outputFile} (existing file not a JSON array)`);
+            }
+          } catch (err) {
+            // existing file not valid JSON — append raw
+            fs.writeFileSync(outputFile, existingNormalized + os.EOL + os.EOL + JSON.stringify(newJson, null, 2) + os.EOL, 'utf8');
+            console.log(`⚠️ Appended raw JSON to ${outputFile} (existing file not valid JSON)`);
+          }
+        } else {
+          // Markdown or other text: normalize EOLs and append with two blank lines
+          const newContent = parser.generateOutput(format).replace(/\r?\n/g, os.EOL);
+          fs.writeFileSync(outputFile, existingNormalized + os.EOL + os.EOL + newContent + os.EOL, 'utf8');
+          console.log(`✅ Tasks appended to ${outputFile}`);
+        }
+      } catch (err) {
+        // Fallback: simple append
+        const newContent = parser.generateOutput(format).replace(/\r?\n/g, os.EOL);
+        fs.writeFileSync(outputFile, existingNormalized + os.EOL + os.EOL + newContent + os.EOL, 'utf8');
+        console.error(`Error while appending (used fallback append): ${err.message}`);
+      }
     } else {
       parser.saveOutput(outputFile, format);
     }

@@ -29,7 +29,7 @@ const { initSupabase } = require('./config/supabase');
 const { i18nMiddleware } = require('./config/i18n');
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 
 // Initialize databases
 const initializeDatabases = async () => {

@@ -132,11 +132,13 @@ router.post('/signup', validateSignup, catchAsync(async (req, res, next) => {
     // Track signup event (optional - skip if MongoDB is not available)
     try {
       const Event = require('../models/Event');
-      await Event.trackEvent(user.id, 'user_signup', {
-        email,
-        locale,
-        source: req.headers['x-source'] || 'web'
-      });
+      if (Event && Event.trackEvent) {
+        await Event.trackEvent(user.id, 'user_signup', {
+          email,
+          locale,
+          source: req.headers['x-source'] || 'web'
+        });
+      }
     } catch (eventError) {
       console.log('Event tracking skipped (MongoDB not available):', eventError.message);
     }
@@ -240,11 +242,13 @@ router.post('/login', validateLogin, catchAsync(async (req, res, next) => {
     // Track login event (optional - skip if not available)
     try {
       const Event = require('../models/Event');
-      await Event.trackEvent(user.id, 'user_login', {
-        email,
-        source: req.headers['x-source'] || 'web',
-        ip: req.ip
-      });
+      if (Event && Event.trackEvent) {
+        await Event.trackEvent(user.id, 'user_login', {
+          email,
+          source: req.headers['x-source'] || 'web',
+          ip: req.ip
+        });
+      }
     } catch (eventError) {
       console.log('Event tracking skipped:', eventError.message);
     }
@@ -303,9 +307,16 @@ router.post('/logout', catchAsync(async (req, res, next) => {
       const token = authHeader.substring(7);
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        await Event.trackEvent(decoded.userId, 'user_logout', {
-          source: req.headers['x-source'] || 'web'
-        });
+        try {
+          const Event = require('../models/Event');
+          if (Event && Event.trackEvent) {
+            await Event.trackEvent(decoded.userId, 'user_logout', {
+              source: req.headers['x-source'] || 'web'
+            });
+          }
+        } catch (eventError) {
+          // Event tracking failed, continue with logout
+        }
         auditLog('user_logout', decoded.userId, {});
       } catch (err) {
         // Token invalid, but still allow logout
@@ -383,10 +394,17 @@ router.post('/forgot-password',
       }
       
       // Track event
-      await Event.trackEvent('anonymous', 'password_reset_requested', {
-        email: email.substring(0, 3) + '***', // Partially masked for privacy
-        source: req.headers['x-source'] || 'web'
-      });
+      try {
+        const Event = require('../models/Event');
+        if (Event && Event.trackEvent) {
+          await Event.trackEvent('anonymous', 'password_reset_requested', {
+            email: email.substring(0, 3) + '***', // Partially masked for privacy
+            source: req.headers['x-source'] || 'web'
+          });
+        }
+      } catch (eventError) {
+        // Event tracking failed, continue
+      }
       
       // Always return success to prevent email enumeration
       res.json({
@@ -428,9 +446,16 @@ router.post('/reset-password',
       }
       
       // Track event
-      await Event.trackEvent(data.user.id, 'password_reset_completed', {
-        source: req.headers['x-source'] || 'web'
-      });
+      try {
+        const Event = require('../models/Event');
+        if (Event && Event.trackEvent) {
+          await Event.trackEvent(data.user.id, 'password_reset_completed', {
+            source: req.headers['x-source'] || 'web'
+          });
+        }
+      } catch (eventError) {
+        // Event tracking failed, continue
+      }
       
       auditLog('password_reset', data.user.id, {});
       
@@ -465,9 +490,16 @@ router.get('/verify-email', catchAsync(async (req, res, next) => {
     }
     
     // Track event
-    await Event.trackEvent('anonymous', 'email_verified', {
-      source: 'email_link'
-    });
+    try {
+      const Event = require('../models/Event');
+      if (Event && Event.trackEvent) {
+        await Event.trackEvent('anonymous', 'email_verified', {
+          source: 'email_link'
+        });
+      }
+    } catch (eventError) {
+      // Event tracking failed, continue
+    }
     
     res.json({
       message: 'Email verified successfully'
@@ -523,17 +555,17 @@ router.get('/test-status', (req, res) => {
   });
 });
 
-// Temporary route for testing
-router.get('/test-login', async (req, res) => {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: 'jorsenmejia@gmail.com',
-    password: 'password123',
-  });
-  if (error) {
-    return res.status(401).json({ error: error.message });
-  }
-  res.json(data);
-});
+// Temporary route for testing - DISABLED for security
+// router.get('/test-login', async (req, res) => {
+//   const supabase = getSupabase();
+//   const { data, error } = await supabase.auth.signInWithPassword({
+//     email: 'jorsenmejia@gmail.com',
+//     password: 'password123',
+//   });
+//   if (error) {
+//     return res.status(401).json({ error: error.message });
+//   }
+//   res.json(data);
+// });
 
 module.exports = router;

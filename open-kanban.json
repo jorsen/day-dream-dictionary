@@ -1,28 +1,11 @@
 [
   {
-    "id": "TASK-1759883520936",
-    "title": "Write unit tests for PRD parser",
-    "description": "Write unit tests for PRD parser",
-    "status": "todo",
-    "effort": null,
-    "created_at": "2025-10-08T00:32:00.936Z"
-  },
-  {
-    "id": "TASK-1759883739659",
-    "title": "Write unit tests for PRD parser",
-    "description": "Write unit tests for PRD parser",
-    "status": "todo",
-    "effort": null,
-    "created_at": "2025-10-08T00:35:39.659Z"
-  },
-  {
     "id": "TASK-1759884659524",
     "title": "Implement user authentication",
     "description": "Implement user authentication",
     "status": "todo",
     "effort": null,
-    "created_at": "2025-10-08T00:50:59.524Z",
-    "tag": "master"
+    "phase": null
   },
   {
     "id": "TASK-1759884712428",
@@ -30,8 +13,7 @@
     "description": "Implement user authentication",
     "status": "todo",
     "effort": null,
-    "created_at": "2025-10-08T00:51:52.428Z",
-    "tag": "master"
+    "phase": null
   },
   {
     "id": "SETUP-001",
@@ -39,8 +21,6 @@
     "description": "Set up the base React application with Next.js framework, Tailwind CSS",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 1: Setup & Infrastructure"
   },
   {
@@ -49,8 +29,6 @@
     "description": "Set up ESLint, Prettier, TypeScript configuration",
     "status": "todo",
     "effort": "1h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 1: Setup & Infrastructure"
   },
   {
@@ -59,8 +37,6 @@
     "description": "Create Supabase project, configure Auth, set up database schema",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 1: Setup & Infrastructure"
   },
   {
@@ -69,8 +45,6 @@
     "description": "Set up MongoDB cluster for dream documents storage",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 1: Setup & Infrastructure"
   },
   {
@@ -79,8 +53,6 @@
     "description": "Initialize Node.js backend with Express/Fastify on Render",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 1: Setup & Infrastructure"
   },
   {
@@ -89,8 +61,6 @@
     "description": "Set up .env files for all API keys and configurations",
     "status": "todo",
     "effort": "1h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 1: Setup & Infrastructure"
   },
   {
@@ -99,8 +69,6 @@
     "description": "Set up sign up, login, logout, password reset flows",
     "status": "todo",
     "effort": "4h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 2: Authentication & User Management"
   },
   {
@@ -109,8 +77,6 @@
     "description": "Implement user profiles with display_name, locale, preferences",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 2: Authentication & User Management"
   },
   {
@@ -119,8 +85,6 @@
     "description": "Set up role-based access control for users and admins",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 2: Authentication & User Management"
   },
   {
@@ -129,8 +93,6 @@
     "description": "Implement middleware for protecting API and frontend routes",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 2: Authentication & User Management"
   },
   {
@@ -139,8 +101,6 @@
     "description": "Set up Stripe account, configure products and prices",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 3: Payment & Billing System"
   },
   {
@@ -149,8 +109,6 @@
     "description": "Create subscription flows for Basic and Pro tiers",
     "status": "todo",
     "effort": "5h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 3: Payment & Billing System"
   },
   {
@@ -159,8 +117,6 @@
     "description": "Implement credit purchase and consumption logic",
     "status": "todo",
     "effort": "4h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 3: Payment & Billing System"
   },
   {
@@ -169,8 +125,6 @@
     "description": "Handle payment events, update subscriptions and credits",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 3: Payment & Billing System"
   },
   {
@@ -179,8 +133,6 @@
     "description": "Build pricing page, checkout flow, payment management",
     "status": "todo",
     "effort": "4h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 3: Payment & Billing System"
   },
   {
@@ -189,8 +141,6 @@
     "description": "Set up OpenRouter with Claude 3.5 Sonnet model",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 4: Core Dream Interpretation"
   },
   {
@@ -199,8 +149,6 @@
     "description": "Implement structured prompt for dream analysis",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 4: Core Dream Interpretation"
   },
   {
@@ -209,8 +157,6 @@
     "description": "Create POST /api/dreams/interpret endpoint",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 4: Core Dream Interpretation"
   },
   {
@@ -219,8 +165,6 @@
     "description": "Validate and repair AI responses",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 4: Core Dream Interpretation"
   },
   {
@@ -229,8 +173,6 @@
     "description": "Build form for dream text input with character limits",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 4: Core Dream Interpretation"
   },
   {
@@ -239,8 +181,6 @@
     "description": "Create UI for showing themes, symbols, insights, guidance",
     "status": "todo",
     "effort": "4h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 4: Core Dream Interpretation"
   },
   {
@@ -249,8 +189,6 @@
     "description": "Track free interpretations per user",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 5: Quota & Paywall System"
   },
   {
@@ -259,8 +197,6 @@
     "description": "Show paywall after quota exhaustion",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 5: Quota & Paywall System"
   },
   {
@@ -269,8 +205,6 @@
     "description": "Create UI for subscription and credit purchase prompts",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 5: Quota & Paywall System"
   },
   {
@@ -279,8 +213,6 @@
     "description": "Deduct credits for premium features",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 5: Quota & Paywall System"
   },
   {
@@ -289,8 +221,6 @@
     "description": "Store dreams in MongoDB with user association",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 6: Data Storage & History"
   },
   {
@@ -299,8 +229,6 @@
     "description": "Build GET /api/dreams endpoint for user history",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 6: Data Storage & History"
   },
   {
@@ -309,8 +237,6 @@
     "description": "Create page to view past interpretations",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 6: Data Storage & History"
   },
   {
@@ -319,8 +245,6 @@
     "description": "Allow users to delete individual dreams or all data",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 6: Data Storage & History"
   },
   {
@@ -329,8 +253,6 @@
     "description": "Implement opt-in/opt-out for data storage",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 6: Data Storage & History"
   },
   {
@@ -339,8 +261,6 @@
     "description": "Build admin dashboard structure and navigation",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 7: Admin Dashboard"
   },
   {
@@ -349,8 +269,6 @@
     "description": "View users, roles, subscription status",
     "status": "todo",
     "effort": "4h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 7: Admin Dashboard"
   },
   {
@@ -359,8 +277,6 @@
     "description": "View payments, process refunds, add credits",
     "status": "todo",
     "effort": "4h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 7: Admin Dashboard"
   },
   {
@@ -369,8 +285,6 @@
     "description": "Show KPIs: DAU, MRR, conversion rates",
     "status": "todo",
     "effort": "5h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 7: Admin Dashboard"
   },
   {
@@ -379,8 +293,6 @@
     "description": "Optional viewing and management of submissions",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 7: Admin Dashboard"
   },
   {
@@ -389,8 +301,6 @@
     "description": "Generate PDF reports for interpretations",
     "status": "todo",
     "effort": "4h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 8: Premium Features"
   },
   {
@@ -399,8 +309,6 @@
     "description": "Send interpretation results via email",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 8: Premium Features"
   },
   {
@@ -409,8 +317,6 @@
     "description": "Build searchable dream symbol database",
     "status": "todo",
     "effort": "5h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 8: Premium Features"
   },
   {
@@ -419,8 +325,6 @@
     "description": "Enhanced interpretation for premium users",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 8: Premium Features"
   },
   {
@@ -429,8 +333,6 @@
     "description": "Configure next-i18next for translations",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 9: Internationalization"
   },
   {
@@ -439,8 +341,6 @@
     "description": "Extract and organize all UI strings",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 9: Internationalization"
   },
   {
@@ -449,8 +349,6 @@
     "description": "Translate all UI strings to Spanish",
     "status": "todo",
     "effort": "4h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 9: Internationalization"
   },
   {
@@ -459,8 +357,6 @@
     "description": "Add UI for changing language preference",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 9: Internationalization"
   },
   {
@@ -469,8 +365,6 @@
     "description": "Test core business logic and utilities",
     "status": "todo",
     "effort": "6h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 10: Testing & Deployment"
   },
   {
@@ -479,8 +373,6 @@
     "description": "Test API endpoints and database operations",
     "status": "todo",
     "effort": "5h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 10: Testing & Deployment"
   },
   {
@@ -489,8 +381,6 @@
     "description": "Check for vulnerabilities, implement rate limiting",
     "status": "todo",
     "effort": "4h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 10: Testing & Deployment"
   },
   {
@@ -499,8 +389,6 @@
     "description": "Configure automated testing and deployment",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 10: Testing & Deployment"
   },
   {
@@ -509,8 +397,6 @@
     "description": "Deploy frontend to Vercel, backend to Render",
     "status": "todo",
     "effort": "3h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 10: Testing & Deployment"
   },
   {
@@ -519,8 +405,6 @@
     "description": "Set up error tracking and performance monitoring",
     "status": "todo",
     "effort": "2h",
-    "created_at": "2025-10-08T00:55:16.276Z",
-    "tag": "master",
     "phase": "Phase 10: Testing & Deployment"
   }
 ]

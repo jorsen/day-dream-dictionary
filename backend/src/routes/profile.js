@@ -8,38 +8,69 @@ const {
   getUserCredits,
   getUserSubscription,
   getSupabase,
-  createUserProfile
+  createUserProfile,
+  checkUserRole
 } = require('../config/supabase');
 const { AppError, catchAsync } = require('../middleware/errorHandler');
 const { auditLog } = require('../middleware/logger');
 
 // Get user profile
-router.get('/', (req, res) => {
-  // TEMPORARY WORKAROUND: Skip authentication and return hardcoded profile
-  console.log('Profile API called - returning hardcoded response');
+router.get('/', authenticate, catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
 
-  res.json({
-    profile: {
-      id: 'test-user-id',
-      email: 'test@example.com',
-      display_name: 'Test User',
-      locale: 'en',
-      preferences: {
-        emailNotifications: true,
-        pushNotifications: false,
-        theme: 'light',
-        dreamPrivacy: 'private',
-        dreamStorage: true
-      },
-      emailVerified: true,
-      credits: 1, // TEMPORARY: Return 1 credit for testing
-      subscription: null,
-      stats: {
-        totalDreams: 0
+  try {
+    // Get user profile from Supabase
+    const profile = await getUserProfile(userId);
+
+    // Get user credits
+    const credits = await getUserCredits(userId);
+
+    // Get user subscription
+    const subscription = await getUserSubscription(userId);
+
+    // Get user role
+    const role = await checkUserRole(userId);
+
+    // Get basic stats
+    const { data: dreams } = await getSupabase()
+      .from('dreams')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_deleted', false);
+
+    // Safely extract user information
+    const userEmail = req.user?.email || 'user@example.com';
+    const emailParts = userEmail.split('@');
+    const defaultDisplayName = emailParts.length > 0 ? emailParts[0] : 'User';
+
+    res.json({
+      profile: {
+        id: userId,
+        email: userEmail,
+        display_name: profile?.display_name || defaultDisplayName,
+        locale: profile?.locale || 'en',
+        preferences: profile?.preferences || {
+          emailNotifications: true,
+          pushNotifications: false,
+          theme: 'light',
+          dreamPrivacy: 'private',
+          dreamStorage: true
+        },
+        emailVerified: req.user?.emailVerified || false,
+        credits: credits,
+        subscription: subscription,
+        role: role,
+        stats: {
+          totalDreams: dreams?.length || 0
+        }
       }
-    }
-  });
-});
+    });
+
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    next(error);
+  }
+}));
 
 // Update profile
 router.put('/', 
