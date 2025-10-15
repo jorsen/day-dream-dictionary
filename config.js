@@ -12,9 +12,16 @@ const API_CONFIG = (() => {
             API_BASE_URL: 'http://localhost:5000/api/v1'
         };
     } else {
-        // Production - Frontend and backend are on the same Render service
+        // Production - Try multiple API endpoints with fallback
+        const possibleAPIs = [
+            'https://day-dream-dictionary-api.onrender.com/api/v1',
+            'https://day-dream-dictionary.onrender.com/api/v1',
+            'https://day-dream-dictionary.onrender.com/api'
+        ];
+        
         return {
-            API_BASE_URL: 'https://day-dream-dictionary.onrender.com/api/v1'
+            API_BASE_URL: possibleAPIs[0], // Primary API URL
+            FALLBACK_URLS: possibleAPIs.slice(1) // Backup URLs
         };
     }
 })();

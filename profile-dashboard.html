@@ -712,10 +712,32 @@
             }
         }
 
+        // Robust API fetch with fallback support
+        async function fetchWithFallback(endpoint, options = {}) {
+            const urls = [API_URL];
+            if (API_CONFIG.FALLBACK_URLS) {
+                urls.push(...API_CONFIG.FALLBACK_URLS);
+            }
+
+            for (const url of urls) {
+                try {
+                    const response = await fetch(`${url}${endpoint}`, options);
+                    if (response.ok) {
+                        return response;
+                    }
+                } catch (error) {
+                    console.warn(`Failed to fetch from ${url}${endpoint}:`, error);
+                    continue;
+                }
+            }
+            
+            throw new Error('All API endpoints failed');
+        }
+
         // Load user subscription and credits
         async function loadUserSubscription() {
             try {
-                const response = await fetch(`${API_URL}/profile/credits`, {
+                const response = await fetchWithFallback('/profile/credits', {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
@@ -744,6 +766,11 @@
                 }
             } catch (error) {
                 console.error('Error loading subscription:', error);
+                // Show offline mode for production
+                if (!window.location.hostname.includes('localhost')) {
+                    document.getElementById('userCredits').innerHTML = '🔴 Offline';
+                    showOfflineMessage();
+                }
             }
         }
 
@@ -759,6 +786,21 @@
                 setTimeout(() => {
                     alertBox.style.display = 'none';
                 }, 5000);
+            }
+        }
+
+        // Show offline message when API is unavailable
+        function showOfflineMessage() {
+            const alertBox = document.getElementById('alertBox');
+            if (alertBox) {
+                alertBox.className = 'alert alert-info';
+                alertBox.textContent = '🔴 API is currently offline. Some features may be unavailable. Please try again later.';
+                alertBox.style.display = 'block';
+                
+                // Hide the message after 10 seconds
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                }, 10000);
             }
         }
 
