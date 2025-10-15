@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 http://localhost:5001 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
     <title>Day Dream Dictionary - Welcome</title>
     <style>
         * {
@@ -173,13 +173,13 @@
         <div id="status" class="status" style="display: none;"></div>
     </div>
 
-    <script src="config.js"></script>
+    <script src="config.js?v=<?php echo time(); ?>"></script>
     <script>
         // Check backend status
         async function checkBackendStatus() {
             const statusEl = document.getElementById('status');
             try {
-                const response = await fetch(API_CONFIG.API_BASE_URL.replace('/api/v1', '/health'));
+                const response = await fetch(API_CONFIG.API_BASE_URL + '/health');
                 if (response.ok) {
                     const data = await response.json();
                     statusEl.className = 'status success';

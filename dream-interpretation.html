@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 http://localhost:5001 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
     <title>Dream Interpretation - Day Dream Dictionary</title>
     <style>
         * {
@@ -429,8 +429,8 @@
             hideMessage();
 
             try {
-                // FREE MODE: Use test endpoint (no authentication required)
-                const response = await fetch(`${API_URL}/dreams/test-interpret`, {
+                // FREE MODE: Use mock API endpoint
+                const response = await fetch(`${API_URL}/dreams/interpret`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -448,9 +448,9 @@
 
                 if (response.ok) {
                     showMessage('success', 'Dream interpreted and saved successfully!');
-                    displayInterpretation(data.dream);
+                    displayInterpretation(data);
                 } else {
-                    showMessage('error', data.message || 'Failed to interpret dream');
+                    showMessage('error', data.message || 'No Credits');
                 }
             } catch (error) {
                 console.error('Error:', error);

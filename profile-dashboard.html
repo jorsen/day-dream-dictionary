@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 http://localhost:5001 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
     <title>Day Dream Dictionary - User Dashboard</title>
     <style>
         * {
@@ -417,15 +417,19 @@
                             <span class="badge badge-free" id="planBadge">Free</span>
                         </span>
                     </div>
-                    <div class="info-row">
+                    <div class="info-row" id="creditsRow">
                         <span class="info-label">Credits</span>
                         <span class="info-value" id="userCredits">5</span>
                     </div>
-                    <div class="info-row">
+                    <div class="info-row" id="monthlyLimitRow">
                         <span class="info-label">Monthly Limit</span>
                         <span class="info-value" id="monthlyLimit">5 basic / 3 deep</span>
                     </div>
-                    <button class="btn" style="margin-top: 20px;" onclick="upgradeToPro()">Upgrade to Pro</button>
+                    <div class="info-row" id="monthlyUsageRow">
+                        <span class="info-label">Usage This Month</span>
+                        <span class="info-value" id="monthlyUsage">0 / 5</span>
+                    </div>
+                    <button class="btn" style="margin-top: 20px;" onclick="goToPayment()">💳 Buy Credits & Upgrade</button>
                 </div>
 
                 <!-- Dream Statistics Card -->
@@ -611,6 +615,7 @@
             
             // Load additional user data
             loadUserProfile();
+            loadUserSubscription();
             loadUserStats();
             loadRecentDreams();
         }
@@ -630,6 +635,12 @@
                     // Update profile information if needed
                     if (data.profile) {
                         const profile = data.profile;
+                        
+                        // Update subscription display
+                        if (profile.subscription) {
+                            updateSubscriptionDisplay(profile.subscription);
+                        }
+                        
                         if (profile.credits !== undefined) {
                             document.getElementById('userCredits').textContent = profile.credits;
                         }
@@ -642,35 +653,138 @@
             }
         }
 
-        // Load user statistics
-        async function loadUserStats() {
-            try {
-                console.log('Loading user statistics...');
-                console.log('API URL:', API_URL);
-                console.log('Access Token:', accessToken ? 'Present' : 'Not present');
+        // Update subscription display based on plan
+        function updateSubscriptionDisplay(subscription) {
+            const planBadge = document.getElementById('planBadge');
+            const creditsRow = document.getElementById('creditsRow');
+            const monthlyLimitRow = document.getElementById('monthlyLimitRow');
+            const monthlyUsageRow = document.getElementById('monthlyUsageRow');
+            const userCredits = document.getElementById('userCredits');
 
-                // Since we're in test mode, directly use the test endpoint like dreams history
-                console.log('Using test stats endpoint for demonstration');
-                const testResponse = await fetch(`${API_URL}/dreams/test-stats/summary`, {
+            // Update plan badge
+            planBadge.className = `badge badge-${subscription.plan}`;
+            planBadge.textContent = subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1);
+
+            if (subscription.plan === 'pro') {
+                // Pro plan: Show unlimited credits, hide monthly limits and usage
+                userCredits.innerHTML = '♾️ Unlimited';
+                creditsRow.style.display = 'block';
+                monthlyLimitRow.style.display = 'none';
+                monthlyUsageRow.style.display = 'none';
+            } else {
+                // Free/Basic plans: Show credits and limits
+                creditsRow.style.display = 'block';
+                monthlyLimitRow.style.display = 'block';
+                monthlyUsageRow.style.display = 'block';
+                
+                // Update monthly limits display
+                const limits = subscription.monthlyLimits || {};
+                const usage = subscription.monthlyUsage || {};
+                
+                let limitText = '';
+                if (limits.basic === -1) {
+                    limitText = 'Unlimited basic';
+                } else {
+                    limitText = `${limits.basic || 0} basic`;
+                }
+                
+                if (limits.deep === -1) {
+                    limitText += ' / Unlimited deep';
+                } else {
+                    limitText += ` / ${limits.deep || 0} deep`;
+                }
+                
+                document.getElementById('monthlyLimit').textContent = limitText;
+                
+                // Update usage display
+                let usageText = '';
+                if (limits.basic === -1) {
+                    usageText = 'Unlimited';
+                } else {
+                    usageText = `${usage.basic || 0} / ${limits.basic || 0}`;
+                }
+                
+                if (limits.deep !== -1) {
+                    usageText += ` / ${usage.deep || 0} deep`;
+                }
+                
+                document.getElementById('monthlyUsage').textContent = usageText;
+            }
+        }
+
+        // Load user subscription and credits
+        async function loadUserSubscription() {
+            try {
+                const response = await fetch(`${API_URL}/profile/credits`, {
                     headers: {
+                        'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     }
                 });
 
-                console.log('Test stats endpoint response status:', testResponse.status);
-
-                if (testResponse.ok) {
-                    const testData = await testResponse.json();
-                    console.log('Test stats endpoint data:', testData);
-                    const stats = testData.stats || {};
+                if (response.ok) {
+                    const data = await response.json();
                     
-                    document.getElementById('totalDreams').textContent = stats.totalDreams || 0;
-                    document.getElementById('interpretations').textContent = stats.totalDreams || 0;
-                    document.getElementById('thisMonth').textContent = stats.thisMonth || 0;
-                    document.getElementById('creditsUsed').textContent = stats.creditsUsed || 0;
+                    // Update subscription display
+                    if (data.subscription) {
+                        updateSubscriptionDisplay(data.subscription);
+                    }
+                    
+                    // Update credits display
+                    if (data.balance === 'unlimited' || data.subscription.plan === 'pro') {
+                        document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
+                    } else {
+                        document.getElementById('userCredits').textContent = data.balance || 0;
+                    }
+                    
+                    // Show success message for Pro plan users
+                    if (data.subscription && data.subscription.plan === 'pro') {
+                        showProUpgradeSuccess();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading subscription:', error);
+            }
+        }
+
+        // Show Pro upgrade success message
+        function showProUpgradeSuccess() {
+            const alertBox = document.getElementById('alertBox');
+            if (alertBox) {
+                alertBox.className = 'alert alert-success';
+                alertBox.textContent = '🎉 Congratulations! You are now on the Pro plan with unlimited access!';
+                alertBox.style.display = 'block';
+                
+                // Hide the message after 5 seconds
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Refresh subscription data (call this after purchase)
+        function refreshSubscriptionData() {
+            loadUserSubscription();
+            loadUserStats();
+        }
+
+        // Load user statistics
+        async function loadUserStats() {
+            try {
+                const response = await fetch(`${API_URL}/dreams/stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('totalDreams').textContent = data.totalDreams || 0;
+                    document.getElementById('interpretations').textContent = data.totalInterpretations || 0;
+                    document.getElementById('thisMonth').textContent = data.thisMonth || 0;
+                    document.getElementById('creditsUsed').textContent = data.creditsUsed || 0;
                 } else {
-                    console.error('Error loading stats from test endpoint:', testResponse.status);
-                    console.error('Test stats endpoint error:', await testResponse.text());
                     // Set default values if API fails
                     document.getElementById('totalDreams').textContent = '0';
                     document.getElementById('interpretations').textContent = '0';
@@ -690,27 +804,17 @@
         // Load recent dreams
         async function loadRecentDreams() {
             try {
-                console.log('Loading recent dreams...');
-                console.log('API URL:', API_URL);
-                console.log('Access Token:', accessToken ? 'Present' : 'Not present');
-
-                // Since we're in test mode, directly use the test endpoint
-                console.log('Using test endpoint for demonstration');
-                const testResponse = await fetch(`${API_URL}/test-dreams-history?page=1&limit=5&sortBy=created_at&order=desc`, {
+                const response = await fetch(`${API_URL}/dreams?page=1&limit=5&sortBy=created_at&order=desc`, {
                     headers: {
+                        'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
                     }
                 });
 
-                console.log('Test endpoint response status:', testResponse.status);
-
-                if (testResponse.ok) {
-                    const testData = await testResponse.json();
-                    console.log('Test endpoint data:', testData);
-                    displayRecentDreams(testData.dreams || []);
+                if (response.ok) {
+                    const data = await response.json();
+                    displayRecentDreams(data.dreams || []);
                 } else {
-                    console.error('Error loading recent dreams from test endpoint:', testResponse.status);
-                    console.error('Test endpoint error:', await testResponse.text());
                     displayRecentDreams([]);
                 }
             } catch (error) {
@@ -753,6 +857,11 @@
                 localStorage.setItem('pendingDream', content);
             }
             window.location.href = 'dream-interpretation.html';
+        }
+
+        // Go to payment page
+        function goToPayment() {
+            window.location.href = 'payment.html';
         }
 
         // Upgrade to Pro

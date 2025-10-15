@@ -250,7 +250,7 @@
                 if (response.ok) {
                     resultDiv.innerHTML = `<span class="success">Dream submitted!\n${JSON.stringify(data, null, 2)}</span>`;
                 } else {
-                    resultDiv.innerHTML = `<span class="error">Failed to interpret dream:\n${JSON.stringify(data, null, 2)}</span>`;
+                    resultDiv.innerHTML = `<span class="error">No Credits:\n${JSON.stringify(data, null, 2)}</span>`;
                 }
             } catch (error) {
                 resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;

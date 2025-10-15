@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 http://localhost:5001 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
+    <title>Test Dashboard Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 10px 0; }
+        .stat-box { padding: 10px; background: #f8f9fa; border-radius: 5px; text-align: center; }
+        .dream-item { background: #f8f9fa; padding: 10px; margin: 5px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Test Dashboard Data Loading</h1>
+    <div id="results"></div>
+    
+    <script src="config.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        async function testDashboardData() {
+            addResult('Testing Dashboard Data Loading...', 'info');
+            addResult(`API Base URL: ${API_CONFIG.API_BASE_URL}`, 'info');
+            
+            // Step 1: Test login
+            addResult('Step 1: Testing login...', 'info');
+            try {
+                const loginResponse = await fetch(`${API_CONFIG.API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'sample1@gmail.com',
+                        password: 'sample'
+                    })
+                });
+                
+                if (loginResponse.ok) {
+                    const loginData = await loginResponse.json();
+                    addResult('✅ Login successful!', 'success');
+                    addResult(`User: ${loginData.user.email}`, 'success');
+                    addResult(`Token: ${loginData.accessToken.substring(0, 20)}...`, 'success');
+                    
+                    const accessToken = loginData.accessToken;
+                    
+                    // Step 2: Test stats endpoint
+                    addResult('Step 2: Testing stats endpoint...', 'info');
+                    try {
+                        const statsResponse = await fetch(`${API_CONFIG.API_BASE_URL}/dreams/test-stats/summary`, {
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (statsResponse.ok) {
+                            const statsData = await statsResponse.json();
+                            addResult('✅ Stats endpoint working!', 'success');
+                            addResult(`Stats data: ${JSON.stringify(statsData)}`, 'success');
+                            
+                            // Display stats
+                            const statsSection = document.createElement('div');
+                            statsSection.className = 'test-section';
+                            statsSection.innerHTML = `
+                                <h3>Dream Statistics</h3>
+                                <div class="stats">
+                                    <div class="stat-box">
+                                        <div style="font-size: 24px; font-weight: bold; color: #667eea;">${statsData.stats.totalDreams}</div>
+                                        <div>Total Dreams</div>
+                                    </div>
+                                    <div class="stat-box">
+                                        <div style="font-size: 24px; font-weight: bold; color: #667eea;">${statsData.stats.thisMonth}</div>
+                                        <div>This Month</div>
+                                    </div>
+                                    <div class="stat-box">
+                                        <div style="font-size: 24px; font-weight: bold; color: #667eea;">${statsData.stats.creditsUsed}</div>
+                                        <div>Credits Used</div>
+                                    </div>
+                                    <div class="stat-box">
+                                        <div style="font-size: 24px; font-weight: bold; color: #667eea;">${statsData.stats.totalDreams}</div>
+                                        <div>Interpretations</div>
+                                    </div>
+                                </div>
+                            `;
+                            results.appendChild(statsSection);
+                            
+                        } else {
+                            addResult(`❌ Stats endpoint failed: ${statsResponse.status}`, 'error');
+                        }
+                    } catch (error) {
+                        addResult(`❌ Stats endpoint error: ${error.message}`, 'error');
+                    }
+                    
+                    // Step 3: Test dreams history endpoint
+                    addResult('Step 3: Testing dreams history endpoint...', 'info');
+                    try {
+                        const dreamsResponse = await fetch(`${API_CONFIG.API_BASE_URL}/test-dreams-history?page=1&limit=5&sortBy=created_at&order=desc`, {
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        if (dreamsResponse.ok) {
+                            const dreamsData = await dreamsResponse.json();
+                            addResult('✅ Dreams history endpoint working!', 'success');
+                            addResult(`Found ${dreamsData.dreams.length} dreams`, 'success');
+                            
+                            // Display dreams
+                            const dreamsSection = document.createElement('div');
+                            dreamsSection.className = 'test-section';
+                            let dreamsHtml = '<h3>Recent Dreams</h3>';
+                            
+                            dreamsData.dreams.forEach(dream => {
+                                const dreamDate = new Date(dream.created_at).toLocaleDateString();
+                                const dreamText = dream.dream_text || '';
+                                const truncatedText = dreamText.length > 100 ? dreamText.substring(0, 100) + '...' : dreamText;
+                                
+                                dreamsHtml += `
+                                    <div class="dream-item">
+                                        <div style="font-weight: 600;">${truncatedText}</div>
+                                        <div style="color: #666; font-size: 14px;">${dreamDate}</div>
+                                    </div>
+                                `;
+                            });
+                            
+                            dreamsSection.innerHTML = dreamsHtml;
+                            results.appendChild(dreamsSection);
+                            
+                        } else {
+                            addResult(`❌ Dreams history endpoint failed: ${dreamsResponse.status}`, 'error');
+                        }
+                    } catch (error) {
+                        addResult(`❌ Dreams history endpoint error: ${error.message}`, 'error');
+                    }
+                    
+                } else {
+                    addResult(`❌ Login failed: ${loginResponse.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Login error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Run tests
+        testDashboardData();
+    </script>
+</body>
+</html>

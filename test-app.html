@@ -294,7 +294,7 @@
     </div>
     
     <script>
-        const API_URL = 'http://localhost:3000';
+        const API_URL = 'http://localhost:5000';
         let authToken = null;
         
         // Check server status on load
@@ -316,7 +316,7 @@
         // Check server health
         async function checkHealth() {
             try {
-                const response = await fetch(`${API_URL}/health`);
+                const response = await fetch(`${API_URL}/api/v1/health`);
                 const data = await response.json();
                 
                 document.getElementById('status').className = 'status online';

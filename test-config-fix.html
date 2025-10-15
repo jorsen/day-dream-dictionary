@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Config Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Test Config Fix</h1>
+    <div id="results"></div>
+    
+    <script src="config.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        // Test the fixed configuration
+        addResult('Testing Fixed Configuration...', 'info');
+        addResult(`API Base URL from config.js: ${API_CONFIG.API_BASE_URL}`, 'info');
+        
+        // Test API connection using the config
+        async function testAPIConnection() {
+            try {
+                addResult('Testing API connection with config...', 'info');
+                
+                const response = await fetch(`${API_CONFIG.API_BASE_URL}/health`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ API Connection Successful!`, 'success');
+                    addResult(`Response: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    addResult(`❌ API Connection Failed: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ API Connection Error: ${error.message}`, 'error');
+            }
+            
+            // Test dreams endpoint
+            try {
+                addResult('Testing dreams endpoint with config...', 'info');
+                const dreamsResponse = await fetch(`${API_CONFIG.API_BASE_URL}/dreams/all-dreams`);
+                if (dreamsResponse.ok) {
+                    const dreamsData = await dreamsResponse.json();
+                    addResult(`✅ Dreams endpoint working! Found ${dreamsData.dreams.length} dreams`, 'success');
+                } else {
+                    addResult(`❌ Dreams endpoint failed: ${dreamsResponse.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Dreams endpoint error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Run tests
+        testAPIConnection();
+    </script>
+</body>
+</html>

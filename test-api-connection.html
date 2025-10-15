@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>API Connection Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+        
+        // Test API configuration
+        addResult('Testing API Configuration...', 'info');
+        
+        // Check if we're on localhost
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1' ||
+                           window.location.hostname === '';
+        
+        const API_BASE_URL = isLocalhost ? 
+            'http://localhost:5001/api/v1' : 
+            'https://day-dream-dictionary.onrender.com/api/v1';
+        
+        addResult(`API Base URL: ${API_BASE_URL}`, 'info');
+        addResult(`Hostname: ${window.location.hostname}`, 'info');
+        addResult(`Is Localhost: ${isLocalhost}`, 'info');
+        
+        // Test API connection
+        async function testAPI() {
+            try {
+                addResult('Testing API connection...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/health`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ API Connection Successful!`, 'success');
+                    addResult(`Response: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    addResult(`❌ API Connection Failed: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ API Connection Error: ${error.message}`, 'error');
+                addResult(`This might be a CORS issue or the server is not running.`, 'error');
+            }
+            
+            // Test additional endpoints
+            try {
+                addResult('Testing dreams endpoint...', 'info');
+                const dreamsResponse = await fetch(`${API_BASE_URL}/dreams/all-dreams`);
+                if (dreamsResponse.ok) {
+                    const dreamsData = await dreamsResponse.json();
+                    addResult(`✅ Dreams endpoint working! Found ${dreamsData.dreams.length} dreams`, 'success');
+                } else {
+                    addResult(`❌ Dreams endpoint failed: ${dreamsResponse.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Dreams endpoint error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Run tests
+        testAPI();
+    </script>
+</body>
+</html>

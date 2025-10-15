@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - Day Dream Dictionary</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .payment-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            margin-top: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .payment-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: #666;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .product-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .product-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .product-card.selected {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .product-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .product-price {
+            font-size: 24px;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .product-description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .product-features {
+            list-style: none;
+            text-align: left;
+        }
+
+        .product-features li {
+            padding: 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .product-features li:before {
+            content: "✓ ";
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .payment-form {
+            margin-top: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .card-element {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .payment-status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        .payment-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .payment-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .payment-status.processing {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="payment-container">
+            <div class="header">
+                <h1>💳 Upgrade Your Dream Experience</h1>
+                <p>Unlock premium features and deeper insights</p>
+            </div>
+
+            <div class="payment-tabs">
+                <button class="tab active" onclick="switchTab('credits')">Credit Packs</button>
+                <button class="tab" onclick="switchTab('subscriptions')">Subscriptions</button>
+                <button class="tab" onclick="switchTab('addons')">Add-ons</button>
+            </div>
+
+            <!-- Credit Packs Tab -->
+            <div id="credits-tab" class="tab-content active">
+                <h2>Buy Dream Interpretation Credits</h2>
+                <div id="credits-grid" class="product-grid">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Subscriptions Tab -->
+            <div id="subscriptions-tab" class="tab-content">
+                <h2>Monthly Subscription Plans</h2>
+                <div id="subscriptions-grid" class="product-grid">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Add-ons Tab -->
+            <div id="addons-tab" class="tab-content">
+                <h2>Premium Add-on Features</h2>
+                <div id="addons-grid" class="product-grid">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Payment Form -->
+            <div id="payment-form" class="payment-form" style="display: none;">
+                <h3>Complete Your Purchase</h3>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="email" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label>Card Information</label>
+                    <div id="card-element" class="card-element">
+                        <!-- Stripe Elements will be inserted here -->
+                    </div>
+                </div>
+                <button id="submit-payment" class="btn">
+                    <span id="button-text">Complete Payment</span>
+                </button>
+            </div>
+
+            <!-- Payment Status -->
+            <div id="payment-status" class="payment-status">
+                <p id="status-message"></p>
+            </div>
+
+            <div class="back-link">
+                <a href="profile-dashboard.html">← Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        let stripe;
+        let elements;
+        let selectedProduct = null;
+        let currentTab = 'credits';
+
+        // Initialize Stripe
+        async function initializeStripe() {
+            try {
+                const response = await fetch(`${window.PAYMENT_API_BASE_URL || 'http://localhost:5001'}/api/v1/payment/products`);
+                const data = await response.json();
+                
+                stripe = Stripe(data.publishableKey);
+                elements = stripe.elements();
+                
+                const cardElement = elements.create('card', {
+                    style: {
+                        base: {
+                            fontSize: '16px',
+                            color: '#424770',
+                            '::placeholder': {
+                                color: '#aab7c4',
+                            },
+                        },
+                    },
+                });
+                
+                cardElement.mount('#card-element');
+                
+                loadProducts(data.products);
+            } catch (error) {
+                console.error('Error initializing Stripe:', error);
+                showStatus('Error loading payment system. Please try again.', 'error');
+            }
+        }
+
+        // Load products into the grid
+        function loadProducts(products) {
+            // Load credit packs
+            const creditsGrid = document.getElementById('credits-grid');
+            Object.entries(products.credit_packs).forEach(([key, product]) => {
+                const card = createProductCard(product, 'credit_pack', key);
+                creditsGrid.appendChild(card);
+            });
+
+            // Load subscriptions
+            const subscriptionsGrid = document.getElementById('subscriptions-grid');
+            Object.entries(products.subscriptions).forEach(([key, product]) => {
+                const card = createProductCard(product, 'subscription', key);
+                subscriptionsGrid.appendChild(card);
+            });
+
+            // Load add-ons
+            const addonsGrid = document.getElementById('addons-grid');
+            Object.entries(products.add_ons).forEach(([key, product]) => {
+                const card = createProductCard(product, 'addon', key);
+                addonsGrid.appendChild(card);
+            });
+        }
+
+        // Create product card element
+        function createProductCard(product, type, key) {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.onclick = () => selectProduct(product, type, key);
+            
+            let featuresHTML = '';
+            if (product.features) {
+                featuresHTML = product.features.map(feature => `<li>${feature}</li>`).join('');
+            } else {
+                featuresHTML = `<li>${product.description}</li>`;
+            }
+
+            card.innerHTML = `
+                <div class="product-name">${product.name}</div>
+                <div class="product-price">$${(product.amount / 100).toFixed(2)}</div>
+                <div class="product-description">${product.description}</div>
+                ${featuresHTML ? `<ul class="product-features">${featuresHTML}</ul>` : ''}
+            `;
+            
+            return card;
+        }
+
+        // Select a product
+        function selectProduct(product, type, key) {
+            // Remove previous selection
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Add selection to clicked card
+            event.currentTarget.classList.add('selected');
+            
+            selectedProduct = {
+                ...product,
+                type: type,
+                key: key
+            };
+            
+            // Show payment form
+            document.getElementById('payment-form').style.display = 'block';
+            document.getElementById('payment-form').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Switch tabs
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tab}-tab`).classList.add('active');
+            
+            currentTab = tab;
+            
+            // Hide payment form when switching tabs
+            document.getElementById('payment-form').style.display = 'none';
+            document.querySelectorAll('.product-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            selectedProduct = null;
+        }
+
+        // Handle payment submission
+        async function handlePayment() {
+            if (!selectedProduct) {
+                showStatus('Please select a product first.', 'error');
+                return;
+            }
+
+            const email = document.getElementById('email').value;
+            if (!email) {
+                showStatus('Please enter your email address.', 'error');
+                return;
+            }
+
+            setLoading(true);
+            showStatus('Processing payment...', 'processing');
+
+            try {
+                if (selectedProduct.type === 'subscription') {
+                    await handleSubscription(email);
+                } else {
+                    await handleOneTimePayment(email);
+                }
+            } catch (error) {
+                console.error('Payment error:', error);
+                showStatus('Payment failed: ' + error.message, 'error');
+                setLoading(false);
+            }
+        }
+
+        // Handle one-time payment (credit packs, add-ons)
+        async function handleOneTimePayment(email) {
+            const response = await fetch(`${window.PAYMENT_API_BASE_URL || 'http://localhost:5001'}/api/v1/payment/create-intent`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    amount: selectedProduct.amount,
+                    currency: selectedProduct.currency || 'usd',
+                    metadata: {
+                        product_type: selectedProduct.type,
+                        product_key: selectedProduct.key,
+                        email: email
+                    }
+                })
+            });
+
+            const { clientSecret, paymentIntentId } = await response.json();
+
+            // For testing with mock server, simulate successful payment without real Stripe confirmation
+            console.log('🔄 Processing mock payment with ID:', paymentIntentId);
+            
+            // Simulate payment processing delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Confirm payment with our mock server
+            await confirmPayment(paymentIntentId);
+            showStatus('Payment successful! Your features have been activated.', 'success');
+            
+            // Redirect after successful payment
+            setTimeout(() => {
+                window.location.href = 'profile-dashboard.html';
+            }, 3000);
+        }
+
+        // Handle subscription payment
+        async function handleSubscription(email) {
+            const response = await fetch(`${window.PAYMENT_API_BASE_URL || 'http://localhost:5001'}/api/v1/payment/create-subscription`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    priceId: selectedProduct.id,
+                    userId: 'test-user-id', // Would come from auth
+                    email: email,
+                    paymentMethodId: 'pm_mock' // Would come from Stripe Elements
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.subscriptionId) {
+                // Map price ID to plan name for the main API server
+                let planName = selectedProduct.key;
+                if (selectedProduct.key === 'price_basic_monthly') {
+                    planName = 'basic';
+                } else if (selectedProduct.key === 'price_pro_monthly') {
+                    planName = 'pro';
+                }
+
+                // Upgrade subscription through main API server
+                const subscriptionResponse = await fetch(`${window.API_BASE_URL || 'http://localhost:5000'}/api/v1/monetization/subscribe`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: 'test-user-id',
+                        plan: planName
+                    })
+                });
+
+                const subscriptionResult = await subscriptionResponse.json();
+                console.log('Subscription upgraded:', subscriptionResult);
+                
+                showStatus('Subscription activated successfully! Your features have been unlocked.', 'success');
+                
+                // Redirect after successful subscription
+                setTimeout(() => {
+                    window.location.href = 'profile-dashboard.html';
+                }, 3000);
+            } else {
+                throw new Error('Failed to create subscription');
+            }
+        }
+
+        // Confirm payment with main server
+        async function confirmPayment(paymentIntentId) {
+            // First confirm with payment server
+            const paymentResponse = await fetch(`${window.PAYMENT_API_BASE_URL || 'http://localhost:5001'}/api/v1/payment/confirm`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    paymentIntentId: paymentIntentId
+                })
+            });
+
+            const paymentResult = await paymentResponse.json();
+
+            // Then award credits through main API server
+            if (selectedProduct.type === 'credit_pack') {
+                const creditsResponse = await fetch(`${window.API_BASE_URL || 'http://localhost:5000'}/api/v1/monetization/purchase-credits`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: 'test-user-id',
+                        packSize: selectedProduct.key
+                    })
+                });
+
+                const creditsResult = await creditsResponse.json();
+                console.log('Credits awarded:', creditsResult);
+                return { ...paymentResult, credits: creditsResult };
+            }
+
+            return paymentResult;
+        }
+
+        // Set loading state
+        function setLoading(isLoading) {
+            const button = document.getElementById('submit-payment');
+            const buttonText = document.getElementById('button-text');
+            
+            if (isLoading) {
+                button.disabled = true;
+                buttonText.innerHTML = '<span class="loading"></span>Processing...';
+            } else {
+                button.disabled = false;
+                buttonText.textContent = 'Complete Payment';
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('payment-status');
+            const messageP = document.getElementById('status-message');
+            
+            statusDiv.className = `payment-status ${type}`;
+            messageP.textContent = message;
+            statusDiv.style.display = 'block';
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeStripe();
+            
+            // Set up payment form submission
+            document.getElementById('submit-payment').addEventListener('click', handlePayment);
+        });
+    </script>
+</body>
+</html>
