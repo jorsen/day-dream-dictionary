@@ -226,6 +226,12 @@
             border: 1px solid #bee5eb;
         }
 
+        .payment-status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
         .back-link {
             text-align: center;
             margin-top: 20px;
@@ -336,7 +342,6 @@
         </div>
     </div>
 
-    <script src="config.js"></script>
     <script>
         let stripe;
         let elements;
@@ -349,10 +354,24 @@
                 // Use payment server URL based on environment
                 const paymentApiUrl = window.location.hostname.includes('onrender.com') 
                     ? 'https://day-dream-dictionary-payments.onrender.com/api/v1/payment/products'
-                    : `${window.PAYMENT_API_BASE_URL || 'http://localhost:5001/api/v1/payment/products'}`;
+                    : 'http://localhost:5001/api/v1/payment/products';
                 
                 console.log('Fetching products from:', paymentApiUrl);
-                const response = await fetch(paymentApiUrl);
+                
+                // Add timeout and better error handling
+                const response = await fetch(paymentApiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    timeout: 10000 // 10 second timeout
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
 
                 // Mock Stripe initialization for testing
@@ -361,8 +380,109 @@
                 loadProducts(data.products);
             } catch (error) {
                 console.error('Error initializing payment system:', error);
-                showStatus('Error loading payment system. Please try again.', 'error');
+                showStatus(`Error loading payment system: ${error.message}. Please try again.`, 'error');
+                
+                // Show fallback products if API fails
+                showFallbackProducts();
             }
+        }
+
+        // Fallback products in case API fails
+        function showFallbackProducts() {
+            const fallbackProducts = {
+                credit_packs: {
+                    small: {
+                        id: 'price_small_credits',
+                        name: 'Small Credit Pack',
+                        amount: 999,
+                        currency: 'usd',
+                        credits: 10,
+                        description: '10 Dream Interpretation Credits'
+                    },
+                    medium: {
+                        id: 'price_medium_credits',
+                        name: 'Medium Credit Pack',
+                        amount: 1999,
+                        currency: 'usd',
+                        credits: 30,
+                        description: '30 Dream Interpretation Credits (25 + 5 bonus)'
+                    },
+                    large: {
+                        id: 'price_large_credits',
+                        name: 'Large Credit Pack',
+                        amount: 3999,
+                        currency: 'usd',
+                        credits: 75,
+                        description: '75 Dream Interpretation Credits (60 + 15 bonus)'
+                    }
+                },
+                subscriptions: {
+                    basic: {
+                        id: 'price_basic_monthly',
+                        name: 'Basic Plan',
+                        amount: 499,
+                        currency: 'usd',
+                        interval: 'month',
+                        features: ['20 basic interpretations', '5 deep interpretations', 'unlimited history', 'PDF export', 'no ads']
+                    },
+                    pro: {
+                        id: 'price_pro_monthly',
+                        name: 'Pro Plan',
+                        amount: 1299,
+                        currency: 'usd',
+                        interval: 'month',
+                        features: ['unlimited interpretations', 'analytics', 'voice journaling', 'reminders', 'symbol encyclopedia', 'no ads']
+                    }
+                },
+                add_ons: {
+                    remove_ads: {
+                        id: 'price_remove_ads',
+                        name: 'Remove Ads',
+                        amount: 199,
+                        currency: 'usd',
+                        interval: 'month',
+                        description: 'Ad-free experience'
+                    },
+                    life_season_report: {
+                        id: 'price_life_season',
+                        name: 'Life Season Report',
+                        amount: 1499,
+                        currency: 'usd',
+                        description: 'Personal life analysis based on dreams'
+                    },
+                    recurring_dream_map: {
+                        id: 'price_recurring_map',
+                        name: 'Recurring Dream Map',
+                        amount: 999,
+                        currency: 'usd',
+                        description: 'Visualization of recurring dream patterns'
+                    },
+                    couples_report: {
+                        id: 'price_couples_report',
+                        name: 'Couples Report',
+                        amount: 1999,
+                        currency: 'usd',
+                        description: 'Relationship dream analysis'
+                    },
+                    lucid_kit: {
+                        id: 'price_lucid_kit',
+                        name: 'Lucid Dreaming Kit',
+                        amount: 2499,
+                        currency: 'usd',
+                        description: 'Tools and techniques for lucid dreaming'
+                    },
+                    therapist_export: {
+                        id: 'price_therapist_export',
+                        name: 'Therapist Export',
+                        amount: 2999,
+                        currency: 'usd',
+                        description: 'Professional export format for therapists'
+                    }
+                }
+            };
+            
+            loadProducts(fallbackProducts);
+            showStatus('Using offline product catalog. Payment processing may be limited.', 'info');
         }
 
         // Load products into the grid
