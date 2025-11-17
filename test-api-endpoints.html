@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Endpoints Test - Day Dream Dictionary</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #5a6fd8;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 API Endpoints Test</h1>
+        <p>Test individual API endpoints to diagnose issues</p>
+        
+        <div class="test-section">
+            <h3>Health Check</h3>
+            <button class="test-button" onclick="testHealth()">Test /health</button>
+            <div id="health-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Auth Check</h3>
+            <button class="test-button" onclick="testAuth()">Test /api/v1/auth/status</button>
+            <div id="auth-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Dreams Check</h3>
+            <button class="test-button" onclick="testDreams()">Test /api/v1/dreams</button>
+            <div id="dreams-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Profile Check</h3>
+            <button class="test-button" onclick="testProfile()">Test /api/v1/profile</button>
+            <div id="profile-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Payments Check</h3>
+            <button class="test-button" onclick="testPayments()">Test /api/v1/payments</button>
+            <div id="payments-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        // Determine API base URL
+        const API_URL = window.location.hostname.includes('onrender.com') 
+            ? 'https://day-dream-dictionary-api.onrender.com/api/v1'
+            : 'http://localhost:5000/api/v1';
+
+        async function testHealth() {
+            const result = document.getElementById('health-result');
+            result.className = 'result info';
+            result.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_URL.replace('/api/v1', '')}/health`);
+                const data = await response.json();
+                
+                result.className = 'result success';
+                result.innerHTML = `
+                    <strong>✅ Health Check Passed</strong><br>
+                    Status: ${data.status}<br>
+                    Message: ${data.message}<br>
+                    Version: ${data.version}<br>
+                    Timestamp: ${data.timestamp}
+                `;
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `
+                    <strong>❌ Health Check Failed</strong><br>
+                    Error: ${error.message}
+                `;
+            }
+        }
+
+        async function testAuth() {
+            const result = document.getElementById('auth-result');
+            result.className = 'result info';
+            result.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/status`);
+                const data = await response.json();
+                
+                result.className = 'result success';
+                result.innerHTML = `
+                    <strong>✅ Auth Endpoint Working</strong><br>
+                    Status: ${response.status}<br>
+                    Data: ${JSON.stringify(data, null, 2)}
+                `;
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `
+                    <strong>❌ Auth Endpoint Failed</strong><br>
+                    Error: ${error.message}
+                `;
+            }
+        }
+
+        async function testDreams() {
+            const result = document.getElementById('dreams-result');
+            result.className = 'result info';
+            result.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_URL}/dreams?page=1&limit=5`);
+                const data = await response.json();
+                
+                result.className = 'result success';
+                result.innerHTML = `
+                    <strong>✅ Dreams Endpoint Working</strong><br>
+                    Status: ${response.status}<br>
+                    Dreams: ${data.dreams ? data.dreams.length : 0} found<br>
+                    Data: ${JSON.stringify(data, null, 2)}
+                `;
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `
+                    <strong>❌ Dreams Endpoint Failed</strong><br>
+                    Error: ${error.message}
+                `;
+            }
+        }
+
+        async function testProfile() {
+            const result = document.getElementById('profile-result');
+            result.className = 'result info';
+            result.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch(`${API_URL}/profile`);
+                const data = await response.json();
+                
+                result.className = 'result success';
+                result.innerHTML = `
+                    <strong>✅ Profile Endpoint Working</strong><br>
+                    Status: ${response.status}<br>
+                    Data: ${JSON.stringify(data, null, 2)}
+                `;
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `
+                    <strong>❌ Profile Endpoint Failed</strong><br>
+                    Error: ${error.message}
+                `;
+            }
+        }
+
+        async function testPayments() {
+            const result = document.getElementById('payments-result');
+            result.className = 'result info';
+            result.textContent = 'Testing...';
+            
+            try {
+                // Test the main payments endpoint
+                const response = await fetch(`${API_URL}/payments`);
+                const data = await response.json();
+                
+                result.className = 'result success';
+                result.innerHTML = `
+                    <strong>✅ Main Payments Endpoint Working</strong><br>
+                    Status: ${response.status}<br>
+                    Data: ${JSON.stringify(data, null, 2)}
+                `;
+                
+                // Also test credit packs endpoint
+                const creditPacksResponse = await fetch(`${API_URL}/payments/credit-packs`);
+                const creditPacksData = await creditPacksResponse.json();
+                
+                result.innerHTML += `
+                    <br><br>
+                    <strong>✅ Credit Packs Endpoint Working</strong><br>
+                    Status: ${creditPacksResponse.status}<br>
+                    Data: ${JSON.stringify(creditPacksData, null, 2)}
+                `;
+            } catch (error) {
+                result.className = 'result error';
+                result.innerHTML = `
+                    <strong>❌ Payments Endpoint Failed</strong><br>
+                    Error: ${error.message}
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -826,10 +826,15 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    document.getElementById('totalDreams').textContent = data.totalDreams || 0;
-                    document.getElementById('interpretations').textContent = data.totalInterpretations || 0;
-                    document.getElementById('thisMonth').textContent = data.thisMonth || 0;
-                    document.getElementById('creditsUsed').textContent = data.creditsUsed || 0;
+                    console.log('Stats data received:', data); // Debug log
+                    
+                    // Handle different response structures
+                    const stats = data.data || data; // Some APIs wrap data in a data property
+                    
+                    document.getElementById('totalDreams').textContent = stats.totalDreams || stats.total_dreams || 0;
+                    document.getElementById('interpretations').textContent = stats.totalInterpretations || stats.total_interpretations || 0;
+                    document.getElementById('thisMonth').textContent = stats.thisMonth || stats.this_month || 0;
+                    document.getElementById('creditsUsed').textContent = stats.creditsUsed || stats.credits_used || 0;
                 } else {
                     // Set default values if API fails
                     document.getElementById('totalDreams').textContent = '0';
@@ -842,6 +847,7 @@
                 // Set default values if stats fail to load
                 document.getElementById('totalDreams').textContent = '0';
                 document.getElementById('interpretations').textContent = '0';
+                document.getElementById('thisMonth').textContent = '0';
                 document.getElementById('thisMonth').textContent = '0';
                 document.getElementById('creditsUsed').textContent = '0';
             }
