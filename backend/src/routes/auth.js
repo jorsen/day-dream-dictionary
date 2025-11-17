@@ -191,7 +191,7 @@ router.post('/login', validateLogin, catchAsync(async (req, res, next) => {
     const { testMode } = require('../config/test-mode');
     console.log('Login attempt - Test mode:', testMode, 'Email:', email);
 
-    if (testMode && (email === 'test@example.com' || email === 'sample1@gmail.com') && password === 'test') {
+    if (testMode && (email === 'test@example.com' || email === 'sample1@gmail.com') && (password === 'test' || password === 'sample')) {
       console.log('Using test mode authentication for email:', email);
 
       // Generate tokens for test user

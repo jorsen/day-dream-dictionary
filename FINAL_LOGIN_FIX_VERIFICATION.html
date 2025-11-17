@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Login Fix Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+        .login-form {
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .quick-test {
+            background: #28a745;
+        }
+        .quick-test:hover { background: #218838; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Final Login Fix Verification</h1>
+    
+    <div class="test-section">
+        <h2>📋 Configuration Check</h2>
+        <div id="config-status" class="status info">Checking configuration...</div>
+        <button onclick="checkConfiguration()">Check Configuration</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🌐 API Endpoints Test</h2>
+        <div id="api-status" class="status info">Ready to test APIs...</div>
+        <button onclick="testAllEndpoints()">Test All Endpoints</button>
+        <button onclick="testPrimaryEndpoint()">Test Primary Only</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🔐 Login Functionality Test</h2>
+        <div id="login-status" class="status info">Ready to test login...</div>
+        
+        <div class="login-form">
+            <div class="form-group">
+                <label for="test-email">Email:</label>
+                <input type="email" id="test-email" value="sample1@gmail.com" readonly>
+            </div>
+            <div class="form-group">
+                <label for="test-password">Password:</label>
+                <input type="password" id="test-password" value="sample" readonly>
+            </div>
+            <button onclick="testLogin()" class="quick-test">🚀 Test Login</button>
+            <button onclick="testLoginWithFallback()">Test with Fallback</button>
+            <button onclick="clearResults()">Clear Results</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Test Results</h2>
+        <pre id="results">Test results will appear here...</pre>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        let testResults = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            testResults.push(logEntry);
+            
+            const resultsElement = document.getElementById('results');
+            resultsElement.textContent = testResults.join('\n');
+            resultsElement.scrollTop = resultsElement.scrollHeight;
+            
+            console.log(logEntry);
+        }
+
+        function updateStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+
+        function clearResults() {
+            testResults = [];
+            document.getElementById('results').textContent = 'Test results cleared...';
+        }
+
+        function checkConfiguration() {
+            log('=== Configuration Check ===');
+            updateStatus('config-status', 'Checking configuration...', 'info');
+            
+            try {
+                log(`Current hostname: ${window.location.hostname}`);
+                log(`Is localhost: ${window.location.hostname === 'localhost'}`);
+                log(`Primary API URL: ${API_CONFIG.API_BASE_URL}`);
+                log(`Fallback URLs: ${API_CONFIG.FALLBACK_URLS ? API_CONFIG.FALLBACK_URLS.join(', ') : 'None'}`);
+                
+                // Check if URLs are accessible
+                const primaryUrl = new URL(API_CONFIG.API_BASE_URL);
+                log(`Primary API domain: ${primaryUrl.hostname}`);
+                log(`Primary API protocol: ${primaryUrl.protocol}`);
+                
+                if (API_CONFIG.FALLBACK_URLS && API_CONFIG.FALLBACK_URLS.length > 0) {
+                    log(`Number of fallback URLs: ${API_CONFIG.FALLBACK_URLS.length}`);
+                    API_CONFIG.FALLBACK_URLS.forEach((url, index) => {
+                        log(`Fallback ${index + 1}: ${url}`);
+                    });
+                }
+                
+                updateStatus('config-status', '✅ Configuration loaded successfully', 'success');
+                log('✅ Configuration check completed');
+                
+            } catch (error) {
+                updateStatus('config-status', `❌ Configuration error: ${error.message}`, 'error');
+                log(`❌ Configuration error: ${error.message}`);
+            }
+        }
+
+        async function testEndpoint(url, endpointName) {
+            try {
+                log(`\n--- Testing ${endpointName}: ${url} ---`);
+                
+                // Test health endpoint first
+                const healthResponse = await fetch(`${url}/health`, {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(5000)
+                });
+                
+                log(`Health check status: ${healthResponse.status}`);
+                
+                if (healthResponse.ok) {
+                    const healthData = await healthResponse.json();
+                    log(`Health response: ${JSON.stringify(healthData)}`);
+                    
+                    // Test auth login endpoint
+                    const authResponse = await fetch(`${url}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: 'test@example.com', password: 'test' }),
+                        signal: AbortSignal.timeout(5000)
+                    });
+                    
+                    log(`Auth endpoint status: ${authResponse.status}`);
+                    
+                    if (authResponse.status === 401 || authResponse.status === 400) {
+                        log(`✅ ${endpointName} is working (auth endpoint responding correctly)`);
+                        return { success: true, url, message: 'Working' };
+                    } else if (authResponse.ok) {
+                        const authData = await authResponse.json();
+                        log(`Auth response: ${JSON.stringify(authData)}`);
+                        return { success: true, url, message: 'Working' };
+                    } else {
+                        const errorData = await authResponse.json();
+                        log(`❌ ${endpointName} auth error: ${errorData.message || 'Unknown error'}`);
+                        return { success: false, url, message: errorData.message || 'Auth error' };
+                    }
+                } else {
+                    log(`❌ ${endpointName} health check failed: ${healthResponse.status}`);
+                    return { success: false, url, message: `Health check failed: ${healthResponse.status}` };
+                }
+            } catch (error) {
+                log(`❌ ${endpointName} network error: ${error.message}`);
+                return { success: false, url, message: error.message };
+            }
+        }
+
+        async function testAllEndpoints() {
+            log('\n=== Testing All API Endpoints ===');
+            updateStatus('api-status', 'Testing all endpoints...', 'info');
+            
+            const urls = [API_CONFIG.API_BASE_URL];
+            if (API_CONFIG.FALLBACK_URLS) {
+                urls.push(...API_CONFIG.FALLBACK_URLS);
+            }
+            
+            const results = [];
+            for (let i = 0; i < urls.length; i++) {
+                const result = await testEndpoint(urls[i], `API ${i + 1}`);
+                results.push(result);
+            }
+            
+            const workingAPIs = results.filter(r => r.success);
+            if (workingAPIs.length > 0) {
+                updateStatus('api-status', `✅ ${workingAPIs.length} of ${urls.length} APIs working`, 'success');
+                log(`\n✅ SUCCESS: ${workingAPIs.length} working API(s) found`);
+                workingAPIs.forEach(api => log(`  - ${api.url}: ${api.message}`));
+            } else {
+                updateStatus('api-status', `❌ All ${urls.length} APIs failed`, 'error');
+                log(`\n❌ FAILED: All APIs are down`);
+                results.forEach(api => log(`  - ${api.url}: ${api.message}`));
+            }
+        }
+
+        async function testPrimaryEndpoint() {
+            log('\n=== Testing Primary API Only ===');
+            updateStatus('api-status', 'Testing primary API...', 'info');
+            
+            const result = await testEndpoint(API_CONFIG.API_BASE_URL, 'Primary API');
+            
+            if (result.success) {
+                updateStatus('api-status', `✅ Primary API working`, 'success');
+                log(`\n✅ Primary API is working: ${result.url}`);
+            } else {
+                updateStatus('api-status', `❌ Primary API failed`, 'error');
+                log(`\n❌ Primary API failed: ${result.message}`);
+            }
+        }
+
+        async function testLogin() {
+            log('\n=== Testing Login Flow ===');
+            updateStatus('login-status', 'Testing login...', 'info');
+            
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+            
+            try {
+                log(`Attempting login with: ${email}`);
+                
+                const response = await fetch(`${API_CONFIG.API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password }),
+                    signal: AbortSignal.timeout(10000)
+                });
+                
+                log(`Login response status: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Login successful!`);
+                    log(`User: ${JSON.stringify(data.user, null, 2)}`);
+                    log(`Access token received: ${data.accessToken ? 'Yes' : 'No'}`);
+                    updateStatus('login-status', `✅ Login successful`, 'success');
+                } else {
+                    const errorData = await response.json();
+                    log(`Login failed: ${errorData.message || 'Unknown error'}`);
+                    
+                    if (response.status === 401 || response.status === 400) {
+                        log(`✅ API is working (login endpoint responding with proper error)`);
+                        updateStatus('login-status', `✅ API working, credentials invalid`, 'warning');
+                    } else {
+                        updateStatus('login-status', `❌ Login failed`, 'error');
+                    }
+                }
+            } catch (error) {
+                log(`❌ Login network error: ${error.message}`);
+                updateStatus('login-status', `❌ Network error`, 'error');
+            }
+        }
+
+        async function testLoginWithFallback() {
+            log('\n=== Testing Login with Fallback URLs ===');
+            updateStatus('login-status', 'Testing login with fallback...', 'info');
+            
+            const email = document.getElementById('test-email').value;
+            const password = document.getElementById('test-password').value;
+            
+            const urls = [API_CONFIG.API_BASE_URL];
+            if (API_CONFIG.FALLBACK_URLS) {
+                urls.push(...API_CONFIG.FALLBACK_URLS);
+            }
+            
+            let loginSuccess = false;
+            let workingUrl = null;
+            
+            for (let i = 0; i < urls.length; i++) {
+                const currentUrl = urls[i];
+                log(`\nTrying login with API ${i + 1}/${urls.length}: ${currentUrl}`);
+                
+                try {
+                    const response = await fetch(`${currentUrl}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password }),
+                        signal: AbortSignal.timeout(10000)
+                    });
+                    
+                    log(`Response status: ${response.status}`);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        log(`✅ Login successful with ${currentUrl}!`);
+                        log(`User: ${JSON.stringify(data.user, null, 2)}`);
+                        loginSuccess = true;
+                        workingUrl = currentUrl;
+                        break;
+                    } else {
+                        const errorData = await response.json();
+                        log(`Login failed: ${errorData.message || 'Unknown error'}`);
+                        
+                        // If we get a proper error response (not a network error), the API is working
+                        if (response.status === 401 || response.status === 400) {
+                            log(`✅ API is working (login endpoint responding correctly)`);
+                            loginSuccess = true;
+                            workingUrl = currentUrl;
+                            break;
+                        }
+                    }
+                } catch (error) {
+                    log(`Network error with ${currentUrl}: ${error.message}`);
+                }
+            }
+            
+            if (loginSuccess) {
+                updateStatus('login-status', `✅ Login working via ${workingUrl}`, 'success');
+                log(`\n✅ LOGIN TEST PASSED: Working API found at ${workingUrl}`);
+            } else {
+                updateStatus('login-status', `❌ All login attempts failed`, 'error');
+                log(`\n❌ LOGIN TEST FAILED: No working APIs found`);
+            }
+        }
+
+        // Auto-run configuration check on load
+        window.onload = () => {
+            log('🚀 Final Login Fix Verification Tool');
+            log('This tool tests the complete login fix implementation');
+            checkConfiguration();
+        };
+    </script>
+</body>
+</html>

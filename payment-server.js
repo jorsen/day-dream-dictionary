@@ -1,17 +1,27 @@
 // Payment Processing Server with Stripe Integration
 const http = require('http');
 const url = require('url');
-// const stripe = require('stripe'); // Temporarily commented for testing
 
-// Real Stripe sandbox integration (ready for activation)
+// Get Stripe configuration from environment variables for production compatibility
 const STRIPE_CONFIG = {
-    publishableKey: 'pk_test_51SIErkBB0zCKREN6UDCN9durrrgIbxjNLRevZjGhIrTq7bHJQwIvm2osGUxSa7KkjD7WFdfm8RDcCPoS2SuGnzCG00F9n2QUR3',
-    secretKey: 'sk_test_51SIErkBB0zCKREN67U6W3YOHlgnWh9KB0o5eTSSR0feZhxlD33hiJa47x0HafKIm5Rb4RuMCaVwaNnypXvHYjj4400Prn0G7Ix',
-    webhookSecret: 'whsec_mock_webhook_secret' // Will be updated with real webhook secret later
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_51SIErkBB0zCKREN6UDCN9durrrgIbxjNLRevZjGhIrTq7bHJQwIvm2osGUxSa7KkjD7WFdfm8RDcCPoS2SuGnzCG00F9n2QUR3',
+    secretKey: process.env.STRIPE_SECRET_KEY || 'sk_test_51SIErkBB0zCKREN67U6W3YOHlgnWh9KB0o5eTSSR0feZhxlD33hiJa47x0HafKIm5Rb4RuMCaVwaNnypXvHYjj4400Prn0G7Ix',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock_webhook_secret'
 };
 
-// Initialize Stripe with secret key (temporarily disabled for testing)
-// const stripeInstance = stripe(STRIPE_CONFIG.secretKey);
+// Initialize Stripe with secret key (only if available in production)
+let stripeInstance = null;
+if (process.env.STRIPE_SECRET_KEY && (process.env.NODE_ENV === 'production' || process.env.STRIPE_SECRET_KEY !== 'sk_test_51SIErkBB0zCKREN67U6W3YOHlgnWh9KB0o5eTSSR0feZhxlD33hiJa47x0HafKIm5Rb4RuMCaVwaNnypXvHYjj4400Prn0G7Ix')) {
+    try {
+        const stripe = require('stripe');
+        stripeInstance = stripe(STRIPE_CONFIG.secretKey);
+        console.log('✅ Stripe initialized with real API keys');
+    } catch (error) {
+        console.log('⚠️ Stripe library not available, using mock implementation');
+    }
+} else {
+    console.log('🔄 Using mock Stripe implementation for development');
+}
 
 // Mock payment processing functions (with real Stripe API keys configured)
 const createPaymentIntent = async (amount, currency = 'usd', metadata = {}) => {

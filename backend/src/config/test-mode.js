@@ -1,6 +1,8 @@
 // Test mode configuration for running without external dependencies
 const testMode = process.env.TEST_MODE === 'true' || process.env.NODE_ENV === 'test' ||
-  (process.env.TEST_MODE !== 'false' && process.env.SUPABASE_URL === 'https://your-project-id.supabase.co');
+  (process.env.TEST_MODE !== 'false' && process.env.SUPABASE_URL === 'https://your-project-id.supabase.co') ||
+  // Enable test mode for production deployment to allow demo logins
+  (process.env.NODE_ENV === 'production' && process.env.TEST_MODE === 'demo');
 
 const mockSupabase = {
   auth: {

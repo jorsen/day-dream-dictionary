@@ -346,7 +346,13 @@
         // Initialize payment system (simplified for testing)
         async function initializeStripe() {
             try {
-                const response = await fetch(`${window.API_BASE_URL || 'http://localhost:5000/api/v1'}/payment/products`);
+                // Use payment server URL based on environment
+                const paymentApiUrl = window.location.hostname.includes('onrender.com') 
+                    ? 'https://day-dream-dictionary-payments.onrender.com/api/v1/payment/products'
+                    : `${window.PAYMENT_API_BASE_URL || 'http://localhost:5001/api/v1/payment/products'}`;
+                
+                console.log('Fetching products from:', paymentApiUrl);
+                const response = await fetch(paymentApiUrl);
                 const data = await response.json();
 
                 // Mock Stripe initialization for testing
@@ -533,7 +539,12 @@
 
         // Handle subscription payment
         async function handleSubscription(email) {
-            const response = await fetch(`${window.PAYMENT_API_BASE_URL || 'http://localhost:5001'}/api/v1/payment/create-subscription`, {
+            // Use payment server URL based on environment
+            const paymentApiUrl = window.location.hostname.includes('onrender.com') 
+                ? 'https://day-dream-dictionary-payments.onrender.com/api/v1/payment/create-subscription'
+                : `${window.PAYMENT_API_BASE_URL || 'http://localhost:5001/api/v1/payment/create-subscription'}`;
+                
+            const response = await fetch(paymentApiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

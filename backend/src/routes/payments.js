@@ -20,8 +20,18 @@ const {
   applyDynamicCredits
 } = require('../config/dynamic-credits');
 
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Initialize Stripe with error handling
+let stripe = null;
+try {
+  if (process.env.STRIPE_SECRET_KEY) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    console.log('✅ Stripe initialized successfully');
+  } else {
+    console.log('⚠️ STRIPE_SECRET_KEY not found, using mock implementation');
+  }
+} catch (error) {
+  console.error('❌ Failed to initialize Stripe:', error.message);
+}
 
 // Base credit pack configurations (before dynamic pricing)
 const BASE_CREDIT_PACKS = {

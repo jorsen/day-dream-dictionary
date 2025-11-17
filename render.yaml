@@ -32,6 +32,12 @@ services:
         value: 452757dc9928f8adc6c6c1b598b544ad
       - key: SESSION_SECRET
         value: f6a39ad7f121015434b6a6256a5712e9
+      - key: STRIPE_SECRET_KEY
+        value: sk_test_51SIErkBB0zCKREN67U6W3YOHlgnWh9KB0o5eTSSR0feZhxlD33hiJa47x0HafKIm5Rb4RuMCaVwaNnypXvHYjj4400Prn0G7Ix
+      - key: STRIPE_PUBLISHABLE_KEY
+        value: pk_test_51SIErkBB0zCKREN6UDCN9durrrgIbxjNLRevZjGhIrTq7bHJQwIvm2osGUxSa7KkjD7WFdfm8RDcCPoS2SuGnzCG00F9n2QUR3
+      - key: STRIPE_WEBHOOK_SECRET
+        value: whsec_mock_webhook_secret
       - key: SUPABASE_ANON_KEY
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3Z2pja2N6eXNjcGFvemxldnBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MTExNzMsImV4cCI6MjA3MjQ4NzE3M30.gKKl8PoJ7vDt9UWwY9yQv_V3Qr_hA5KsrwjK__XU1Bo
       - key: SUPABASE_SERVICE_KEY
@@ -39,4 +45,23 @@ services:
       - key: SUPABASE_URL
         value: https://gwgjckczyscpaozlevpe.supabase.co
       - key: TEST_MODE
-        value: false
+        value: demo
+  - type: web
+    name: day-dream-dictionary-payments
+    env: node
+    buildCommand: npm install
+    startCommand: node payment-server.js
+    port: 5001
+    autoDeploy: false
+    healthCheckPath: /api/v1/payment/products
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STRIPE_SECRET_KEY
+        value: sk_test_51SIErkBB0zCKREN67U6W3YOHlgnWh9KB0o5eTSSR0feZhxlD33hiJa47x0HafKIm5Rb4RuMCaVwaNnypXvHYjj4400Prn0G7Ix
+      - key: STRIPE_PUBLISHABLE_KEY
+        value: pk_test_51SIErkBB0zCKREN6UDCN9durrrgIbxjNLRevZjGhIrTq7bHJQwIvm2osGUxSa7KkjD7WFdfm8RDcCPoS2SuGnzCG00F9n2QUR3
+      - key: STRIPE_WEBHOOK_SECRET
+        value: whsec_mock_webhook_secret
+      - key: CORS_ORIGIN
+        value: https://day-dream-dictionary.onrender.com,https://daydreamdictionary.com
