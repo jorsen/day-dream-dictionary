@@ -43,6 +43,37 @@ router.get('/', authenticate, catchAsync(async (req, res, next) => {
     const emailParts = userEmail.split('@');
     const defaultDisplayName = emailParts.length > 0 ? emailParts[0] : 'User';
 
+    // Add complete subscription details
+    let enhancedSubscription = subscription;
+    if (subscription) {
+      enhancedSubscription = {
+        ...subscription,
+        // Add plan details
+        planName: subscription.plan === 'basic' ? 'Basic Plan' : 
+                   subscription.plan === 'pro' ? 'Pro Plan' : 'Free Plan',
+        planType: subscription.plan === 'basic' ? 'basic' : 
+                   subscription.plan === 'pro' ? 'pro' : 'free',
+        status: subscription.status || 'active',
+        currentPeriodStart: subscription.current_period_start,
+        currentPeriodEnd: subscription.current_period_end,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        monthlyPrice: subscription.amount || 0,
+        currency: subscription.currency || 'usd',
+        // Add limits if available
+        monthlyLimits: subscription.monthly_limits || {
+          basic: subscription.monthly_limits?.basic || 20,
+          deep: subscription.monthly_limits?.deep || 5
+        },
+        // Add usage if available
+        monthlyUsage: subscription.monthly_usage || {
+          basic: subscription.monthly_usage?.basic || 0,
+          deep: subscription.monthly_usage?.deep || 0
+        },
+        // Add features if available
+        features: subscription.features || []
+      };
+    }
+
     res.json({
       profile: {
         id: userId,
@@ -58,7 +89,7 @@ router.get('/', authenticate, catchAsync(async (req, res, next) => {
         },
         emailVerified: req.user?.emailVerified || false,
         credits: credits,
-        subscription: subscription,
+        subscription: enhancedSubscription,
         role: role,
         stats: {
           totalDreams: dreams?.length || 0

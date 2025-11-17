@@ -661,11 +661,30 @@
             const monthlyUsageRow = document.getElementById('monthlyUsageRow');
             const userCredits = document.getElementById('userCredits');
 
-            // Update plan badge
-            planBadge.className = `badge badge-${subscription.plan}`;
-            planBadge.textContent = subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1);
+            if (!subscription) {
+                // Default to free plan if no subscription
+                planBadge.className = 'badge badge-free';
+                planBadge.textContent = 'Free Plan';
+                userCredits.textContent = '5';
+                creditsRow.style.display = 'block';
+                monthlyLimitRow.style.display = 'block';
+                monthlyUsageRow.style.display = 'block';
+                document.getElementById('monthlyLimit').textContent = '5 basic / 3 deep';
+                document.getElementById('monthlyUsage').textContent = '0 / 5';
+                return;
+            }
 
-            if (subscription.plan === 'pro') {
+            // Use enhanced subscription data if available
+            const planType = subscription.planType || subscription.plan || 'free';
+            const planName = subscription.planName || 
+                           (planType === 'basic' ? 'Basic Plan' : 
+                            planType === 'pro' ? 'Pro Plan' : 'Free Plan');
+
+            // Update plan badge with proper name
+            planBadge.className = `badge badge-${planType}`;
+            planBadge.textContent = planName;
+
+            if (planType === 'pro') {
                 // Pro plan: Show unlimited credits, hide monthly limits and usage
                 userCredits.innerHTML = '♾️ Unlimited';
                 creditsRow.style.display = 'block';
@@ -677,9 +696,9 @@
                 monthlyLimitRow.style.display = 'block';
                 monthlyUsageRow.style.display = 'block';
                 
-                // Update monthly limits display
-                const limits = subscription.monthlyLimits || {};
-                const usage = subscription.monthlyUsage || {};
+                // Update monthly limits display using enhanced data
+                const limits = subscription.monthlyLimits || subscription.monthly_limits || {};
+                const usage = subscription.monthlyUsage || subscription.monthly_usage || {};
                 
                 let limitText = '';
                 if (limits.basic === -1) {
