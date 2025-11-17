@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 http://localhost:5001 https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000 http://localhost:5001 https://day-dream-dictionary.onrender.com https://day-dream-dictionary-api.onrender.com; img-src 'self' data: https:; font-src 'self' https:;">
     <title>Day Dream Dictionary - Login</title>
     <style>
         * {
@@ -251,70 +251,102 @@
             submitBtn.disabled = true;
             submitBtn.textContent = isSignup ? 'Creating Account...' : 'Logging in...';
             
-            try {
-                const endpoint = isSignup ? '/auth/signup' : '/auth/login';
-                const body = isSignup
-                    ? { email, password, displayName: displayName || email.split('@')[0], locale: 'en' }
-                    : { email, password };
+            const endpoint = isSignup ? '/auth/signup' : '/auth/login';
+            const body = isSignup
+                ? { email, password, displayName: displayName || email.split('@')[0], locale: 'en' }
+                : { email, password };
 
-                console.log('Making request to:', `${API_URL}${endpoint}`);
+            // Try primary API URL first, then fallback URLs
+            const urlsToTry = [API_URL];
+            if (API_CONFIG.FALLBACK_URLS) {
+                urlsToTry.push(...API_CONFIG.FALLBACK_URLS);
+            }
 
-                const response = await fetch(`${API_URL}${endpoint}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(body)
-                });
+            let lastError = null;
+            let success = false;
+            let responseData = null;
 
-                console.log('Response status:', response.status);
-                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            for (let i = 0; i < urlsToTry.length; i++) {
+                const currentUrl = urlsToTry[i];
+                console.log(`Trying API endpoint ${i + 1}/${urlsToTry.length}: ${currentUrl}${endpoint}`);
 
-                let data;
                 try {
-                    data = await response.json();
-                    console.log('Response data:', data);
-                } catch (parseError) {
-                    console.error('Failed to parse response as JSON:', parseError);
-                    data = { message: 'Invalid response from server' };
+                    const response = await fetch(`${currentUrl}${endpoint}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(body),
+                        // Add timeout to prevent hanging
+                        signal: AbortSignal.timeout(10000)
+                    });
+
+                    console.log(`Response from ${currentUrl}:`, response.status);
+
+                    let data;
+                    try {
+                        data = await response.json();
+                        console.log(`Response data from ${currentUrl}:`, data);
+                    } catch (parseError) {
+                        console.error(`Failed to parse response from ${currentUrl}:`, parseError);
+                        data = { message: 'Invalid response from server' };
+                    }
+
+                    if (response.ok) {
+                        success = true;
+                        responseData = data;
+                        console.log(`✅ Success with ${currentUrl}`);
+                        break;
+                    } else {
+                        lastError = data.message || `Server error (${response.status}): ${response.statusText}`;
+                        console.log(`❌ Failed with ${currentUrl}: ${lastError}`);
+                    }
+                } catch (error) {
+                    lastError = error;
+                    console.error(`❌ Network error with ${currentUrl}:`, error.message);
+                    
+                    if (i === urlsToTry.length - 1) {
+                        // This is the last URL, show detailed error
+                        let errorMessage = 'Connection error. ';
+                        
+                        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                            errorMessage += 'Unable to connect to server. Check your internet connection and API URL.';
+                        } else if (error.message.includes('CORS')) {
+                            errorMessage += 'CORS error: The server is blocking requests from this domain.';
+                        } else if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+                            errorMessage += 'Network error: Unable to reach the server. The API may be down or starting up.';
+                        } else if (error.name === 'AbortError') {
+                            errorMessage += 'Request timeout: The server took too long to respond.';
+                        } else {
+                            errorMessage += error.message;
+                        }
+                        
+                        showMessage(errorMessage, 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = isSignup ? 'Sign Up' : 'Login';
+                        return;
+                    }
                 }
+            }
 
-                if (response.ok) {
-                    // Save to localStorage
-                    localStorage.setItem('accessToken', data.accessToken);
-                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+            if (success && responseData) {
+                // Save to localStorage
+                localStorage.setItem('accessToken', responseData.accessToken);
+                localStorage.setItem('currentUser', JSON.stringify(responseData.user));
 
-                    // Show success message
-                    showMessage(
-                        isSignup ? '✅ Account created! Redirecting...' : '✅ Login successful! Redirecting...',
-                        'success'
-                    );
+                // Show success message
+                showMessage(
+                    isSignup ? '✅ Account created! Redirecting...' : '✅ Login successful! Redirecting...',
+                    'success'
+                );
 
-                    // Redirect after 1.5 seconds
-                    setTimeout(() => {
-                        window.location.href = 'profile-dashboard.html';
-                    }, 1500);
-                } else {
-                    // Show error message
-                    const errorMessage = data.message || `Server error (${response.status}): ${response.statusText}`;
-                    showMessage(errorMessage, 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = isSignup ? 'Sign Up' : 'Login';
-                }
-            } catch (error) {
-                console.error('Fetch error:', error);
-                let errorMessage = 'Connection error. ';
-
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    errorMessage += 'Unable to connect to server. Check your internet connection and API URL.';
-                } else if (error.message.includes('CORS')) {
-                    errorMessage += 'CORS error: The server is blocking requests from this domain.';
-                } else if (error.message.includes('NetworkError')) {
-                    errorMessage += 'Network error: Unable to reach the server.';
-                } else {
-                    errorMessage += error.message;
-                }
-
+                // Redirect after 1.5 seconds
+                setTimeout(() => {
+                    window.location.href = 'profile-dashboard.html';
+                }, 1500);
+            } else {
+                // All URLs failed
+                const errorMessage = lastError?.message || lastError?.toString() || 'Unable to connect to any API endpoint. Please try again later.';
                 showMessage(errorMessage, 'error');
                 submitBtn.disabled = false;
                 submitBtn.textContent = isSignup ? 'Sign Up' : 'Login';

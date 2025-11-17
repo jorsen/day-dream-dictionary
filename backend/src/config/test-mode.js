@@ -46,7 +46,7 @@ const mockSupabase = {
         {
           id: 'test-dream-1',
           user_id: 'test-user-id',
-          dream_text: 'I was flying through the clouds, feeling completely free and happy. The wind was gentle and I could see beautiful landscapes below me.',
+          dream_text: 'I was flying through clouds, feeling completely free and happy. The wind was gentle and I could see beautiful landscapes below me.',
           interpretation: {
             mainThemes: ['freedom', 'exploration'],
             emotionalTone: 'The dream evokes feelings of joy, freedom, and positivity, suggesting a hopeful and optimistic emotional state.',
@@ -112,7 +112,7 @@ const mockSupabase = {
         {
           id: 'test-dream-3',
           user_id: 'test-user-id',
-          dream_text: 'I found myself in a beautiful garden filled with colorful flowers and talking animals. Everything felt peaceful and I was able to understand what the animals were saying to me.',
+          dream_text: 'I found myself in a beautiful garden filled with colorful flowers and talking animals. Everything felt peaceful and I was able to understand what animals were saying to me.',
           interpretation: {
             mainThemes: ['peace', 'communication'],
             emotionalTone: 'The dream evokes feelings of joy, freedom, and positivity, suggesting a hopeful and optimistic emotional state.',
@@ -146,21 +146,35 @@ const mockSupabase = {
     }
 
     return {
-      select: (columns, options) => {
+      select: (columns = '*', options = {}) => {
         let queryConditions = {};
+        let orderByColumn = null;
+        let orderByAscending = true;
+        let countExact = options.count === 'exact';
+        let headOnly = options.head === true;
 
         const queryBuilder = {
           eq: (column, value) => {
             queryConditions[column] = value;
-            return queryBuilder; // Return self for chaining
+            return queryBuilder;
           },
           gte: (column, value) => {
             queryConditions[`${column}_gte`] = value;
-            return queryBuilder; // Return self for chaining
+            return queryBuilder;
           },
           not: (column, value) => {
             queryConditions[`${column}_not`] = value;
-            return queryBuilder; // Return self for chaining
+            return queryBuilder;
+          },
+          order: (column, options = {}) => {
+            orderByColumn = column;
+            orderByAscending = options.ascending !== false;
+            return queryBuilder;
+          },
+          range: (from, to) => {
+            queryBuilder.rangeFrom = from;
+            queryBuilder.rangeTo = to;
+            return queryBuilder;
           },
           single: async () => {
             // Handle different table queries based on conditions
@@ -177,20 +191,124 @@ const mockSupabase = {
               return { data: null, error: { code: 'PGRST116' } }; // No subscription found
             }
             return { data: null, error: { code: 'PGRST116' } };
-          },
-          order: (column, options) => ({
-            range: (from, to) => ({
-              eq: (col, val) => ({
-                single: async () => {
-                  if (table === 'dreams' && col === 'user_id' && val === 'free-user') {
-                    return { data: { id: 'test-dream-id', dream_text: 'test dream', interpretation: {} }, error: null };
-                  }
-                  return { data: null, error: { code: 'PGRST116' } };
-                }
-              })
-            })
-          })
+          }
         };
+
+        // Create a simple async function that returns the result directly
+        const executeQuery = async () => {
+          let results = [];
+
+          if (table === 'dreams') {
+            results = [...mockSupabase._dreams];
+            
+            // Apply filters
+            if (queryConditions.user_id) {
+              results = results.filter(dream => dream.user_id === queryConditions.user_id);
+            }
+            if (queryConditions.is_deleted !== undefined) {
+              results = results.filter(dream => dream.is_deleted === queryConditions.is_deleted);
+            }
+            if (queryConditions.is_recurring !== undefined) {
+              results = results.filter(dream => dream.is_recurring === queryConditions.is_recurring);
+            }
+            if (queryConditions.created_at_gte) {
+              const date = new Date(queryConditions.created_at_gte);
+              results = results.filter(dream => new Date(dream.created_at) >= date);
+            }
+            if (queryConditions.is_deleted_not) {
+              results = results.filter(dream => dream.is_deleted !== queryConditions.is_deleted_not);
+            }
+
+            // Apply sorting
+            if (orderByColumn) {
+              results.sort((a, b) => {
+                const aVal = a[orderByColumn];
+                const bVal = b[orderByColumn];
+                if (orderByAscending) {
+                  return aVal > bVal ? 1 : -1;
+                } else {
+                  return aVal < bVal ? 1 : -1;
+                }
+              });
+            }
+
+            // Apply pagination
+            if (queryBuilder.rangeFrom !== undefined && queryBuilder.rangeTo !== undefined) {
+              results = results.slice(queryBuilder.rangeFrom, queryBuilder.rangeTo + 1);
+            }
+
+            // Handle count queries
+            if (countExact) {
+              return {
+                data: headOnly ? null : results,
+                count: results.length,
+                error: null
+              };
+            }
+
+            return {
+              data: results,
+              count: results.length,
+              error: null
+            };
+          }
+
+          return { data: results, error: null };
+        };
+
+        // Override methods to return the async function directly
+        queryBuilder.eq = (column, value) => {
+          queryConditions[column] = value;
+          return executeQuery();
+        };
+        queryBuilder.gte = (column, value) => {
+          queryConditions[`${column}_gte`] = value;
+          return executeQuery();
+        };
+        queryBuilder.not = (column, value) => {
+          queryConditions[`${column}_not`] = value;
+          return executeQuery();
+        };
+        queryBuilder.order = (column, options = {}) => {
+          orderByColumn = column;
+          orderByAscending = options.ascending !== false;
+          return executeQuery();
+        };
+        queryBuilder.range = (from, to) => {
+          queryBuilder.rangeFrom = from;
+          queryBuilder.rangeTo = to;
+          return executeQuery();
+        };
+
+        // Override methods to return the async function
+        queryBuilder.eq = (column, value) => {
+          queryConditions[column] = value;
+          return queryBuilder;
+        };
+        queryBuilder.gte = (column, value) => {
+          queryConditions[`${column}_gte`] = value;
+          return queryBuilder;
+        };
+        queryBuilder.not = (column, value) => {
+          queryConditions[`${column}_not`] = value;
+          return queryBuilder;
+        };
+        queryBuilder.order = (column, options = {}) => {
+          orderByColumn = column;
+          orderByAscending = options.ascending !== false;
+          return queryBuilder;
+        };
+        queryBuilder.range = (from, to) => {
+          queryBuilder.rangeFrom = from;
+          queryBuilder.rangeTo = to;
+          return queryBuilder;
+        };
+
+        // Make the query builder itself async
+        Object.setPrototypeOf(queryBuilder, Object.getPrototypeOf({
+          then: executeQuery.then.bind(executeQuery),
+          catch: executeQuery.catch.bind(executeQuery)
+        }));
 
         return queryBuilder;
       },

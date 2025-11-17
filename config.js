@@ -14,8 +14,8 @@ const API_CONFIG = (() => {
     } else {
         // Production - Try multiple API endpoints with fallback
         const possibleAPIs = [
-            'https://day-dream-dictionary-api.onrender.com/api/v1',
             'https://day-dream-dictionary.onrender.com/api/v1',
+            'https://day-dream-dictionary-api.onrender.com/api/v1',
             'https://day-dream-dictionary.onrender.com/api'
         ];
         
