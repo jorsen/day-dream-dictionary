@@ -53,9 +53,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://js.stripe.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "http://localhost:5000", "https://day-dream-dictionary-api.onrender.com"],
+      connectSrc: ["'self'", "http://localhost:5000", "https://day-dream-dictionary-api.onrender.com", "https://api.stripe.com", "https://r.stripe.com", "https://merchant-ui-api.stripe.com"],
+      frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
       scriptSrcAttr: ["'unsafe-inline'"],
     },
   },
@@ -136,6 +137,106 @@ app.get('/health', (req, res) => {
     message: 'Day Dream Dictionary API is running',
     version: process.env.API_VERSION || 'v1',
     timestamp: new Date().toISOString()
+  });
+});
+
+// Payment products endpoint (for frontend compatibility)
+app.get('/api/v1/payment/products', (req, res) => {
+  const products = {
+    credit_packs: {
+      small: {
+        id: 'price_small_credits',
+        name: 'Small Credit Pack',
+        amount: 999,
+        currency: 'usd',
+        credits: 10,
+        description: '10 Dream Interpretation Credits'
+      },
+      medium: {
+        id: 'price_medium_credits',
+        name: 'Medium Credit Pack',
+        amount: 1999,
+        currency: 'usd',
+        credits: 30,
+        description: '30 Dream Interpretation Credits (25 + 5 bonus)'
+      },
+      large: {
+        id: 'price_large_credits',
+        name: 'Large Credit Pack',
+        amount: 3999,
+        currency: 'usd',
+        credits: 75,
+        description: '75 Dream Interpretation Credits (60 + 15 bonus)'
+      }
+    },
+    subscriptions: {
+      basic: {
+        id: 'price_basic_monthly',
+        name: 'Basic Plan',
+        amount: 499,
+        currency: 'usd',
+        interval: 'month',
+        features: ['20 basic interpretations', '5 deep interpretations', 'unlimited history', 'PDF export', 'no ads']
+      },
+      pro: {
+        id: 'price_pro_monthly',
+        name: 'Pro Plan',
+        amount: 1299,
+        currency: 'usd',
+        interval: 'month',
+        features: ['unlimited interpretations', 'analytics', 'voice journaling', 'reminders', 'symbol encyclopedia', 'no ads']
+      }
+    },
+    add_ons: {
+      remove_ads: {
+        id: 'price_remove_ads',
+        name: 'Remove Ads',
+        amount: 199,
+        currency: 'usd',
+        interval: 'month',
+        description: 'Ad-free experience'
+      },
+      life_season_report: {
+        id: 'price_life_season',
+        name: 'Life Season Report',
+        amount: 1499,
+        currency: 'usd',
+        description: 'Personal life analysis based on dreams'
+      },
+      recurring_dream_map: {
+        id: 'price_recurring_map',
+        name: 'Recurring Dream Map',
+        amount: 999,
+        currency: 'usd',
+        description: 'Visualization of recurring dream patterns'
+      },
+      couples_report: {
+        id: 'price_couples_report',
+        name: 'Couples Report',
+        amount: 1999,
+        currency: 'usd',
+        description: 'Relationship dream analysis'
+      },
+      lucid_kit: {
+        id: 'price_lucid_kit',
+        name: 'Lucid Dreaming Kit',
+        amount: 2499,
+        currency: 'usd',
+        description: 'Tools and techniques for lucid dreaming'
+      },
+      therapist_export: {
+        id: 'price_therapist_export',
+        name: 'Therapist Export',
+        amount: 2999,
+        currency: 'usd',
+        description: 'Professional export format for therapists'
+      }
+    }
+  };
+
+  res.json({
+    products: products,
+    publishableKey: 'pk_test_mock_stripe_key'
   });
 });
 

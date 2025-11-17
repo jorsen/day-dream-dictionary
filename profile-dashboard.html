@@ -737,7 +737,7 @@
         // Load user subscription and credits
         async function loadUserSubscription() {
             try {
-                const response = await fetchWithFallback('/profile/credits', {
+                const response = await fetchWithFallback('/profile', {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
@@ -746,22 +746,26 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    // Update subscription display
-                    if (data.subscription) {
-                        updateSubscriptionDisplay(data.subscription);
-                    }
-                    
-                    // Update credits display
-                    if (data.balance === 'unlimited' || data.subscription.plan === 'pro') {
-                        document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
-                    } else {
-                        document.getElementById('userCredits').textContent = data.balance || 0;
-                    }
-                    
-                    // Show success message for Pro plan users
-                    if (data.subscription && data.subscription.plan === 'pro') {
-                        showProUpgradeSuccess();
+
+                    if (data.profile) {
+                        const profile = data.profile;
+
+                        // Update subscription display
+                        if (profile.subscription) {
+                            updateSubscriptionDisplay(profile.subscription);
+                        }
+
+                        // Update credits display
+                        if (profile.credits === 'unlimited' || profile.subscription?.plan === 'pro') {
+                            document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
+                        } else {
+                            document.getElementById('userCredits').textContent = profile.credits || 0;
+                        }
+
+                        // Show success message for Pro plan users
+                        if (profile.subscription && profile.subscription.plan === 'pro') {
+                            showProUpgradeSuccess();
+                        }
                     }
                 }
             } catch (error) {

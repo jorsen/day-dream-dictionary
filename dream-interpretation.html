@@ -429,8 +429,8 @@
             hideMessage();
 
             try {
-                // FREE MODE: Use mock API endpoint
-                const response = await fetch(`${API_URL}/dreams/interpret`, {
+                // FREE MODE: Use test API endpoint (no authentication required)
+                const response = await fetch(`${API_URL}/dreams/test-interpret`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -448,7 +448,7 @@
 
                 if (response.ok) {
                     showMessage('success', 'Dream interpreted and saved successfully!');
-                    displayInterpretation(data);
+                    displayInterpretation(data.dream);
                 } else {
                     showMessage('error', data.message || 'No Credits');
                 }
@@ -466,43 +466,58 @@
             document.getElementById('dreamForm').style.display = 'none';
             document.getElementById('interpretationResult').style.display = 'block';
 
+            // Check if interpretation exists
+            if (!dream.interpretation) {
+                console.error('No interpretation data received');
+                showMessage('error', 'No interpretation data received. Please try again.');
+                return;
+            }
+
             // Display main themes
             const themesContainer = document.getElementById('mainThemes');
             themesContainer.innerHTML = '';
-            dream.interpretation.mainThemes.forEach(theme => {
-                const themeTag = document.createElement('span');
-                themeTag.className = 'theme-tag';
-                themeTag.textContent = theme;
-                themesContainer.appendChild(themeTag);
-            });
+            if (dream.interpretation.mainThemes && Array.isArray(dream.interpretation.mainThemes)) {
+                dream.interpretation.mainThemes.forEach(theme => {
+                    const themeTag = document.createElement('span');
+                    themeTag.className = 'theme-tag';
+                    themeTag.textContent = theme;
+                    themesContainer.appendChild(themeTag);
+                });
+            } else {
+                themesContainer.innerHTML = '<span class="theme-tag">General Dream</span>';
+            }
 
             // Display emotional tone
-            document.getElementById('emotionalTone').textContent = 
-                dream.interpretation.emotionalTone;
+            document.getElementById('emotionalTone').textContent =
+                dream.interpretation.emotionalTone || 'A meaningful dream experience';
 
             // Display symbols
             const symbolsContainer = document.getElementById('symbols');
             symbolsContainer.innerHTML = '';
-            dream.interpretation.symbols.forEach(symbol => {
-                const symbolDiv = document.createElement('div');
-                symbolDiv.className = 'symbol-item';
-                symbolDiv.innerHTML = `
-                    <div class="symbol-name">
-                        ${symbol.symbol}
-                        <span class="significance ${symbol.significance}">${symbol.significance}</span>
-                    </div>
-                    <div class="symbol-meaning">${symbol.meaning}</div>
-                `;
-                symbolsContainer.appendChild(symbolDiv);
-            });
+            if (dream.interpretation.symbols && Array.isArray(dream.interpretation.symbols)) {
+                dream.interpretation.symbols.forEach(symbol => {
+                    const symbolDiv = document.createElement('div');
+                    symbolDiv.className = 'symbol-item';
+                    symbolDiv.innerHTML = `
+                        <div class="symbol-name">
+                            ${symbol.symbol || 'Dream Symbol'}
+                            <span class="significance ${symbol.significance || 'medium'}">${symbol.significance || 'medium'}</span>
+                        </div>
+                        <div class="symbol-meaning">${symbol.meaning || 'This symbol carries personal significance in your dream.'}</div>
+                    `;
+                    symbolsContainer.appendChild(symbolDiv);
+                });
+            } else {
+                symbolsContainer.innerHTML = '<div class="symbol-item"><div class="symbol-name">Dream Elements<span class="significance medium">medium</span></div><div class="symbol-meaning">The elements in your dream contain personal meaning and significance.</div></div>';
+            }
 
             // Display personal insight
-            document.getElementById('personalInsight').textContent = 
-                dream.interpretation.personalInsight;
+            document.getElementById('personalInsight').textContent =
+                dream.interpretation.personalInsight || 'Your dream reflects aspects of your subconscious mind and current life experiences.';
 
             // Display guidance
-            document.getElementById('guidance').textContent = 
-                dream.interpretation.guidance;
+            document.getElementById('guidance').textContent =
+                dream.interpretation.guidance || 'Take time to reflect on your dream and consider how it might relate to your waking life.';
         }
 
         function interpretAnother() {

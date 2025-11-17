@@ -305,13 +305,29 @@ router.get('/export', authenticate, catchAsync(async (req, res, next) => {
   }
 }));
 
+// Get user credits
+router.get('/credits', authenticate, catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
+
+  try {
+    const credits = await getUserCredits(userId);
+
+    res.json({
+      credits: credits
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}));
+
 // Get user preferences
 router.get('/preferences', authenticate, catchAsync(async (req, res, next) => {
   const userId = req.user.id;
-  
+
   try {
     const profile = await getUserProfile(userId);
-    
+
     res.json({
       preferences: profile?.preferences || {
         emailNotifications: true,
@@ -321,7 +337,7 @@ router.get('/preferences', authenticate, catchAsync(async (req, res, next) => {
         dreamStorage: true
       }
     });
-    
+
   } catch (error) {
     next(error);
   }

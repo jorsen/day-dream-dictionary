@@ -639,4 +639,70 @@ router.post('/apply-promo',
   })
 );
 
+// Purchase credits endpoint
+router.post('/purchase-credits', authenticate, catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
+  const { packSize } = req.body;
+
+  // Define credit packs
+  const creditPacks = {
+    small: { credits: 10, amount: 999 },
+    medium: { credits: 30, amount: 1999 },
+    large: { credits: 75, amount: 3999 }
+  };
+
+  if (!creditPacks[packSize]) {
+    throw new AppError('Invalid credit pack', 400);
+  }
+
+  const pack = creditPacks[packSize];
+
+  try {
+    // Get current credits
+    const currentCredits = await getUserCredits(userId);
+
+    // Add credits to user account
+    const newCredits = currentCredits + pack.credits;
+    await updateUserCredits(userId, newCredits);
+
+    // Record the purchase (optional - skip if Supabase not available)
+    try {
+      const { getSupabase } = require('../config/supabase');
+      await getSupabase()
+        .from('payments_history')
+        .insert([{
+          user_id: userId,
+          type: 'credit_purchase',
+          amount: pack.amount,
+          credits: pack.credits,
+          pack_size: packSize,
+          created_at: new Date().toISOString()
+        }]);
+    } catch (error) {
+      console.log('Could not record purchase in database');
+    }
+
+    // Track event (optional - skip if MongoDB not available)
+    try {
+      const Event = require('../models/Event');
+      await Event.trackEvent(userId, 'credits_purchased', {
+        packSize,
+        credits: pack.credits,
+        amount: pack.amount
+      });
+    } catch (error) {
+      console.log('Event tracking skipped');
+    }
+
+    res.json({
+      message: `Successfully purchased ${pack.credits} credits`,
+      creditsAdded: pack.credits,
+      newTotal: newCredits
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}));
+
 module.exports = router;

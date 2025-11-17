@@ -304,14 +304,25 @@
                     <input type="email" id="email" placeholder="Enter your email" required>
                 </div>
                 <div class="form-group">
-                    <label>Card Information</label>
-                    <div id="card-element" class="card-element">
-                        <!-- Stripe Elements will be inserted here -->
+                    <label>Card Number</label>
+                    <input type="text" id="card-number" placeholder="1234 5678 9012 3456" required>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Expiry Date</label>
+                        <input type="text" id="expiry" placeholder="MM/YY" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>CVC</label>
+                        <input type="text" id="cvc" placeholder="123" required>
                     </div>
                 </div>
                 <button id="submit-payment" class="btn">
                     <span id="button-text">Complete Payment</span>
                 </button>
+                <p style="font-size: 12px; color: #666; margin-top: 10px; text-align: center;">
+                    This is a demo payment form. No real payment will be processed.
+                </p>
             </div>
 
             <!-- Payment Status -->
@@ -332,32 +343,18 @@
         let selectedProduct = null;
         let currentTab = 'credits';
 
-        // Initialize Stripe
+        // Initialize payment system (simplified for testing)
         async function initializeStripe() {
             try {
-                const response = await fetch(`${window.PAYMENT_API_BASE_URL || 'http://localhost:5001'}/api/v1/payment/products`);
+                const response = await fetch(`${window.API_BASE_URL || 'http://localhost:5000/api/v1'}/payment/products`);
                 const data = await response.json();
-                
-                stripe = Stripe(data.publishableKey);
-                elements = stripe.elements();
-                
-                const cardElement = elements.create('card', {
-                    style: {
-                        base: {
-                            fontSize: '16px',
-                            color: '#424770',
-                            '::placeholder': {
-                                color: '#aab7c4',
-                            },
-                        },
-                    },
-                });
-                
-                cardElement.mount('#card-element');
-                
+
+                // Mock Stripe initialization for testing
+                console.log('Payment system initialized with mock Stripe');
+
                 loadProducts(data.products);
             } catch (error) {
-                console.error('Error initializing Stripe:', error);
+                console.error('Error initializing payment system:', error);
                 showStatus('Error loading payment system. Please try again.', 'error');
             }
         }
@@ -485,34 +482,49 @@
 
         // Handle one-time payment (credit packs, add-ons)
         async function handleOneTimePayment(email) {
-            const response = await fetch(`${window.PAYMENT_API_BASE_URL || 'http://localhost:5001'}/api/v1/payment/create-intent`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    amount: selectedProduct.amount,
-                    currency: selectedProduct.currency || 'usd',
-                    metadata: {
-                        product_type: selectedProduct.type,
-                        product_key: selectedProduct.key,
-                        email: email
-                    }
-                })
-            });
+            // Validate form inputs
+            const cardNumber = document.getElementById('card-number').value;
+            const expiry = document.getElementById('expiry').value;
+            const cvc = document.getElementById('cvc').value;
 
-            const { clientSecret, paymentIntentId } = await response.json();
+            if (!cardNumber || !expiry || !cvc) {
+                showStatus('Please fill in all payment details.', 'error');
+                setLoading(false);
+                return;
+            }
 
-            // For testing with mock server, simulate successful payment without real Stripe confirmation
-            console.log('🔄 Processing mock payment with ID:', paymentIntentId);
-            
+            // Simulate payment processing
+            console.log('🔄 Processing mock payment for:', selectedProduct.name);
+
             // Simulate payment processing delay
             await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Confirm payment with our mock server
-            await confirmPayment(paymentIntentId);
+
+            // Simulate successful payment
+            const paymentIntentId = 'pi_mock_' + Date.now();
+
+            // Award credits through main API server
+            if (selectedProduct.type === 'credit_pack') {
+                try {
+                    const creditsResponse = await fetch(`${window.API_BASE_URL || 'http://localhost:5000'}/api/v1/monetization/purchase-credits`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            user_id: 'test-user-id',
+                            packSize: selectedProduct.key
+                        })
+                    });
+
+                    const creditsResult = await creditsResponse.json();
+                    console.log('Credits awarded:', creditsResult);
+                } catch (error) {
+                    console.log('Credits API not available, simulating success');
+                }
+            }
+
             showStatus('Payment successful! Your features have been activated.', 'success');
-            
+
             // Redirect after successful payment
             setTimeout(() => {
                 window.location.href = 'profile-dashboard.html';

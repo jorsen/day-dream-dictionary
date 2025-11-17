@@ -201,7 +201,8 @@ const paymentServer = http.createServer((req, res) => {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400');
 
     if (req.method === 'OPTIONS') {
         res.writeHead(200);
@@ -217,24 +218,29 @@ const paymentServer = http.createServer((req, res) => {
 
     // Payment intent creation
     if (path === '/api/v1/payment/create-intent' && method === 'POST') {
+        console.log('PAYMENT: Processing create-intent request');
         let body = '';
         req.on('data', chunk => {
             body += chunk.toString();
         });
         req.on('end', async () => {
             try {
+                console.log('PAYMENT: Received body:', body);
                 const data = JSON.parse(body);
                 const { amount, currency = 'usd', metadata = {} } = data;
-                
+
+                console.log('PAYMENT: Creating payment intent for amount:', amount);
                 const paymentIntent = await createPaymentIntent(amount, currency, metadata);
                 paymentIntents.set(paymentIntent.id, paymentIntent);
-                
+
+                console.log('PAYMENT: Payment intent created:', paymentIntent.id);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     clientSecret: paymentIntent.client_secret,
                     paymentIntentId: paymentIntent.id
                 }));
             } catch (error) {
+                console.log('PAYMENT: Error creating payment intent:', error.message);
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: error.message }));
             }

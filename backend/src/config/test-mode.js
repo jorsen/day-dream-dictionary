@@ -146,17 +146,35 @@ const mockSupabase = {
     }
 
     return {
-      select: (columns, options) => ({
-        eq: (column, value) => ({
+      select: (columns, options) => {
+        let queryConditions = {};
+
+        const queryBuilder = {
+          eq: (column, value) => {
+            queryConditions[column] = value;
+            return queryBuilder; // Return self for chaining
+          },
+          gte: (column, value) => {
+            queryConditions[`${column}_gte`] = value;
+            return queryBuilder; // Return self for chaining
+          },
+          not: (column, value) => {
+            queryConditions[`${column}_not`] = value;
+            return queryBuilder; // Return self for chaining
+          },
           single: async () => {
-            if (table === 'credits' && column === 'user_id' && value === 'test-user-id') {
+            // Handle different table queries based on conditions
+            if (table === 'credits' && queryConditions.user_id === 'test-user-id') {
               return { data: { balance: 5 }, error: null };
             }
-            if (table === 'profiles') {
-              return { data: { display_name: 'Test User', locale: 'en' }, error: null };
+            if (table === 'profiles' && queryConditions.user_id) {
+              return { data: { display_name: 'Test User', locale: 'en', user_id: queryConditions.user_id }, error: null };
             }
-            if (table === 'subscriptions' && column === 'user_id' && value === 'test-user-id') {
+            if (table === 'subscriptions' && queryConditions.user_id === 'test-user-id' && queryConditions.status === 'active') {
               return { data: null, error: { code: 'PGRST116' } }; // No active subscription
+            }
+            if (table === 'subscriptions' && queryConditions.user_id) {
+              return { data: null, error: { code: 'PGRST116' } }; // No subscription found
             }
             return { data: null, error: { code: 'PGRST116' } };
           },
@@ -172,8 +190,13 @@ const mockSupabase = {
               })
             })
           })
-        }),
-        limit: () => ({ data: [], error: null })
+        };
+
+        return queryBuilder;
+      },
+      limit: (count) => ({
+        data: mockSupabase._dreams ? mockSupabase._dreams.slice(0, count) : [],
+        error: null
       }),
       insert: (data) => ({
         select: () => ({
