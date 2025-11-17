@@ -848,7 +848,7 @@
                     console.log('Stats data received:', data); // Debug log
                     
                     // Handle different response structures
-                    const stats = data.data || data; // Some APIs wrap data in a data property
+                    const stats = data.stats || data.data || data; // Some APIs wrap data in stats or data property
                     
                     document.getElementById('totalDreams').textContent = stats.totalDreams || stats.total_dreams || 0;
                     document.getElementById('interpretations').textContent = stats.totalInterpretations || stats.total_interpretations || 0;

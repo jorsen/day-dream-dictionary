@@ -631,7 +631,12 @@
             // Award credits through main API server
             if (selectedProduct.type === 'credit_pack') {
                 try {
-                    const creditsResponse = await fetch(`${window.API_BASE_URL || 'http://localhost:5000'}/api/v1/monetization/purchase-credits`, {
+                    // Determine API URL based on environment
+                    const apiUrl = window.location.hostname.includes('onrender.com') 
+                        ? 'https://day-dream-dictionary-api.onrender.com/api/v1/monetization/purchase-credits'
+                        : 'http://localhost:5000/api/v1/monetization/purchase-credits';
+                    
+                    const creditsResponse = await fetch(apiUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -662,7 +667,7 @@
             // Use payment server URL based on environment
             const paymentApiUrl = window.location.hostname.includes('onrender.com') 
                 ? 'https://day-dream-dictionary-payments.onrender.com/api/v1/payment/create-subscription'
-                : `${window.PAYMENT_API_BASE_URL || 'http://localhost:5001/api/v1/payment/create-subscription'}`;
+                : 'http://localhost:5001/api/v1/payment/create-subscription';
                 
             const response = await fetch(paymentApiUrl, {
                 method: 'POST',
@@ -689,7 +694,11 @@
                 }
 
                 // Upgrade subscription through main API server
-                const subscriptionResponse = await fetch(`${window.API_BASE_URL || 'http://localhost:5000'}/api/v1/monetization/subscribe`, {
+                const mainApiUrl = window.location.hostname.includes('onrender.com') 
+                    ? 'https://day-dream-dictionary-api.onrender.com/api/v1/monetization/subscribe'
+                    : 'http://localhost:5000/api/v1/monetization/subscribe';
+                
+                const subscriptionResponse = await fetch(mainApiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
