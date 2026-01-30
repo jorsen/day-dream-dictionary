@@ -75,14 +75,14 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`\n🌙 Day Dream Dictionary Frontend Server is running!`);
-  console.log(`📱 Open your browser and go to: http://localhost:${PORT}`);
-  console.log(`🔗 API Server is running on: http://localhost:5000`);
-  console.log(`\n📋 Available pages:`);
-  console.log(`   • Main App: http://localhost:${PORT}/`);
-  console.log(`   • Login: http://localhost:${PORT}/login.html`);
-  console.log(`   • Test Interface: http://localhost:${PORT}/test-app.html`);
-  console.log(`   • Dream Interpretation: http://localhost:${PORT}/dream-interpretation.html`);
-  console.log(`   • Profile Dashboard: http://localhost:${PORT}/profile-dashboard.html`);
-  console.log(`\n🚀 Press Ctrl+C to stop the server\n`);
+  console.log(`\n🌙 Day Dream Dictionary Frontend Server is running on PORT ${PORT}!`);
+  console.log(`📱 Production URLs available through your domain (not logged here)`);
+  console.log(`🔗 API Service: day-dream-dictionary-api.onrender.com`);
+  console.log(`\n📋 Available pages (use your production domain):`);
+  console.log(`   • Main App: /`);
+  console.log(`   • Login: /login.html`);
+  console.log(`   • Test Interface: /test-app.html`);
+  console.log(`   • Dream Interpretation: /dream-interpretation.html`);
+  console.log(`   • Profile Dashboard: /profile-dashboard.html`);
+  console.log(`\n🚀 Server ready - access through your Render domain\n`);
 });
