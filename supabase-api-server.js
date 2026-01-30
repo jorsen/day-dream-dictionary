@@ -791,6 +791,26 @@ const server = http.createServer((req, res) => {
 
     console.log(`${method} ${path}`);
 
+    // Root health check for Render (supports HEAD and GET)
+    if (path === '/health' && (method === 'GET' || method === 'HEAD')) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok', message: 'Day Dream Dictionary API is healthy' }));
+        return;
+    }
+
+    // Root endpoint
+    if (path === '/' && (method === 'GET' || method === 'HEAD')) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            name: 'Day Dream Dictionary API',
+            version: '1.0.0',
+            status: 'running',
+            documentation: '/api/v1',
+            health: '/health'
+        }));
+        return;
+    }
+
     // API root endpoint
     if (path === '/api/v1' && method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
