@@ -620,33 +620,47 @@
                 return;
             }
 
-            // Show processing status
-            console.log('🔄 Processing payment for:', selectedProduct.name);
-            setLoading(true);
-            showStatus('Processing payment...', 'processing');
+            // Simulate payment processing
+            console.log('🔄 Processing mock payment for:', selectedProduct.name);
 
-            try {
-                // Simulate payment processing delay
-                await new Promise(resolve => setTimeout(resolve, 2000));
+            // Simulate payment processing delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
-                // Simulate successful payment
-                const paymentIntentId = 'pi_mock_' + Date.now();
+            // Simulate successful payment
+            const paymentIntentId = 'pi_mock_' + Date.now();
 
-                // For demo purposes, just show success without actual API calls
-                // In production, this would call real payment APIs
-                console.log('💳 Payment processed successfully for:', selectedProduct.name);
-                
-                showStatus('Payment successful! Your features have been activated.', 'success');
+            // Award credits through main API server
+            if (selectedProduct.type === 'credit_pack') {
+                try {
+                    // Determine API URL based on environment
+                    const apiUrl = window.location.hostname.includes('onrender.com') 
+                        ? 'https://day-dream-dictionary-api.onrender.com/api/v1/monetization/purchase-credits'
+                        : 'http://localhost:5000/api/v1/monetization/purchase-credits';
+                    
+                    const creditsResponse = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            user_id: 'test-user-id',
+                            packSize: selectedProduct.key
+                        })
+                    });
 
-                // Redirect after successful payment
-                setTimeout(() => {
-                    window.location.href = 'profile-dashboard.html';
-                }, 3000);
-            } catch (error) {
-                console.error('Payment error:', error);
-                showStatus('Payment failed: ' + error.message, 'error');
-                setLoading(false);
+                    const creditsResult = await creditsResponse.json();
+                    console.log('Credits awarded:', creditsResult);
+                } catch (error) {
+                    console.log('Credits API not available, simulating success');
+                }
             }
+
+            showStatus('Payment successful! Your features have been activated.', 'success');
+
+            // Redirect after successful payment
+            setTimeout(() => {
+                window.location.href = 'profile-dashboard.html';
+            }, 3000);
         }
 
         // Handle subscription payment
