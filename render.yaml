@@ -20,6 +20,8 @@ services:
         value: https://day-dream-dictionary.onrender.com
       - key: JWT_SECRET
         value: "vEgPP8X0829L1LFilcySFPM2Bhc0kDd2Mrd90uhREZyFy5rc+gY8/JFbWtrfadS46JDIGxzhbCuu1F5gaQOMBQ=="
+      - key: MONGODB_URI
+        value: mongodb+srv://jorsenmejia_db_user:NHPljhlrWP6gktk5@daydream.7riem3f.mongodb.net/daydreamdictionary?retryWrites=true&w=majority&appName=daydream
       - key: NODE_ENV
         value: production
       - key: OPENROUTER_API_KEY
@@ -38,12 +40,6 @@ services:
         value: pk_test_51SIErkBB0zCKREN6UDCN9durrrgIbxjNLRevZjGhIrTq7bHJQwIvm2osGUxSa7KkjD7WFdfm8RDcCPoS2SuGnzCG00F9n2QUR3
       - key: STRIPE_WEBHOOK_SECRET
         value: whsec_mock_webhook_secret
-      - key: SUPABASE_ANON_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3Z2pja2N6eXNjcGFvemxldnBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MTExNzMsImV4cCI6MjA3MjQ4NzE3M30.gKKl8PoJ7vDt9UWwY9yQv_V3Qr_hA5KsrwjK__XU1Bo
-      - key: SUPABASE_SERVICE_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3Z2pja2N6eXNjcGFvemxldnBlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjkxMTE3MywiZXhwIjoyMDcyNDg3MTczfQ.YW8MY5qNLKMwfeSrIHjIDTN42HgeiQ6YRBZ-McyPXGM
-      - key: SUPABASE_URL
-        value: https://gwgjckczyscpaozlevpe.supabase.co
       - key: TEST_MODE
         value: demo
   - type: web
