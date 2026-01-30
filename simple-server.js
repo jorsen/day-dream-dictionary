@@ -279,6 +279,34 @@ const server = http.createServer((req, res) => {
       return;
     }
 
+    // Handle dreams stats API
+    if (pathname === '/api/v1/dreams/stats' && method === 'GET') {
+      const now = new Date();
+      const thisMonth = now.getMonth();
+      const thisYear = now.getFullYear();
+
+      const thisMonthDreams = dreamStorage.filter(dream => {
+        const dreamDate = new Date(dream.created_at);
+        return dreamDate.getMonth() === thisMonth && dreamDate.getFullYear() === thisYear;
+      });
+
+      const stats = {
+        totalDreams: dreamStorage.length,
+        totalInterpretations: dreamStorage.length,
+        thisMonth: thisMonthDreams.length,
+        creditsUsed: 0, // FREE MODE
+        interpretationTypes: {
+          basic: dreamStorage.filter(d => d.interpretation_type === 'basic').length,
+          deep: dreamStorage.filter(d => d.interpretation_type === 'deep').length,
+          premium: dreamStorage.filter(d => d.interpretation_type === 'premium').length
+        }
+      };
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(stats));
+      return;
+    }
+
     // Handle health check API
     if (pathname === '/api/v1/health' && method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
