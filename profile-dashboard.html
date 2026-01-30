@@ -635,21 +635,35 @@
                     // Update profile information if needed
                     if (data.profile) {
                         const profile = data.profile;
-                        
+
                         // Update subscription display
                         if (profile.subscription) {
                             updateSubscriptionDisplay(profile.subscription);
                         }
-                        
+
                         if (profile.credits !== undefined) {
                             document.getElementById('userCredits').textContent = profile.credits;
                         }
                     }
+                } else {
+                    console.error('Profile API failed, but keeping user logged in');
+                    // DON'T LOGOUT - Just set default FREE MODE values
+                    currentUser.credits = 'unlimited';
+                    currentUser.subscription = { plan: 'basic', planName: 'Free Mode', planType: 'basic' };
+
+                    // Update display with FREE MODE values
+                    updateSubscriptionDisplay(currentUser.subscription);
+                    document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
                 }
             } catch (error) {
-                console.error('Error loading profile:', error);
-                // Set default values if profile fails to load
-                document.getElementById('userCredits').textContent = 'Unlimited';
+                console.error('Profile load error, but keeping user logged in:', error);
+                // DON'T LOGOUT - Just set default FREE MODE values
+                currentUser.credits = 'unlimited';
+                currentUser.subscription = { plan: 'basic', planName: 'Free Mode', planType: 'basic' };
+
+                // Update display with FREE MODE values
+                updateSubscriptionDisplay(currentUser.subscription);
+                document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
             }
         }
 
@@ -786,14 +800,25 @@
                             showProUpgradeSuccess();
                         }
                     }
+                } else {
+                    console.error('Subscription API failed, but keeping user logged in');
+                    // DON'T LOGOUT - Just set default FREE MODE values
+                    currentUser.credits = 'unlimited';
+                    currentUser.subscription = { plan: 'basic', planName: 'Free Mode', planType: 'basic' };
+
+                    // Update display with FREE MODE values
+                    updateSubscriptionDisplay(currentUser.subscription);
+                    document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
                 }
             } catch (error) {
-                console.error('Error loading subscription:', error);
-                // Show offline mode for production
-                if (!window.location.hostname.includes('localhost')) {
-                    document.getElementById('userCredits').innerHTML = '🔴 Offline';
-                    showOfflineMessage();
-                }
+                console.error('Subscription load error, but keeping user logged in:', error);
+                // DON'T LOGOUT - Just set default FREE MODE values
+                currentUser.credits = 'unlimited';
+                currentUser.subscription = { plan: 'basic', planName: 'Free Mode', planType: 'basic' };
+
+                // Update display with FREE MODE values
+                updateSubscriptionDisplay(currentUser.subscription);
+                document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
             }
         }
 
