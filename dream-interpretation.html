@@ -388,10 +388,23 @@
         const API_URL = API_CONFIG.API_BASE_URL;
         let userCredits = 0;
         let hasSubscription = false;
+        let authToken = null;
 
-        // FREE MODE: No authentication required
+        // Check for stored authentication token
         window.addEventListener('DOMContentLoaded', async () => {
-            // Load user credits and data (FREE MODE)
+            // Check if user is authenticated
+            authToken = localStorage.getItem('authToken');
+
+            if (!authToken) {
+                // Not authenticated - redirect to login
+                showMessage('error', 'Please sign up or login first to interpret dreams.');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+                return;
+            }
+
+            // Load user credits and data
             await loadUserCredits();
 
             // Check if there's a pending dream from the dashboard
@@ -402,11 +415,29 @@
             }
         });
 
-        // FREE MODE: No credit loading needed
         async function loadUserCredits() {
-            // Just set unlimited status
-            hasSubscription = true; // FREE MODE
-            userCredits = 'unlimited';
+            try {
+                const response = await fetch(`${API_URL}/profile`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const profileData = await response.json();
+                    hasSubscription = true;
+                    userCredits = profileData.profile.credits;
+                    console.log('User profile loaded:', profileData.profile);
+                } else {
+                    console.error('Failed to load profile:', response.statusText);
+                    userCredits = 'unlimited'; // Fallback
+                }
+            } catch (error) {
+                console.error('Profile load error:', error);
+                userCredits = 'unlimited'; // Fallback
+            }
         }
 
         // Handle form submission
@@ -429,11 +460,12 @@
             hideMessage();
 
             try {
-                // FREE MODE: Use test API endpoint (no authentication required)
+                // AUTHENTICATED: Include Bearer token in headers
                 const response = await fetch(`${API_URL}/dreams/test-interpret`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
                     },
                     body: JSON.stringify({
                         dreamText,
