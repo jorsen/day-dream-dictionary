@@ -8,7 +8,7 @@ const API_CONFIG = (() => {
         // Production environment (Render)
         if (hostname.includes('onrender.com') || hostname.includes('daydreamdictionary.com')) {
             return {
-                API_BASE_URL: 'https://day-dream-dictionary.onrender.com/api/v1',
+                API_BASE_URL: 'https://day-dream-dictionary-api.onrender.com/api/v1',
                 FALLBACK_URLS: []
             };
         }

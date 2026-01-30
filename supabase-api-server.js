@@ -1000,24 +1000,24 @@ const server = http.createServer((req, res) => {
                     const data = JSON.parse(body);
                     const userId = data.user_id || 'test-user-id';
                     const interpretationType = data.interpretationType || 'basic';
-                    
+
                     // Check user limits and credits
                     const limitCheck = checkUserLimits(userId, interpretationType);
                     if (!limitCheck.allowed) {
                         res.writeHead(402, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ 
+                        res.end(JSON.stringify({
                             error: 'Limit exceeded',
                             reason: limitCheck.reason,
                             details: limitCheck
                         }));
                         return;
                     }
-                    
+
                     const interpretation = getMockInterpretation(data.dreamText);
-                    
+
                     // Consume credits and update usage
                     const consumption = consumeCredits(userId, interpretationType);
-                    
+
                     const dreamData = {
                         id: dreamIdCounter.toString(),
                         dream_text: data.dreamText,
@@ -1051,6 +1051,48 @@ const server = http.createServer((req, res) => {
                     res.end(JSON.stringify(dreamData));
                 } catch (error) {
                     console.error('Error processing dream:', error);
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Invalid request data' }));
+                }
+            });
+            return;
+        }
+
+        // FREE MODE test endpoint (no authentication required)
+        if (path === '/api/v1/dreams/test-interpret' && method === 'POST') {
+            let body = '';
+            req.on('data', chunk => {
+                body += chunk.toString();
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body);
+
+                    console.log('Processing FREE dream interpretation request');
+
+                    const interpretation = getMockInterpretation(data.dreamText);
+
+                    const dreamData = {
+                        id: dreamIdCounter.toString(),
+                        dream_text: data.dreamText,
+                        interpretation_type: data.interpretationType || 'basic',
+                        interpretation: interpretation,
+                        created_at: new Date().toISOString(),
+                        user_id: 'free-user-' + Date.now(),
+                        credits_consumed: 0, // FREE MODE
+                        credits_remaining: 'unlimited'
+                    };
+
+                    // Store in local memory
+                    dreamStorage.push(dreamData);
+                    dreamIdCounter++;
+
+                    console.log('FREE dream interpretation completed');
+
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(dreamData));
+                } catch (error) {
+                    console.error('Error processing FREE dream:', error);
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'Invalid request data' }));
                 }
