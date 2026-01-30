@@ -262,7 +262,7 @@ const server = http.createServer((req, res) => {
           }
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(dreamData));
+          res.end(JSON.stringify({ dream: dreamData }));
         } catch (error) {
           console.error('Error processing dream:', error);
           res.writeHead(400, { 'Content-Type': 'application/json' });
