@@ -373,7 +373,7 @@ const paymentServer = http.createServer((req, res) => {
     res.end(JSON.stringify({ error: 'Payment endpoint not found' }));
 });
 
-const PAYMENT_PORT = 5001;
+const PAYMENT_PORT = process.env.PORT || 5001;
 paymentServer.listen(PAYMENT_PORT, () => {
     console.log(`\n💳 Payment Processing Server is running!`);
     console.log(`📡 Server: http://localhost:${PAYMENT_PORT}`);

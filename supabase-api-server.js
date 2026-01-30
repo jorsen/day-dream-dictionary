@@ -1287,7 +1287,7 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ error: 'Endpoint not found' }));
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
     console.log(`\n🌙 Day Dream Dictionary API Server with Supabase Integration is running!`);
     console.log(`📡 Server: http://localhost:${PORT}`);
