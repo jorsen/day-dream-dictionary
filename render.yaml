@@ -1,27 +1,16 @@
-# Static Sites
-staticSites:
-  - type: static
-    name: day-dream-dictionary-frontend
-    buildCommand: echo "No build needed"
-    staticPublishPath: .
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: no-cache
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-
-# Web Services (APIs)
 services:
+  - type: web
+    name: day-dream-dictionary-frontend
+    env: node
+    buildCommand: npm install
+    startCommand: node simple-server.js
+    port: 3000
   - type: web
     name: day-dream-dictionary-api
     env: node
     buildCommand: npm install
     startCommand: node supabase-api-server.js
     port: 5000
-    autoDeploy: false
     healthCheckPath: /health
     envVars:
       - key: API_BASE
@@ -64,7 +53,6 @@ services:
     buildCommand: npm install
     startCommand: node payment-server.js
     port: 5001
-    autoDeploy: false
     healthCheckPath: /api/v1/payment/products
     envVars:
       - key: NODE_ENV
