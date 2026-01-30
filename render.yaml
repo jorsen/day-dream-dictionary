@@ -2,8 +2,8 @@ services:
   - type: web
     name: day-dream-dictionary-api
     env: node
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && node src/server.js
+    buildCommand: npm install
+    startCommand: node supabase-api-server.js
     port: 5000
     autoDeploy: false
     healthCheckPath: /health
