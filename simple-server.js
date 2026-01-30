@@ -243,22 +243,32 @@ const server = http.createServer((req, res) => {
             credits_remaining: 'unlimited'
           };
 
-          // Store in local memory
-          dreamStorage.push(dreamData);
-          dreamIdCounter++;
-
-          // Try to store in Supabase (optional)
+          // Store in Supabase (required - no fallback to local)
           try {
-            await makeSupabaseRequest('POST', 'dreams', {
+            const supabaseResponse = await makeSupabaseRequest('POST', 'dreams', {
               dream_text: dreamData.dream_text,
               interpretation_type: dreamData.interpretation_type,
               interpretation: dreamData.interpretation,
               user_id: dreamData.user_id,
               created_at: dreamData.created_at
             });
-            console.log('Dream stored in Supabase');
+
+            if (supabaseResponse.status >= 200 && supabaseResponse.status < 300) {
+              console.log('✅ Dream successfully stored in Supabase');
+              // Update local counters for stats
+              dreamStorage.push(dreamData);
+              dreamIdCounter++;
+            } else {
+              console.error('❌ Failed to store dream in Supabase:', supabaseResponse);
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Database storage failed' }));
+              return;
+            }
           } catch (supabaseError) {
-            console.log('Supabase unavailable, using local storage');
+            console.error('❌ Supabase connection error:', supabaseError);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Database connection failed' }));
+            return;
           }
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -274,8 +284,27 @@ const server = http.createServer((req, res) => {
 
     // Handle dreams list API
     if (pathname === '/api/v1/dreams' && method === 'GET') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ dreams: dreamStorage.slice(-10) })); // Last 10 dreams
+      // Read from Supabase instead of local storage
+      makeSupabaseRequest('GET', 'dreams?order=created_at.desc&limit=10')
+        .then(supabaseResponse => {
+          if (supabaseResponse.status >= 200 && supabaseResponse.status < 300) {
+            const dreams = Array.isArray(supabaseResponse.data) ? supabaseResponse.data : [];
+            console.log(`📋 Retrieved ${dreams.length} dreams from Supabase`);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ dreams: dreams }));
+          } else {
+            console.error('❌ Failed to fetch dreams from Supabase:', supabaseResponse);
+            // Fallback to local storage if Supabase fails
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ dreams: dreamStorage.slice(-10) }));
+          }
+        })
+        .catch(error => {
+          console.error('❌ Database error fetching dreams:', error);
+          // Fallback to local storage if Supabase fails
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ dreams: dreamStorage.slice(-10) }));
+        });
       return;
     }
 
