@@ -35,7 +35,7 @@ services:
       - key: FRONTEND_URL
         value: https://day-dream-dictionary.onrender.com
       - key: JWT_SECRET
-        value: "vEgPP8X0829L1LFilcySFPM2Bhc0kDd2Mrd90uhREZyFy5rc+gY8/JFbWtrfadS46JDIGxzhbCuu1F5gaQOMBQ=="
+        value: vEgPP8X0829L1LFilcySFPM2Bhc0kDd2Mrd90uhREZyFy5rc+gY8/JFbWtrfadS46JDIGxzhbCuu1F5gaQOMBQ==
       - key: MONGODB_URI
         value: mongodb+srv://jorsenmejia_db_user:NHPljhlrWP6gktk5@daydream.7riem3f.mongodb.net/daydreamdictionary?retryWrites=true&w=majority&appName=daydream
       - key: NODE_ENV
