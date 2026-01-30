@@ -330,20 +330,19 @@ const server = http.createServer((req, res) => {
 
     // Handle dreams list API
     if (pathname === '/api/v1/dreams' && method === 'GET') {
-      // AUTHENTICATION REQUIRED: Check for user authentication
+      // AUTHENTICATION OPTIONAL: Check for user authentication
       const authHeader = req.headers.authorization || req.headers['Authorization'];
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        console.error('❌ No authentication token for dreams list');
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Authentication required. Please sign up/login first.' }));
-        return;
+      let userId = null;
+
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        userId = extractUserIdFromToken(authHeader);
       }
 
-      const userId = extractUserIdFromToken(authHeader);
+      // If no valid user, return empty dreams list (guests don't have stored dreams)
       if (!userId) {
-        console.error('❌ Invalid authentication token for dreams list');
-        res.writeHead(401, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Invalid authentication token. Please login again.' }));
+        console.log('📋 Guest user - returning empty dreams list');
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ dreams: [] }));
         return;
       }
 
