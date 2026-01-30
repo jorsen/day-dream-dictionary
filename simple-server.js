@@ -3,9 +3,184 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
+// API Server integration
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
+// In-memory storage for dreams (will sync to Supabase when possible)
+let dreamStorage = [];
+let dreamIdCounter = 1;
+
+// User management
+const users = new Map();
+const userSubscriptions = new Map();
+const userCredits = new Map();
+const userPurchases = new Map();
+
+// Subscription plans configuration
+const SUBSCRIPTION_PLANS = {
+    free: {
+        name: 'Free',
+        price: 0,
+        monthlyLimits: {
+            basic: 5,
+            deep: 1
+        },
+        features: ['basic_interpretations', 'limited_history', 'ads'],
+        description: '5 basic + 1 deep interpretation per month'
+    },
+    basic: {
+        name: 'Basic',
+        price: 4.99,
+        monthlyLimits: {
+            basic: 20,
+            deep: 5
+        },
+        features: ['basic_interpretations', 'deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads'],
+        description: '20 basic + 5 deep interpretations per month'
+    },
+    pro: {
+        name: 'Pro',
+        price: 12.99,
+        monthlyLimits: {
+            basic: -1, // unlimited
+            deep: -1  // unlimited
+        },
+        features: ['unlimited_interpretations', 'analytics', 'voice_journaling', 'reminders', 'symbol_encyclopedia', 'no_ads'],
+        description: 'Unlimited interpretations + premium features'
+    }
+};
+
+// Initialize user data
+const initializeUserData = (userId) => {
+    if (!userSubscriptions.has(userId)) {
+        userSubscriptions.set(userId, {
+            plan: 'basic',
+            startDate: new Date().toISOString(),
+            nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            features: [...SUBSCRIPTION_PLANS.basic.features],
+            monthlyUsage: { basic: 0, deep: 0 }
+        });
+    }
+
+    if (!userCredits.has(userId)) {
+        userCredits.set(userId, 0); // Start with 0 credits for new users
+    }
+
+    if (!userPurchases.has(userId)) {
+        userPurchases.set(userId, []);
+    }
+};
+
+// Helper function to extract user ID from JWT token
+const extractUserIdFromToken = (authHeader) => {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return null;
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    // Mock JWT token format: mock-jwt-token-{userId}-{timestamp}
+    const match = token.match(/^mock-jwt-token-(.+)-\d+$/);
+    return match ? match[1] : null;
+};
+
+// Helper function to make HTTP requests to Supabase
+async function makeSupabaseRequest(method, endpoint, data = null) {
+    const options = {
+        hostname: 'gwgjckczyscpaozlevpe.supabase.co',
+        port: 443,
+        path: `/rest/v1/${endpoint}`,
+        method: method,
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        }
+    };
+
+    if (data) {
+        options.headers['Content-Length'] = Buffer.byteLength(JSON.stringify(data));
+    }
+
+    return new Promise((resolve, reject) => {
+        const req = require('https').request(options, (res) => {
+            let body = '';
+            res.on('data', (chunk) => {
+                body += chunk;
+            });
+            res.on('end', () => {
+                try {
+                    const jsonData = JSON.parse(body);
+                    resolve({ status: res.statusCode, data: jsonData });
+                } catch (e) {
+                    resolve({ status: res.statusCode, data: body });
+                }
+            });
+        });
+
+        req.on('error', (err) => {
+            console.log('Supabase connection failed, using local storage:', err.message);
+            reject(err);
+        });
+
+        if (data) {
+            req.write(JSON.stringify(data));
+        }
+        req.end();
+    });
+}
+
+// Dream interpretation functions
+const getMockInterpretation = (dreamText) => {
+    const text = dreamText.toLowerCase();
+    const detectedSymbols = [];
+    const detectedEmotions = [];
+
+    // Basic symbol detection for demo
+    const symbolDb = {
+        'water': 'Emotions, subconscious mind',
+        'flying': 'Freedom, transcendence',
+        'falling': 'Loss of control, anxiety',
+        'snake': 'Transformation, healing'
+    };
+
+    for (const [symbol, meaning] of Object.entries(symbolDb)) {
+        if (text.includes(symbol)) {
+            detectedSymbols.push({
+                symbol: symbol,
+                meaning: meaning,
+                significance: 'medium'
+            });
+        }
+    }
+
+    // Basic emotion detection
+    const emotionDb = {
+        'happy': 'joyful',
+        'sad': 'sad',
+        'scared': 'fearful',
+        'angry': 'angry'
+    };
+
+    for (const [word, emotion] of Object.entries(emotionDb)) {
+        if (text.includes(word)) {
+            detectedEmotions.push(emotion);
+        }
+    }
+
+    return {
+        mainThemes: ['personal_growth', 'self_discovery'],
+        emotionalTone: detectedEmotions.length > 0 ? 'Mixed emotions present' : 'Neutral dream experience',
+        symbols: detectedSymbols.slice(0, 3),
+        personalInsight: 'Your dream reflects aspects of your subconscious processing recent experiences.',
+        guidance: 'Consider how these dream elements might relate to your current life circumstances.'
+    };
+};
+
 const PORT = process.env.PORT || 3000;
 
-// MIME types
+// MIME types for static files
 const mimeTypes = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -38,7 +213,110 @@ const server = http.createServer((req, res) => {
 
   const parsedUrl = url.parse(req.url);
   let pathname = parsedUrl.pathname;
+  const method = req.method;
 
+  console.log(`${method} ${pathname}`);
+
+  // Handle API routes
+  if (pathname.startsWith('/api/v1/')) {
+    // Handle dream interpretation API
+    if (pathname === '/api/v1/dreams/test-interpret' && method === 'POST') {
+      let body = '';
+      req.on('data', chunk => {
+        body += chunk.toString();
+      });
+      req.on('end', async () => {
+        try {
+          const data = JSON.parse(body);
+          console.log('Processing FREE dream interpretation request');
+
+          const interpretation = getMockInterpretation(data.dreamText);
+
+          const dreamData = {
+            id: dreamIdCounter.toString(),
+            dream_text: data.dreamText,
+            interpretation_type: data.interpretationType || 'basic',
+            interpretation: interpretation,
+            created_at: new Date().toISOString(),
+            user_id: 'free-user-' + Date.now(),
+            credits_consumed: 0, // FREE MODE
+            credits_remaining: 'unlimited'
+          };
+
+          // Store in local memory
+          dreamStorage.push(dreamData);
+          dreamIdCounter++;
+
+          // Try to store in Supabase (optional)
+          try {
+            await makeSupabaseRequest('POST', 'dreams', {
+              dream_text: dreamData.dream_text,
+              interpretation_type: dreamData.interpretation_type,
+              interpretation: dreamData.interpretation,
+              user_id: dreamData.user_id,
+              created_at: dreamData.created_at
+            });
+            console.log('Dream stored in Supabase');
+          } catch (supabaseError) {
+            console.log('Supabase unavailable, using local storage');
+          }
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(dreamData));
+        } catch (error) {
+          console.error('Error processing dream:', error);
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid request data' }));
+        }
+      });
+      return;
+    }
+
+    // Handle dreams list API
+    if (pathname === '/api/v1/dreams' && method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ dreams: dreamStorage.slice(-10) })); // Last 10 dreams
+      return;
+    }
+
+    // Handle health check API
+    if (pathname === '/api/v1/health' && method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', message: 'Dream Dictionary API is healthy' }));
+      return;
+    }
+
+    // Handle profile API
+    if (pathname === '/api/v1/profile' && method === 'GET') {
+      initializeUserData('demo-user');
+      const subscription = userSubscriptions.get('demo-user');
+      const credits = userCredits.get('demo-user');
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        profile: {
+          id: 'demo-user',
+          email: 'demo@example.com',
+          display_name: 'Demo User',
+          locale: 'en',
+          credits: 'unlimited', // FREE MODE
+          subscription: {
+            plan: 'basic',
+            features: subscription.features,
+            monthlyLimits: SUBSCRIPTION_PLANS.basic.monthlyLimits
+          }
+        }
+      }));
+      return;
+    }
+
+    // Default API response
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'API endpoint not found' }));
+    return;
+  }
+
+  // Handle static files
   // Default to index.html
   if (pathname === '/') {
     pathname = '/index.html';
@@ -47,8 +325,6 @@ const server = http.createServer((req, res) => {
   const filePath = path.join(__dirname, pathname);
   const ext = path.parse(filePath).ext;
   const contentType = mimeTypes[ext] || 'application/octet-stream';
-
-  console.log(`${req.method} ${pathname}`);
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
