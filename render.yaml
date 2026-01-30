@@ -5,69 +5,15 @@ services:
     buildCommand: npm install
     startCommand: node simple-server.js
     port: 3000
-  - type: web
-    name: day-dream-dictionary-api
-    env: node
-    buildCommand: npm install
-    startCommand: node supabase-api-server.js
-    port: 5000
-    healthCheckPath: /health
+    healthCheckPath: /
     envVars:
-      - key: API_BASE
-        value: https://day-dream-dictionary-api.onrender.com/api/v1
-      - key: CORS_ORIGIN
-        value: https://day-dream-dictionary.onrender.com,https://daydreamdictionary.com
-      - key: FREE_BASIC_INTERPRETATIONS_MONTHLY
-        value: 1000
-      - key: FREE_DEEP_INTERPRETATIONS_MONTHLY
-        value: 1000
-      - key: FRONTEND_URL
-        value: https://day-dream-dictionary.onrender.com
-      - key: JWT_SECRET
-        value: vEgPP8X0829L1LFilcySFPM2Bhc0kDd2Mrd90uhREZyFy5rc+gY8/JFbWtrfadS46JDIGxzhbCuu1F5gaQOMBQ==
-      - key: MONGODB_URI
-        value: mongodb+srv://jorsenmejia_db_user:NHPljhlrWP6gktk5@daydream.7riem3f.mongodb.net/daydreamdictionary?retryWrites=true&w=majority&appName=daydream
-      - key: NODE_ENV
-        value: production
-      - key: OPENROUTER_API_KEY
-        value: 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
-      - key: RATE_LIMIT_MAX_REQUESTS
-        value: 100
-      - key: RATE_LIMIT_WINDOW_MS
-        value: 900000
-      - key: REFRESH_TOKEN_SECRET
-        value: 452757dc9928f8adc6c6c1b598b544ad
-      - key: SESSION_SECRET
-        value: f6a39ad7f121015434b6a6256a5712e9
-      - key: STRIPE_SECRET_KEY
-        value: sk_test_51SIErkBB0zCKREN67U6W3YOHlgnWh9KB0o5eTSSR0feZhxlD33hiJa47x0HafKIm5Rb4RuMCaVwaNnypXvHYjj4400Prn0G7Ix
-      - key: STRIPE_PUBLISHABLE_KEY
-        value: pk_test_51SIErkBB0zCKREN6UDCN9durrrgIbxjNLRevZjGhIrTq7bHJQwIvm2osGUxSa7KkjD7WFdfm8RDcCPoS2SuGnzCG00F9n2QUR3
-      - key: STRIPE_WEBHOOK_SECRET
-        value: whsec_mock_webhook_secret
-      - key: TEST_MODE
-        value: demo
       - key: SUPABASE_URL
         value: https://gwgjckczyscpaozlevpe.supabase.co
       - key: SUPABASE_ANON_KEY
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3Z2pja2N6eXNjcGFvemxldnBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MTExNzMsImV4cCI6MjA3MjQ4NzE3M30.gKKl8PoJ7vDt9UWwY9yQv_V3Qr_hA5KwrwjK__XU1Bo
       - key: SUPABASE_SERVICE_KEY
         value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3Z2pja2N6eXNjcGFvemxldnBlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjkxMTE3MywiZXhwIjoyMDcyNDg3MTczfQ.YW8MY5qNLKMwfeSrIHjIDTN42HgeiQ6YRBZ-McyPXGM
-  - type: web
-    name: day-dream-dictionary-payments
-    env: node
-    buildCommand: npm install
-    startCommand: node payment-server.js
-    port: 5001
-    healthCheckPath: /api/v1/payment/products
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: STRIPE_SECRET_KEY
-        value: sk_test_51SIErkBB0zCKREN67U6W3YOHlgnWh9KB0o5eTSSR0feZhxlD33hiJa47x0HafKIm5Rb4RuMCaVwaNnypXvHYjj4400Prn0G7Ix
-      - key: STRIPE_PUBLISHABLE_KEY
-        value: pk_test_51SIErkBB0zCKREN6UDCN9durrrgIbxjNLRevZjGhIrTq7bHJQwIvm2osGUxSa7KkjD7WFdfm8RDcCPoS2SuGnzCG00F9n2QUR3
-      - key: STRIPE_WEBHOOK_SECRET
-        value: whsec_mock_webhook_secret
+      - key: API_BASE
+        value: /api/v1
       - key: CORS_ORIGIN
-        value: https://day-dream-dictionary.onrender.com,https://daydreamdictionary.com
+        value: *
