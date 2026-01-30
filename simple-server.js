@@ -424,9 +424,11 @@ const server = http.createServer((req, res) => {
         const tokenUserId = extractUserIdFromToken(authHeader);
         if (tokenUserId) {
           userId = tokenUserId;
-          initializeUserData(userId);
         }
       }
+
+      // ALWAYS initialize user data (fix crash when subscription is undefined)
+      initializeUserData(userId);
 
       const subscription = userSubscriptions.get(userId);
       const credits = userCredits.get(userId);
