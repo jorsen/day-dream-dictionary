@@ -392,17 +392,8 @@
 
         // Check for stored authentication token
         window.addEventListener('DOMContentLoaded', async () => {
-            // Check if user is authenticated
-            authToken = localStorage.getItem('authToken');
-
-            if (!authToken) {
-                // Not authenticated - redirect to login
-                showMessage('error', 'Please sign up or login first to interpret dreams.');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000);
-                return;
-            }
+            // Check if user is authenticated (optional - allow guests too)
+            authToken = localStorage.getItem('authToken') || localStorage.getItem('accessToken');
 
             // Load user credits and data
             await loadUserCredits();

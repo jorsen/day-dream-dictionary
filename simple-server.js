@@ -228,24 +228,21 @@ const server = http.createServer((req, res) => {
           try {
             const data = JSON.parse(body);
 
-            // AUTHENTICATION REQUIRED: Check for user authentication
+            // AUTHENTICATION OPTIONAL: Check for user authentication, allow guests
             const authHeader = req.headers.authorization || req.headers['Authorization'];
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-              console.error('❌ No authentication token provided');
-              res.writeHead(401, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Authentication required. Please sign up/login first.' }));
-              return;
-            }
+            let userId = 'guest-' + Date.now(); // Default guest user
 
-            const userId = extractUserIdFromToken(authHeader);
-            if (!userId) {
-              console.error('❌ Invalid authentication token');
-              res.writeHead(401, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Invalid authentication token. Please login again.' }));
-              return;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+              const tokenUserId = extractUserIdFromToken(authHeader);
+              if (tokenUserId) {
+                userId = tokenUserId;
+                console.log(`Processing authenticated dream interpretation for user: ${userId}`);
+              } else {
+                console.log(`Processing dream interpretation for guest user: ${userId}`);
+              }
+            } else {
+              console.log(`Processing dream interpretation for guest user: ${userId}`);
             }
-
-            console.log(`Processing authenticated dream interpretation for user: ${userId}`);
 
             // Check and deduct credits before processing
             initializeUserData(userId);
