@@ -226,53 +226,71 @@ const server = http.createServer((req, res) => {
         body += chunk.toString();
       });
       req.on('end', async () => {
-        try {
-          const data = JSON.parse(body);
-          console.log('Processing FREE dream interpretation request');
-
-          const interpretation = getMockInterpretation(data.dreamText);
-
-          const dreamData = {
-            id: dreamIdCounter.toString(),
-            dream_text: data.dreamText,
-            interpretation_type: data.interpretationType || 'basic',
-            interpretation: interpretation,
-            created_at: new Date().toISOString(),
-            user_id: 'free-user-' + Date.now(),
-            credits_consumed: 0, // FREE MODE
-            credits_remaining: 'unlimited'
-          };
-
-          // Store in Supabase (required - no fallback to local)
           try {
-            const supabaseResponse = await makeSupabaseRequest('POST', 'dreams', {
-              dream_text: dreamData.dream_text,
-              interpretation_type: dreamData.interpretation_type,
-              interpretation: dreamData.interpretation,
-              user_id: dreamData.user_id,
-              created_at: dreamData.created_at
-            });
+            const data = JSON.parse(body);
 
-            if (supabaseResponse.status >= 200 && supabaseResponse.status < 300) {
-              console.log('✅ Dream successfully stored in Supabase');
-              // Update local counters for stats
-              dreamStorage.push(dreamData);
-              dreamIdCounter++;
-            } else {
-              console.error('❌ Failed to store dream in Supabase:', supabaseResponse);
-              res.writeHead(500, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Database storage failed' }));
+            // AUTHENTICATION REQUIRED: Check for user authentication
+            const authHeader = req.headers.authorization || req.headers['Authorization'];
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+              console.error('❌ No authentication token provided');
+              res.writeHead(401, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Authentication required. Please sign up/login first.' }));
               return;
             }
-          } catch (supabaseError) {
-            console.error('❌ Supabase connection error:', supabaseError);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Database connection failed' }));
-            return;
-          }
 
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ dream: dreamData }));
+            const userId = extractUserIdFromToken(authHeader);
+            if (!userId) {
+              console.error('❌ Invalid authentication token');
+              res.writeHead(401, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Invalid authentication token. Please login again.' }));
+              return;
+            }
+
+            console.log(`Processing authenticated dream interpretation for user: ${userId}`);
+
+            const interpretation = getMockInterpretation(data.dreamText);
+
+            const dreamData = {
+              id: dreamIdCounter.toString(),
+              dream_text: data.dreamText,
+              interpretation_type: data.interpretationType || 'basic',
+              interpretation: interpretation,
+              created_at: new Date().toISOString(),
+              user_id: userId, // SECURE: Use authenticated user ID
+              credits_consumed: 0, // FREE MODE
+              credits_remaining: 'unlimited'
+            };
+
+            // Store in Supabase (required - no fallback to local)
+            try {
+              const supabaseResponse = await makeSupabaseRequest('POST', 'dreams', {
+                dream_text: dreamData.dream_text,
+                interpretation_type: dreamData.interpretation_type,
+                interpretation: dreamData.interpretation,
+                user_id: dreamData.user_id,
+                created_at: dreamData.created_at
+              });
+
+              if (supabaseResponse.status >= 200 && supabaseResponse.status < 300) {
+                console.log(`✅ Dream successfully stored in Supabase for user ${userId}`);
+                // Update local counters for stats (filtered by user)
+                dreamStorage.push(dreamData);
+                dreamIdCounter++;
+              } else {
+                console.error('❌ Failed to store dream in Supabase:', supabaseResponse);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Database storage failed' }));
+                return;
+              }
+            } catch (supabaseError) {
+              console.error('❌ Supabase connection error:', supabaseError);
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Database connection failed' }));
+              return;
+            }
+
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ dream: dreamData }));
         } catch (error) {
           console.error('Error processing dream:', error);
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -284,26 +302,45 @@ const server = http.createServer((req, res) => {
 
     // Handle dreams list API
     if (pathname === '/api/v1/dreams' && method === 'GET') {
-      // Read from Supabase instead of local storage
-      makeSupabaseRequest('GET', 'dreams?order=created_at.desc&limit=10')
+      // AUTHENTICATION REQUIRED: Check for user authentication
+      const authHeader = req.headers.authorization || req.headers['Authorization'];
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.error('❌ No authentication token for dreams list');
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Authentication required. Please sign up/login first.' }));
+        return;
+      }
+
+      const userId = extractUserIdFromToken(authHeader);
+      if (!userId) {
+        console.error('❌ Invalid authentication token for dreams list');
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid authentication token. Please login again.' }));
+        return;
+      }
+
+      // Read from Supabase with user filtering
+      makeSupabaseRequest('GET', `dreams?user_id=eq.${userId}&order=created_at.desc&limit=10`)
         .then(supabaseResponse => {
           if (supabaseResponse.status >= 200 && supabaseResponse.status < 300) {
             const dreams = Array.isArray(supabaseResponse.data) ? supabaseResponse.data : [];
-            console.log(`📋 Retrieved ${dreams.length} dreams from Supabase`);
+            console.log(`📋 Retrieved ${dreams.length} dreams from Supabase for user ${userId}`);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ dreams: dreams }));
           } else {
             console.error('❌ Failed to fetch dreams from Supabase:', supabaseResponse);
-            // Fallback to local storage if Supabase fails
+            // Fallback to local storage filtered by user
+            const userDreams = dreamStorage.filter(dream => dream.user_id === userId).slice(-10);
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ dreams: dreamStorage.slice(-10) }));
+            res.end(JSON.stringify({ dreams: userDreams }));
           }
         })
         .catch(error => {
           console.error('❌ Database error fetching dreams:', error);
-          // Fallback to local storage if Supabase fails
+          // Fallback to local storage filtered by user
+          const userDreams = dreamStorage.filter(dream => dream.user_id === userId).slice(-10);
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ dreams: dreamStorage.slice(-10) }));
+          res.end(JSON.stringify({ dreams: userDreams }));
         });
       return;
     }
