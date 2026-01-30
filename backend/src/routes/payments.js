@@ -5,35 +5,23 @@ const { body, validationResult } = require('express-validator');
 const { authenticate } = require('../middleware/auth');
 const { AppError, catchAsync } = require('../middleware/errorHandler');
 const { paymentLog, auditLog } = require('../middleware/logger');
-const {
-  getSupabase,
-  getUserProfile,
-  updateUserCredits,
-  getUserSubscription
-} = require('../config/supabase');
-const {
-  DYNAMIC_CREDIT_CONFIG,
-  getUserLoyaltyTier,
-  getUserSubscriptionMultiplier,
-  calculateDynamicPricing,
-  getTotalDynamicCredits,
-  applyDynamicCredits
-} = require('../config/dynamic-credits');
+const { User, Payment, Event } = require('../models');
+const { logger } = require('../config/mongodb');
 
 // Initialize Stripe with error handling
 let stripe = null;
 try {
   if (process.env.STRIPE_SECRET_KEY) {
     stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    console.log('✅ Stripe initialized successfully');
+    logger.info('✅ Stripe initialized successfully');
   } else {
-    console.log('⚠️ STRIPE_SECRET_KEY not found, using mock implementation');
+    logger.warn('⚠️ STRIPE_SECRET_KEY not found, using mock implementation');
   }
 } catch (error) {
-  console.error('❌ Failed to initialize Stripe:', error.message);
+  logger.error('❌ Failed to initialize Stripe:', error.message);
 }
 
-// Base credit pack configurations (before dynamic pricing)
+// Base credit pack configurations
 const BASE_CREDIT_PACKS = {
   'pack_10': {
     credits: 10,
@@ -58,26 +46,22 @@ const BASE_CREDIT_PACKS = {
 // Get dynamic credit packs for user
 const getDynamicCreditPacks = async (userId) => {
   const packs = {};
+  const user = await User.findById(userId);
+  
+  // Calculate multipliers based on subscription
+  const subscriptionMultiplier = user?.subscription?.plan === 'pro' ? 1.5 : 
+                                 user?.subscription?.plan === 'basic' ? 1.25 : 1;
 
   for (const [packId, pack] of Object.entries(BASE_CREDIT_PACKS)) {
-    const dynamicPrice = await calculateDynamicPricing(userId, pack.basePrice, pack.credits);
-    const subscriptionMultiplier = await getUserSubscriptionMultiplier(userId);
-    const loyaltyTier = await getUserLoyaltyTier(userId);
-    const loyaltyMultiplier = DYNAMIC_CREDIT_CONFIG.loyaltyTiers[loyaltyTier].multiplier;
-
-    // Calculate effective credits (including multipliers)
-    const effectiveCredits = Math.round(pack.credits * subscriptionMultiplier * loyaltyMultiplier);
+    const effectiveCredits = Math.round(pack.credits * subscriptionMultiplier);
 
     packs[packId] = {
       ...pack,
-      price: dynamicPrice,
+      price: pack.basePrice,
       originalPrice: pack.basePrice,
       effectiveCredits,
-      discount: pack.basePrice > dynamicPrice,
-      discountPercent: pack.basePrice > dynamicPrice
-        ? Math.round(((pack.basePrice - dynamicPrice) / pack.basePrice) * 100)
-        : 0,
-      loyaltyTier,
+      discount: false,
+      discountPercent: 0,
       subscriptionMultiplier
     };
   }
@@ -85,38 +69,30 @@ const getDynamicCreditPacks = async (userId) => {
   return packs;
 };
 
-// Create Stripe customer
+// Create or get Stripe customer
 const createOrGetStripeCustomer = async (userId, email) => {
-  const supabase = getSupabase();
+  const user = await User.findById(userId);
   
-  // Check if customer already exists
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('stripe_customer_id')
-    .eq('user_id', userId)
-    .single();
+  if (user?.subscription?.stripeCustomerId) {
+    return user.subscription.stripeCustomerId;
+  }
   
-  if (subscription?.stripe_customer_id) {
-    return subscription.stripe_customer_id;
+  if (!stripe) {
+    throw new AppError('Payment processing not available', 503);
   }
   
   // Create new Stripe customer
   const customer = await stripe.customers.create({
     email,
     metadata: {
-      userId
+      userId: userId.toString()
     }
   });
   
   // Store customer ID
-  await supabase
-    .from('subscriptions')
-    .upsert([{
-      user_id: userId,
-      stripe_customer_id: customer.id,
-      status: 'inactive',
-      created_at: new Date().toISOString()
-    }]);
+  await User.findByIdAndUpdate(userId, {
+    'subscription.stripeCustomerId': customer.id
+  });
   
   return customer.id;
 };
@@ -133,14 +109,16 @@ router.post('/create-subscription-checkout',
       return res.status(400).json({ errors: errors.array() });
     }
     
+    if (!stripe) {
+      throw new AppError('Payment processing not available', 503);
+    }
+    
     const userId = req.user.id;
     const { priceId, successUrl, cancelUrl } = req.body;
     
     try {
-      // Get or create Stripe customer
       const customerId = await createOrGetStripeCustomer(userId, req.user.email);
       
-      // Create checkout session
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
@@ -152,18 +130,17 @@ router.post('/create-subscription-checkout',
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: {
-          userId
+          userId: userId.toString()
         },
         subscription_data: {
           metadata: {
-            userId
+            userId: userId.toString()
           }
         },
         allow_promotion_codes: true,
         billing_address_collection: 'auto'
       });
       
-      // Track event
       await Event.trackEvent(userId, 'subscription_checkout_created', {
         priceId,
         sessionId: session.id
@@ -200,18 +177,19 @@ router.post('/create-credits-checkout',
       return res.status(400).json({ errors: errors.array() });
     }
 
+    if (!stripe) {
+      throw new AppError('Payment processing not available', 503);
+    }
+
     const userId = req.user.id;
     const { packId, successUrl, cancelUrl } = req.body;
 
-    // Get dynamic credit packs for this user
     const dynamicPacks = await getDynamicCreditPacks(userId);
     const pack = dynamicPacks[packId];
     
     try {
-      // Get or create Stripe customer
       const customerId = await createOrGetStripeCustomer(userId, req.user.email);
       
-      // Create checkout session
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
@@ -230,15 +208,14 @@ router.post('/create-credits-checkout',
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata: {
-          userId,
+          userId: userId.toString(),
           packId,
-          credits: pack.credits
+          credits: pack.credits.toString()
         },
         allow_promotion_codes: true,
         billing_address_collection: 'auto'
       });
       
-      // Track event
       await Event.trackEvent(userId, 'credits_checkout_created', {
         packId,
         credits: pack.credits,
@@ -271,21 +248,20 @@ router.get('/subscription', authenticate, catchAsync(async (req, res, next) => {
   const userId = req.user.id;
   
   try {
-    const subscription = await getUserSubscription(userId);
+    const user = await User.findById(userId);
     
-    if (!subscription) {
+    if (!user || !user.subscription || user.subscription.plan === 'free') {
       return res.json({
         hasSubscription: false,
         subscription: null
       });
     }
     
-    // Get additional details from Stripe if active
     let stripeDetails = null;
-    if (subscription.stripe_subscription_id && subscription.status === 'active') {
+    if (user.subscription.stripeSubscriptionId && user.subscription.status === 'active' && stripe) {
       try {
         const stripeSubscription = await stripe.subscriptions.retrieve(
-          subscription.stripe_subscription_id
+          user.subscription.stripeSubscriptionId
         );
         
         stripeDetails = {
@@ -294,14 +270,18 @@ router.get('/subscription', authenticate, catchAsync(async (req, res, next) => {
           status: stripeSubscription.status
         };
       } catch (error) {
-        console.error('Error fetching Stripe subscription:', error);
+        logger.error('Error fetching Stripe subscription:', error);
       }
     }
     
     res.json({
-      hasSubscription: subscription.status === 'active',
+      hasSubscription: user.subscription.status === 'active',
       subscription: {
-        ...subscription,
+        plan: user.subscription.plan,
+        status: user.subscription.status,
+        currentPeriodStart: user.subscription.currentPeriodStart,
+        currentPeriodEnd: user.subscription.currentPeriodEnd,
+        cancelAtPeriodEnd: user.subscription.cancelAtPeriodEnd,
         stripeDetails
       }
     });
@@ -316,40 +296,36 @@ router.post('/cancel-subscription', authenticate, catchAsync(async (req, res, ne
   const userId = req.user.id;
   
   try {
-    const subscription = await getUserSubscription(userId);
+    const user = await User.findById(userId);
     
-    if (!subscription || !subscription.stripe_subscription_id) {
+    if (!user || !user.subscription?.stripeSubscriptionId) {
       throw new AppError('No active subscription found', 404);
     }
     
-    // Cancel subscription at period end
+    if (!stripe) {
+      throw new AppError('Payment processing not available', 503);
+    }
+    
     const updatedSubscription = await stripe.subscriptions.update(
-      subscription.stripe_subscription_id,
+      user.subscription.stripeSubscriptionId,
       { cancel_at_period_end: true }
     );
     
-    // Update database
-    const supabase = getSupabase();
-    await supabase
-      .from('subscriptions')
-      .update({
-        cancel_at_period_end: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', userId);
+    await User.findByIdAndUpdate(userId, {
+      'subscription.cancelAtPeriodEnd': true
+    });
     
-    // Track event
     await Event.trackEvent(userId, 'subscription_cancelled', {
-      subscriptionId: subscription.stripe_subscription_id,
-      plan: subscription.plan
+      subscriptionId: user.subscription.stripeSubscriptionId,
+      plan: user.subscription.plan
     });
     
     paymentLog('subscription_cancelled', userId, {
-      subscriptionId: subscription.stripe_subscription_id
+      subscriptionId: user.subscription.stripeSubscriptionId
     });
     
     auditLog('subscription_cancelled', userId, {
-      subscriptionId: subscription.stripe_subscription_id
+      subscriptionId: user.subscription.stripeSubscriptionId
     });
     
     res.json({
@@ -370,36 +346,32 @@ router.post('/resume-subscription', authenticate, catchAsync(async (req, res, ne
   const userId = req.user.id;
   
   try {
-    const subscription = await getUserSubscription(userId);
+    const user = await User.findById(userId);
     
-    if (!subscription || !subscription.stripe_subscription_id) {
+    if (!user || !user.subscription?.stripeSubscriptionId) {
       throw new AppError('No subscription found', 404);
     }
     
-    // Resume subscription
+    if (!stripe) {
+      throw new AppError('Payment processing not available', 503);
+    }
+    
     const updatedSubscription = await stripe.subscriptions.update(
-      subscription.stripe_subscription_id,
+      user.subscription.stripeSubscriptionId,
       { cancel_at_period_end: false }
     );
     
-    // Update database
-    const supabase = getSupabase();
-    await supabase
-      .from('subscriptions')
-      .update({
-        cancel_at_period_end: false,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', userId);
+    await User.findByIdAndUpdate(userId, {
+      'subscription.cancelAtPeriodEnd': false
+    });
     
-    // Track event
     await Event.trackEvent(userId, 'subscription_resumed', {
-      subscriptionId: subscription.stripe_subscription_id,
-      plan: subscription.plan
+      subscriptionId: user.subscription.stripeSubscriptionId,
+      plan: user.subscription.plan
     });
     
     paymentLog('subscription_resumed', userId, {
-      subscriptionId: subscription.stripe_subscription_id
+      subscriptionId: user.subscription.stripeSubscriptionId
     });
     
     res.json({
@@ -418,30 +390,20 @@ router.post('/resume-subscription', authenticate, catchAsync(async (req, res, ne
 // Get payment history
 router.get('/history', authenticate, catchAsync(async (req, res, next) => {
   const userId = req.user.id;
-  const { limit = 10, starting_after } = req.query;
+  const { limit = 10, page = 1 } = req.query;
   
   try {
-    const supabase = getSupabase();
-    
-    // Get payment history from database
-    let query = supabase
-      .from('payments_history')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-    
-    if (starting_after) {
-      query = query.lt('created_at', starting_after);
-    }
-    
-    const { data: payments, error } = await query;
-    
-    if (error) throw error;
+    const result = await Payment.getUserPaymentHistory(userId, {
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
     
     res.json({
-      payments,
-      hasMore: payments.length === limit
+      payments: result.payments,
+      hasMore: result.currentPage < result.totalPages,
+      totalCount: result.totalCount,
+      currentPage: result.currentPage,
+      totalPages: result.totalPages
     });
     
   } catch (error) {
@@ -455,15 +417,16 @@ router.get('/credit-packs', authenticate, catchAsync(async (req, res, next) => {
 
   try {
     const dynamicPacks = await getDynamicCreditPacks(userId);
-    const totalDynamicCredits = await getTotalDynamicCredits(userId);
+    const user = await User.findById(userId);
+    
+    const subscriptionMultiplier = user?.subscription?.plan === 'pro' ? 1.5 : 
+                                   user?.subscription?.plan === 'basic' ? 1.25 : 1;
 
     res.json({
       packs: dynamicPacks,
       userInfo: {
-        loyaltyTier: totalDynamicCredits.loyaltyTier,
-        subscriptionMultiplier: totalDynamicCredits.subscriptionMultiplier,
-        loyaltyMultiplier: totalDynamicCredits.loyaltyMultiplier,
-        totalBonusCredits: totalDynamicCredits.totalBonus
+        subscriptionPlan: user?.subscription?.plan || 'free',
+        subscriptionMultiplier
       }
     });
 
@@ -472,32 +435,21 @@ router.get('/credit-packs', authenticate, catchAsync(async (req, res, next) => {
   }
 }));
 
-// Get credit balance with dynamic info
+// Get credit balance
 router.get('/credits', authenticate, catchAsync(async (req, res, next) => {
   const userId = req.user.id;
 
   try {
-    const supabase = getSupabase();
-
-    const { data: credits, error } = await supabase
-      .from('credits')
-      .select('balance')
-      .eq('user_id', userId)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-
-    // Get dynamic credit information
-    const totalDynamicCredits = await getTotalDynamicCredits(userId);
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
 
     res.json({
-      balance: credits?.balance || 0,
-      dynamicInfo: {
-        loyaltyTier: totalDynamicCredits.loyaltyTier,
-        subscriptionMultiplier: totalDynamicCredits.subscriptionMultiplier,
-        loyaltyMultiplier: totalDynamicCredits.loyaltyMultiplier,
-        availableBonusCredits: totalDynamicCredits.totalBonus
-      }
+      balance: user.credits || 0,
+      lifetimeCreditsEarned: user.lifetimeCreditsEarned || 0,
+      subscriptionPlan: user.subscription?.plan || 'free'
     });
 
   } catch (error) {
@@ -515,26 +467,26 @@ router.post('/update-payment-method',
       return res.status(400).json({ errors: errors.array() });
     }
     
+    if (!stripe) {
+      throw new AppError('Payment processing not available', 503);
+    }
+    
     const userId = req.user.id;
     const { paymentMethodId } = req.body;
     
     try {
-      // Get customer ID
       const customerId = await createOrGetStripeCustomer(userId, req.user.email);
       
-      // Attach payment method to customer
       await stripe.paymentMethods.attach(paymentMethodId, {
         customer: customerId
       });
       
-      // Set as default payment method
       await stripe.customers.update(customerId, {
         invoice_settings: {
           default_payment_method: paymentMethodId
         }
       });
       
-      // Track event
       await Event.trackEvent(userId, 'payment_method_updated', {
         paymentMethodId
       });
@@ -562,22 +514,15 @@ router.get('/invoices', authenticate, catchAsync(async (req, res, next) => {
   const { limit = 10 } = req.query;
   
   try {
-    // Get customer ID
-    const supabase = getSupabase();
-    const { data: subscription } = await supabase
-      .from('subscriptions')
-      .select('stripe_customer_id')
-      .eq('user_id', userId)
-      .single();
+    const user = await User.findById(userId);
     
-    if (!subscription?.stripe_customer_id) {
+    if (!user?.subscription?.stripeCustomerId || !stripe) {
       return res.json({ invoices: [] });
     }
     
-    // Get invoices from Stripe
     const invoices = await stripe.invoices.list({
-      customer: subscription.stripe_customer_id,
-      limit
+      customer: user.subscription.stripeCustomerId,
+      limit: parseInt(limit)
     });
     
     res.json({
@@ -608,11 +553,14 @@ router.post('/apply-promo',
       return res.status(400).json({ errors: errors.array() });
     }
     
+    if (!stripe) {
+      throw new AppError('Payment processing not available', 503);
+    }
+    
     const userId = req.user.id;
     const { code } = req.body;
     
     try {
-      // Validate promo code with Stripe
       const promotionCodes = await stripe.promotionCodes.list({
         code,
         active: true,
@@ -625,7 +573,6 @@ router.post('/apply-promo',
       
       const promoCode = promotionCodes.data[0];
       
-      // Track event
       await Event.trackEvent(userId, 'promo_code_used', {
         code,
         couponId: promoCode.coupon.id
@@ -654,7 +601,6 @@ router.post('/purchase-credits', authenticate, catchAsync(async (req, res, next)
   const userId = req.user.id;
   const { packSize } = req.body;
 
-  // Define credit packs
   const creditPacks = {
     small: { credits: 10, amount: 999 },
     medium: { credits: 30, amount: 1999 },
@@ -668,41 +614,34 @@ router.post('/purchase-credits', authenticate, catchAsync(async (req, res, next)
   const pack = creditPacks[packSize];
 
   try {
-    // Get current credits
-    const currentCredits = await getUserCredits(userId);
-
-    // Add credits to user account
-    const newCredits = currentCredits + pack.credits;
-    await updateUserCredits(userId, newCredits);
-
-    // Record the purchase (optional - skip if Supabase not available)
-    try {
-      const { getSupabase } = require('../config/supabase');
-      await getSupabase()
-        .from('payments_history')
-        .insert([{
-          user_id: userId,
-          type: 'credit_purchase',
-          amount: pack.amount,
-          credits: pack.credits,
-          pack_size: packSize,
-          created_at: new Date().toISOString()
-        }]);
-    } catch (error) {
-      console.log('Could not record purchase in database');
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new AppError('User not found', 404);
     }
 
-    // Track event (optional - skip if MongoDB not available)
-    try {
-      const Event = require('../models/Event');
-      await Event.trackEvent(userId, 'credits_purchased', {
-        packSize,
-        credits: pack.credits,
-        amount: pack.amount
-      });
-    } catch (error) {
-      console.log('Event tracking skipped');
-    }
+    // Add credits
+    const newCredits = (user.credits || 0) + pack.credits;
+    user.credits = newCredits;
+    user.lifetimeCreditsEarned = (user.lifetimeCreditsEarned || 0) + pack.credits;
+    await user.save();
+
+    // Record the purchase
+    await Payment.create({
+      userId,
+      type: 'credit_purchase',
+      amount: pack.amount,
+      currency: 'usd',
+      status: 'succeeded',
+      creditsPurchased: pack.credits,
+      metadata: { packSize }
+    });
+
+    await Event.trackEvent(userId, 'credits_purchased', {
+      packSize,
+      credits: pack.credits,
+      amount: pack.amount
+    });
 
     res.json({
       message: `Successfully purchased ${pack.credits} credits`,

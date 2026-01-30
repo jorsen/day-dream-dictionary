@@ -15,59 +15,108 @@ const logger = winston.createLogger({
   ]
 });
 
+let isConnected = false;
+
 const connectMongoDB = async () => {
+  if (isConnected) {
+    logger.info('MongoDB already connected');
+    return;
+  }
+
   try {
+    // Use the MongoDB Atlas URI from environment or default
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/daydreamdictionary';
     
-    // Check if we're in test mode or MongoDB is not available
-    if (process.env.TEST_MODE === 'true' || mongoUri.includes('localhost')) {
-      logger.warn('⚠️ MongoDB connection may fail if not installed locally. App will continue with limited functionality.');
-    }
+    logger.info('Connecting to MongoDB...');
     
     const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
-      family: 4
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      retryWrites: true,
+      w: 'majority'
     };
 
-    try {
-      await mongoose.connect(mongoUri, options);
-      logger.info('✅ MongoDB connected successfully');
-    } catch (mongoError) {
-      logger.warn('⚠️ MongoDB connection failed. Running without database:', mongoError.message);
-      // Continue without MongoDB for testing
-      return;
-    }
+    await mongoose.connect(mongoUri, options);
+    isConnected = true;
+    logger.info('✅ MongoDB connected successfully');
     
     // Connection event handlers
     mongoose.connection.on('error', (err) => {
       logger.error('MongoDB connection error:', err);
+      isConnected = false;
     });
 
     mongoose.connection.on('disconnected', () => {
       logger.warn('MongoDB disconnected');
+      isConnected = false;
     });
 
     mongoose.connection.on('reconnected', () => {
       logger.info('MongoDB reconnected');
+      isConnected = true;
     });
 
     // Graceful shutdown
     process.on('SIGINT', async () => {
-      await mongoose.connection.close();
-      logger.info('MongoDB connection closed through app termination');
+      try {
+        await mongoose.connection.close();
+        logger.info('MongoDB connection closed through app termination');
+        process.exit(0);
+      } catch (err) {
+        logger.error('Error closing MongoDB connection:', err);
+        process.exit(1);
+      }
+    });
+
+    process.on('SIGTERM', async () => {
+      try {
+        await mongoose.connection.close();
+        logger.info('MongoDB connection closed through SIGTERM');
+        process.exit(0);
+      } catch (err) {
+        logger.error('Error closing MongoDB connection:', err);
+        process.exit(1);
+      }
     });
 
   } catch (error) {
-    logger.error('MongoDB connection failed:', error);
+    logger.error('MongoDB connection failed:', error.message);
+    isConnected = false;
+    throw error;
+  }
+};
+
+const getConnectionStatus = () => {
+  return {
+    isConnected,
+    readyState: mongoose.connection.readyState,
+    // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    readyStateText: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown'
+  };
+};
+
+const disconnectMongoDB = async () => {
+  if (!isConnected) {
+    logger.info('MongoDB already disconnected');
+    return;
+  }
+
+  try {
+    await mongoose.connection.close();
+    isConnected = false;
+    logger.info('MongoDB disconnected successfully');
+  } catch (error) {
+    logger.error('Error disconnecting from MongoDB:', error);
     throw error;
   }
 };
 
 module.exports = {
   connectMongoDB,
+  disconnectMongoDB,
+  getConnectionStatus,
   mongoose,
   logger
 };

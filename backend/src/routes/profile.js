@@ -2,103 +2,63 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const { authenticate } = require('../middleware/auth');
-const {
-  getUserProfile,
-  updateUserProfile,
-  getUserCredits,
-  getUserSubscription,
-  getSupabase,
-  createUserProfile,
-  checkUserRole
-} = require('../config/supabase');
+const { User, Dream, Payment, Event } = require('../models');
 const { AppError, catchAsync } = require('../middleware/errorHandler');
 const { auditLog } = require('../middleware/logger');
+const { logger } = require('../config/mongodb');
 
 // Get user profile
 router.get('/', authenticate, catchAsync(async (req, res, next) => {
   const userId = req.user.id;
 
   try {
-    // Get user profile from Supabase
-    const profile = await getUserProfile(userId);
+    const user = await User.findById(userId);
+    
+    if (!user || user.isDeleted) {
+      throw new AppError('User not found', 404);
+    }
 
-    // Get user credits
-    const credits = await getUserCredits(userId);
+    // Get dream count
+    const dreamCount = await Dream.countDocuments({ userId, isDeleted: false });
 
-    // Get user subscription
-    const subscription = await getUserSubscription(userId);
-
-    // Get user role
-    const role = await checkUserRole(userId);
-
-    // Get basic stats
-    const { data: dreams } = await getSupabase()
-      .from('dreams')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('is_deleted', false);
-
-    // Safely extract user information
-    const userEmail = req.user?.email || 'user@example.com';
-    const emailParts = userEmail.split('@');
-    const defaultDisplayName = emailParts.length > 0 ? emailParts[0] : 'User';
-
-    // Add complete subscription details
-    let enhancedSubscription = subscription;
-    if (subscription) {
+    // Build subscription details
+    let enhancedSubscription = null;
+    if (user.subscription) {
       enhancedSubscription = {
-        ...subscription,
-        // Add plan details
-        planName: subscription.plan === 'basic' ? 'Basic Plan' : 
-                   subscription.plan === 'pro' ? 'Pro Plan' : 'Free Plan',
-        planType: subscription.plan === 'basic' ? 'basic' : 
-                   subscription.plan === 'pro' ? 'pro' : 'free',
-        status: subscription.status || 'active',
-        currentPeriodStart: subscription.current_period_start,
-        currentPeriodEnd: subscription.current_period_end,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        monthlyPrice: subscription.amount || 0,
-        currency: subscription.currency || 'usd',
-        // Add limits if available
-        monthlyLimits: subscription.monthly_limits || {
-          basic: subscription.monthly_limits?.basic || 20,
-          deep: subscription.monthly_limits?.deep || 5
-        },
-        // Add usage if available
-        monthlyUsage: subscription.monthly_usage || {
-          basic: subscription.monthly_usage?.basic || 0,
-          deep: subscription.monthly_usage?.deep || 0
-        },
-        // Add features if available
-        features: subscription.features || []
+        plan: user.subscription.plan,
+        planName: user.subscription.plan === 'basic' ? 'Basic Plan' : 
+                  user.subscription.plan === 'pro' ? 'Pro Plan' : 'Free Plan',
+        planType: user.subscription.plan,
+        status: user.subscription.status,
+        currentPeriodStart: user.subscription.currentPeriodStart,
+        currentPeriodEnd: user.subscription.currentPeriodEnd,
+        cancelAtPeriodEnd: user.subscription.cancelAtPeriodEnd,
+        stripeCustomerId: user.subscription.stripeCustomerId,
+        stripeSubscriptionId: user.subscription.stripeSubscriptionId
       };
     }
 
     res.json({
       profile: {
-        id: userId,
-        email: userEmail,
-        display_name: profile?.display_name || defaultDisplayName,
-        locale: profile?.locale || 'en',
-        preferences: profile?.preferences || {
-          emailNotifications: true,
-          pushNotifications: false,
-          theme: 'light',
-          dreamPrivacy: 'private',
-          dreamStorage: true
-        },
-        emailVerified: req.user?.emailVerified || false,
-        credits: credits,
+        id: user._id,
+        email: user.email,
+        display_name: user.displayName,
+        locale: user.locale,
+        preferences: user.preferences,
+        emailVerified: user.emailVerified,
+        credits: user.credits,
         subscription: enhancedSubscription,
-        role: role,
+        role: user.role,
         stats: {
-          totalDreams: dreams?.length || 0
-        }
+          totalDreams: dreamCount
+        },
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt
       }
     });
 
   } catch (error) {
-    console.error('Error fetching profile:', error);
+    logger.error('Error fetching profile:', error);
     next(error);
   }
 }));
@@ -126,50 +86,53 @@ router.put('/',
     const updates = {};
     
     // Build update object
-    if (req.body.displayName) updates.display_name = req.body.displayName;
+    if (req.body.displayName) updates.displayName = req.body.displayName;
     if (req.body.locale) updates.locale = req.body.locale;
     if (req.body.preferences) {
-      const currentProfile = await getUserProfile(userId);
+      const user = await User.findById(userId);
       updates.preferences = {
-        ...currentProfile?.preferences,
+        ...user?.preferences,
         ...req.body.preferences
       };
     }
     
     try {
-      // Update profile
-      const updatedProfile = await updateUserProfile(userId, updates);
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $set: updates },
+        { new: true }
+      );
       
-      // Track event (optional - skip if MongoDB not available)
+      if (!updatedUser) {
+        throw new AppError('User not found', 404);
+      }
+      
+      // Track event
       try {
-        const Event = require('../models/Event');
         await Event.trackEvent(userId, 'profile_updated', {
           fields: Object.keys(updates)
         });
         
-        // Track language change if applicable
         if (req.body.locale) {
           await Event.trackEvent(userId, 'language_changed', {
-            from: req.user.locale,
             to: req.body.locale
           });
         }
         
-        // Track theme change if applicable
         if (req.body.preferences?.theme) {
           await Event.trackEvent(userId, 'theme_changed', {
             theme: req.body.preferences.theme
           });
         }
-      } catch (error) {
-        console.log('Event tracking skipped');
+      } catch (eventError) {
+        logger.warn('Event tracking failed:', eventError.message);
       }
       
       auditLog('profile_updated', userId, updates);
       
       res.json({
         message: 'Profile updated successfully',
-        profile: updatedProfile
+        profile: updatedUser.toSafeObject()
       });
       
     } catch (error) {
@@ -188,68 +151,41 @@ router.delete('/account', authenticate, catchAsync(async (req, res, next) => {
   }
   
   try {
-    const supabase = getSupabase();
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
     
     // Verify password
-    const { error: authError } = await getSupabase().auth.signInWithPassword({
-      email: req.user.email,
-      password
-    });
-    
-    if (authError) {
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
       throw new AppError('Invalid password', 401);
     }
     
-    // Cancel any active subscriptions
-    const subscription = await getUserSubscription(userId);
-    if (subscription?.stripe_subscription_id) {
-      // This would trigger the webhook to handle the cancellation
-      // You'd need to call Stripe API here
-    }
+    // Soft delete all dreams
+    await Dream.updateMany(
+      { userId },
+      { $set: { isDeleted: true, deletedAt: new Date() } }
+    );
     
-    // Soft delete all dreams in Supabase
+    // Anonymize events
+    await Event.anonymizeUserEvents(userId);
+    
+    // Soft delete user
+    user.isDeleted = true;
+    user.deletedAt = new Date();
+    user.email = `deleted_${user._id}@deleted.com`;
+    await user.save();
+    
+    // Track event
     try {
-      await getSupabase()
-        .from('dreams')
-        .update({ is_deleted: true, deleted_at: new Date().toISOString() })
-        .eq('user_id', userId);
-    } catch (error) {
-      console.log('Could not delete dreams');
-    }
-    
-    // Anonymize events (optional - skip if MongoDB not available)
-    try {
-      const Event = require('../models/Event');
-      await Event.updateMany(
-        { userId },
-        { userId: 'deleted_user' }
-      );
-    } catch (error) {
-      console.log('Could not anonymize events');
-    }
-    
-    // Delete profile
-    await getSupabase()
-      .from('profiles')
-      .delete()
-      .eq('user_id', userId);
-
-    // Delete user from auth
-    const { error: deleteError } = await getSupabase().auth.admin.deleteUser(userId);
-    
-    if (deleteError) {
-      throw new AppError('Failed to delete account', 500);
-    }
-    
-    // Track event (optional - skip if MongoDB not available)
-    try {
-      const Event = require('../models/Event');
       await Event.trackEvent('deleted_user', 'account_deleted', {
-        userId,
+        userId: userId.toString(),
         timestamp: new Date().toISOString()
       });
-    } catch (error) {
-      console.log('Event tracking skipped');
+    } catch (eventError) {
+      logger.warn('Event tracking failed:', eventError.message);
     }
     
     auditLog('account_deleted', userId, {});
@@ -268,63 +204,61 @@ router.get('/export', authenticate, catchAsync(async (req, res, next) => {
   const userId = req.user.id;
   
   try {
-    const supabase = getSupabase();
+    const user = await User.findById(userId);
     
-    // Gather all user data
-    const profile = await getUserProfile(userId);
-    const subscription = await getUserSubscription(userId);
-    
-    // Get dreams from Supabase
-    const { data: dreams } = await getSupabase()
-      .from('dreams')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_deleted', false);
-
-    // Get payments
-    const { data: payments } = await getSupabase()
-      .from('payments_history')
-      .select('*')
-      .eq('user_id', userId);
-    
-    // Get events (optional - skip if MongoDB not available)
-    let events = [];
-    try {
-      const Event = require('../models/Event');
-      events = await Event.find({ userId }).limit(1000).lean();
-    } catch (error) {
-      console.log('Could not export events');
+    if (!user) {
+      throw new AppError('User not found', 404);
     }
+    
+    // Get dreams
+    const dreams = await Dream.find({ userId, isDeleted: false }).lean();
+    
+    // Get payments
+    const payments = await Payment.find({ userId }).lean();
+    
+    // Get events
+    const events = await Event.findEvents({ userId }, { limit: 1000 });
     
     const exportData = {
       exportDate: new Date().toISOString(),
       user: {
-        id: userId,
-        email: req.user.email,
-        emailVerified: req.user.emailVerified
+        id: user._id,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        displayName: user.displayName,
+        locale: user.locale,
+        role: user.role,
+        createdAt: user.createdAt
       },
-      profile,
-      subscription,
-      payments: payments || [],
-      dreams: (dreams || []).map(dream => ({
-        id: dream.id,
-        text: dream.dream_text,
+      preferences: user.preferences,
+      subscription: user.subscription,
+      credits: user.credits,
+      payments: payments.map(p => ({
+        id: p._id,
+        amount: p.amount,
+        currency: p.currency,
+        status: p.status,
+        type: p.type,
+        createdAt: p.createdAt
+      })),
+      dreams: dreams.map(dream => ({
+        id: dream._id,
+        text: dream.dreamText,
         interpretation: dream.interpretation,
         tags: dream.tags,
-        createdAt: dream.created_at
+        createdAt: dream.createdAt
       })),
       eventsCount: events.length,
-      events: events.slice(0, 100) // Limit events for performance
+      events: events.slice(0, 100)
     };
     
-    // Track event (optional - skip if MongoDB not available)
+    // Track event
     try {
-      const Event = require('../models/Event');
       await Event.trackEvent(userId, 'data_exported', {
         format: 'json'
       });
-    } catch (error) {
-      console.log('Event tracking skipped');
+    } catch (eventError) {
+      logger.warn('Event tracking failed:', eventError.message);
     }
     
     auditLog('data_exported', userId, {});
@@ -341,10 +275,15 @@ router.get('/credits', authenticate, catchAsync(async (req, res, next) => {
   const userId = req.user.id;
 
   try {
-    const credits = await getUserCredits(userId);
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
 
     res.json({
-      credits: credits
+      credits: user.credits,
+      lifetimeCreditsEarned: user.lifetimeCreditsEarned
     });
 
   } catch (error) {
@@ -357,10 +296,14 @@ router.get('/preferences', authenticate, catchAsync(async (req, res, next) => {
   const userId = req.user.id;
 
   try {
-    const profile = await getUserProfile(userId);
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
 
     res.json({
-      preferences: profile?.preferences || {
+      preferences: user.preferences || {
         emailNotifications: true,
         pushNotifications: false,
         theme: 'light',
@@ -397,21 +340,26 @@ router.patch('/preferences/:key',
     }
     
     try {
-      const profile = await getUserProfile(userId);
-      const preferences = profile?.preferences || {};
+      const user = await User.findById(userId);
+      
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+      
+      const preferences = user.preferences || {};
       preferences[key] = value;
       
-      await updateUserProfile(userId, { preferences });
+      user.preferences = preferences;
+      await user.save();
       
-      // Track event (optional - skip if MongoDB not available)
+      // Track event
       try {
-        const Event = require('../models/Event');
         await Event.trackEvent(userId, 'preferences_updated', {
           key,
           value
         });
-      } catch (error) {
-        console.log('Event tracking skipped');
+      } catch (eventError) {
+        logger.warn('Event tracking failed:', eventError.message);
       }
       
       res.json({
@@ -446,93 +394,52 @@ router.get('/stats', authenticate, catchAsync(async (req, res, next) => {
         startDate.setDate(endDate.getDate() - 90);
         break;
       case 'all':
-        startDate.setFullYear(2020); // Set to a very old date
+        startDate.setFullYear(2020);
         break;
       default:
         startDate.setDate(endDate.getDate() - 30);
     }
     
-    // Get dream statistics from Supabase
-    const { data: dreams } = await getSupabase()
-      .from('dreams')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_deleted', false)
-      .gte('created_at', startDate.toISOString())
-      .lte('created_at', endDate.toISOString());
+    // Get dream statistics
+    const dreams = await Dream.find({
+      userId,
+      isDeleted: false,
+      createdAt: { $gte: startDate, $lte: endDate }
+    }).lean();
     
-    // Calculate statistics
     let dreamStats = {
-      totalDreams: 0,
-      recurringDreams: 0,
+      totalDreams: dreams.length,
+      recurringDreams: dreams.filter(d => d.isRecurring).length,
       averageLength: 0,
       mostCommonThemes: [],
-      mostCommonEmotions: [],
       totalSymbols: []
     };
     
-    if (dreams && dreams.length > 0) {
-      dreamStats.totalDreams = dreams.length;
-      dreamStats.recurringDreams = dreams.filter(d => d.is_recurring).length;
-      
-      // Calculate average length
-      const totalLength = dreams.reduce((sum, d) => sum + (d.dream_text?.length || 0), 0);
+    if (dreams.length > 0) {
+      const totalLength = dreams.reduce((sum, d) => sum + (d.dreamText?.length || 0), 0);
       dreamStats.averageLength = totalLength / dreams.length;
       
-      // Collect themes and emotions
+      // Collect themes
+      const themeCount = {};
       dreams.forEach(dream => {
-        if (dream.interpretation) {
-          if (dream.interpretation.mainThemes) {
-            dreamStats.mostCommonThemes.push(...dream.interpretation.mainThemes);
-          }
-          if (dream.interpretation.emotionalTone) {
-            dreamStats.mostCommonEmotions.push(dream.interpretation.emotionalTone);
-          }
-          if (dream.interpretation.symbols) {
-            dreamStats.totalSymbols.push(...dream.interpretation.symbols);
-          }
+        if (dream.interpretation?.mainThemes) {
+          dream.interpretation.mainThemes.forEach(theme => {
+            themeCount[theme] = (themeCount[theme] || 0) + 1;
+          });
         }
       });
+      
+      // Get top themes
+      const topThemes = Object.entries(themeCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([theme, count]) => ({ theme, count }));
+        
+      dreamStats.mostCommonThemes = topThemes;
     }
     
-    // Get activity statistics (optional - skip if MongoDB not available)
-    let activityStats = [];
-    try {
-      const Event = require('../models/Event');
-      activityStats = await Event.aggregate([
-        {
-          $match: {
-            userId,
-            createdAt: { $gte: startDate, $lte: endDate }
-          }
-        },
-        {
-          $group: {
-            _id: {
-              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
-            },
-            count: { $sum: 1 }
-          }
-        },
-        {
-          $sort: { _id: 1 }
-        }
-      ]);
-    } catch (error) {
-      console.log('Could not get activity stats');
-    }
-    
-    // Process theme frequency
-    const themeFrequency = {};
-    dreamStats.mostCommonThemes.forEach(theme => {
-      themeFrequency[theme] = (themeFrequency[theme] || 0) + 1;
-    });
-    
-    // Get top themes
-    const topThemes = Object.entries(themeFrequency)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([theme, count]) => ({ theme, count }));
+    // Get activity statistics
+    const activityStats = await Event.getUserActivityStats(userId, startDate, endDate);
     
     res.json({
       period,
@@ -545,7 +452,7 @@ router.get('/stats', authenticate, catchAsync(async (req, res, next) => {
         recurringDreams: dreamStats.recurringDreams,
         averageLength: dreamStats.averageLength
       },
-      topThemes,
+      topThemes: dreamStats.mostCommonThemes,
       activity: activityStats,
       engagement: {
         daysActive: activityStats.length,
@@ -582,8 +489,13 @@ router.put('/notifications',
     const { email, push } = req.body;
     
     try {
-      const profile = await getUserProfile(userId);
-      const preferences = profile?.preferences || {};
+      const user = await User.findById(userId);
+      
+      if (!user) {
+        throw new AppError('User not found', 404);
+      }
+      
+      const preferences = user.preferences || {};
       
       if (email) {
         preferences.emailNotifications = {
@@ -599,17 +511,17 @@ router.put('/notifications',
         };
       }
       
-      await updateUserProfile(userId, { preferences });
+      user.preferences = preferences;
+      await user.save();
       
-      // Track event (optional - skip if MongoDB not available)
+      // Track event
       try {
-        const Event = require('../models/Event');
         await Event.trackEvent(userId, 'notification_settings_updated', {
           email,
           push
         });
-      } catch (error) {
-        console.log('Event tracking skipped');
+      } catch (eventError) {
+        logger.warn('Event tracking failed:', eventError.message);
       }
       
       res.json({

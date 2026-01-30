@@ -2,20 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const axios = require('axios');
-const {
-  getUserProfile,
-  getUserCredits,
-  updateUserCredits,
-  getUserSubscription,
-  getSupabase
-} = require('../config/supabase');
+const mongoose = require('mongoose');
+const { User, Dream, Event } = require('../models');
 const { AppError, catchAsync } = require('../middleware/errorHandler');
 const { dreamLog } = require('../middleware/logger');
 const { authenticate } = require('../middleware/auth');
-// Enable quota system for freemium model
 const { checkQuota } = require('../middleware/quota');
-
-// Import AI provider system (not used in this file)
+const { logger } = require('../config/mongodb');
 
 // Dynamic interpretation generator based on dream content
 const generateDynamicInterpretation = (dreamText, interpretationType = 'basic', locale = 'en') => {
@@ -104,12 +97,11 @@ const generateDynamicInterpretation = (dreamText, interpretationType = 'basic', 
       themes.push('transformation');
     }
 
-    // Add default themes if none found
     if (themes.length === 0) {
       themes.push('self-discovery', 'personal-growth');
     }
 
-    return themes.slice(0, 3); // Limit to 3 main themes
+    return themes.slice(0, 3);
   };
 
   // Find relevant symbols in the dream text
@@ -122,7 +114,6 @@ const generateDynamicInterpretation = (dreamText, interpretationType = 'basic', 
       }
     });
 
-    // If no specific symbols found, add some general ones
     if (foundSymbols.length === 0) {
       foundSymbols.push({
         symbol: 'dream elements',
@@ -131,7 +122,7 @@ const generateDynamicInterpretation = (dreamText, interpretationType = 'basic', 
       });
     }
 
-    return foundSymbols.slice(0, 3); // Limit to 3 symbols
+    return foundSymbols.slice(0, 3);
   };
 
   // Generate personal insight based on themes
@@ -250,7 +241,6 @@ Language: ${locale === 'es' ? 'Spanish' : 'English'}`;
 
     const interpretation = JSON.parse(response.data.choices[0].message.content);
 
-    // Validate the response structure
     if (!interpretation.mainThemes || !interpretation.emotionalTone || !interpretation.symbols ||
         !interpretation.personalInsight || !interpretation.guidance) {
       throw new Error('Invalid interpretation structure received from AI');
@@ -258,10 +248,8 @@ Language: ${locale === 'es' ? 'Spanish' : 'English'}`;
 
     return interpretation;
   } catch (error) {
-    console.error('OpenRouter API error:', error.response?.data || error.message);
-
-    // DYNAMIC: Generate interpretation based on user's dream text
-    console.log('Using dynamic interpretation based on user input:', dreamText.substring(0, 50) + '...');
+    logger.error('OpenRouter API error:', error.response?.data || error.message);
+    logger.info('Using dynamic interpretation based on user input');
     return generateDynamicInterpretation(dreamText, interpretationType, locale);
   }
 };
@@ -302,14 +290,14 @@ router.post('/interpret',
       if (interpretationType === 'deep') creditsNeeded = 3;
       if (interpretationType === 'premium') creditsNeeded = 5;
 
-      // Check if user has subscription (quota middleware already checked this)
-      const subscription = await getUserSubscription(userId);
-      const hasActiveSubscription = subscription && subscription.status === 'active';
+      // Check user subscription
+      const user = await User.findById(userId);
+      const hasActiveSubscription = user?.subscription?.status === 'active' && user?.subscription?.plan !== 'free';
 
-      // Save dream to Supabase
-      const dreamData = {
-        user_id: userId,
-        dream_text: dreamText,
+      // Create dream document
+      const dream = new Dream({
+        userId,
+        dreamText,
         interpretation,
         metadata: {
           interpretationType,
@@ -319,78 +307,48 @@ router.post('/interpret',
           temperature: parseFloat(process.env.OPENROUTER_TEMPERATURE) || 0.7,
           maxTokens: parseInt(process.env.OPENROUTER_MAX_TOKENS) || 2000
         },
-        user_context: userContext,
+        userContext,
         tags,
-        is_recurring: isRecurring,
+        isRecurring,
         locale,
         source: req.headers['x-source'] || 'web'
-      };
+      });
 
-    // Try to save to Supabase dreams table
-    const { data: dream, error: dreamError } = await getSupabase()
-      .from('dreams')
-      .insert([dreamData])
-      .select()
-      .single();
-
-    if (dreamError) {
-      console.warn('Could not save dream to database:', dreamError);
-      // In test mode, manually add to mock database
-      if (getSupabase()._dreams) {
-        const mockDream = {
-          id: `test-dream-${Date.now()}`,
-          ...dreamData,
-          created_at: new Date().toISOString()
-        };
-        getSupabase()._dreams.push(mockDream);
-        console.log('✅ Dream saved to mock database in test mode');
-      }
-    } else {
-      console.log('✅ Dream saved to real Supabase database');
-    }
+      await dream.save();
+      logger.info(`✅ Dream saved to MongoDB: ${dream._id}`);
 
       // Deduct credits if not on subscription
-      if (!hasActiveSubscription && creditsNeeded > 0) {
-        try {
-          await updateUserCredits(userId, -creditsNeeded);
-        } catch (creditError) {
-          console.error('Error deducting credits:', creditError);
-          // Continue - credits will be deducted later or handled by quota system
-        }
+      if (!hasActiveSubscription && creditsNeeded > 0 && user) {
+        await User.updateCredits(userId, creditsNeeded, 'subtract');
       }
 
-      // Get remaining credits for response
+      // Get remaining credits
       let creditsRemaining = 'unlimited';
-      if (!hasActiveSubscription) {
-        try {
-          const currentCredits = await getUserCredits(userId);
-          creditsRemaining = Math.max(0, currentCredits);
-        } catch (error) {
-          creditsRemaining = 'unknown';
-        }
+      if (!hasActiveSubscription && user) {
+        const updatedUser = await User.findById(userId);
+        creditsRemaining = updatedUser?.credits || 0;
       }
 
       // Track events
       try {
-        const Event = require('../models/Event');
         await Event.trackEvent(userId, 'dream_submitted', {
-          dreamId: dream?.id || 'temp-id',
+          dreamId: dream._id,
           interpretationType,
           creditsUsed: hasActiveSubscription ? 0 : creditsNeeded,
           processingTime,
         });
 
         await Event.trackEvent(userId, 'dream_interpreted', {
-          dreamId: dream?.id || 'temp-id',
+          dreamId: dream._id,
           interpretationType,
           hasSubscription: hasActiveSubscription
         });
       } catch (eventError) {
-        console.log('Event tracking skipped (MongoDB not available)');
+        logger.warn('Event tracking failed:', eventError.message);
       }
 
       // Log dream interpretation
-      dreamLog(userId, dream?.id || 'temp-id', {
+      dreamLog(userId, dream._id.toString(), {
         interpretationType,
         creditsUsed: hasActiveSubscription ? 0 : creditsNeeded,
         processingTime,
@@ -399,19 +357,19 @@ router.post('/interpret',
       res.status(201).json({
         message: `Dream interpreted successfully${hasActiveSubscription ? ' (Subscription)' : ` (${creditsNeeded} credits used)`}`,
         dream: {
-          id: dream?.id || Date.now().toString(),
-          dreamText: dreamText,
-          interpretation: interpretation,
-          metadata: dreamData.metadata,
-          tags: tags,
-          isRecurring: isRecurring,
-          createdAt: dream?.created_at || new Date().toISOString()
+          id: dream._id,
+          dreamText: dream.dreamText,
+          interpretation: dream.interpretation,
+          metadata: dream.metadata,
+          tags: dream.tags,
+          isRecurring: dream.isRecurring,
+          createdAt: dream.createdAt
         },
         quota: {
           hasSubscription: hasActiveSubscription,
           creditsUsed: hasActiveSubscription ? 0 : creditsNeeded,
           creditsRemaining: creditsRemaining,
-          subscriptionTier: subscription?.plan_type || null
+          subscriptionTier: user?.subscription?.plan || null
         }
       });
 
@@ -421,123 +379,13 @@ router.post('/interpret',
   })
 );
 
-// Test endpoint to bypass authentication for testing
-router.get('/test-history', (req, res, next) => {
-  // Temporarily disable all middleware for this test endpoint
-  req.skipAuth = true;
-  next();
-}, catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 10,
-    sortBy = 'created_at',
-    order = 'desc',
-    filter = {}
-  } = req.query;
-
-  try {
-    // Use a test user ID for demonstration
-    const userId = 'test-user-id';
-
-    // Get dreams from Supabase
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    let query = getSupabase()
-      .from('dreams')
-      .select('*', { count: 'exact' })
-      .eq('is_deleted', false)
-      .order(sortBy, { ascending: order === 'asc' })
-      .range(from, to);
-
-    const { data: dreams, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching dreams:', error);
-      // Fallback to empty response
-      return res.json({
-        dreams: [],
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: 1
-      });
-    }
-
-    res.json({
-      dreams: dreams || [],
-      totalCount: count || 0,
-      totalPages: Math.ceil((count || 0) / limit),
-      currentPage: page
-    });
-
-  } catch (error) {
-    next(error);
-  }
-}));
-
-// Get all dreams from database (admin endpoint)
-router.get('/all-dreams', (req, res, next) => {
-  // Skip authentication for this admin endpoint
-  req.skipAuth = true;
-  next();
-}, catchAsync(async (req, res, next) => {
-  const {
-    page = 1,
-    limit = 50,
-    sortBy = 'created_at',
-    order = 'desc'
-  } = req.query;
-
-  try {
-    // Get all dreams from Supabase (no user filter)
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    let query = getSupabase()
-      .from('dreams')
-      .select('*', { count: 'exact' })
-      .eq('is_deleted', false)
-      .order(sortBy, { ascending: order === 'asc' })
-      .range(from, to);
-
-    const { data: dreams, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching all dreams:', error);
-      return res.json({
-        dreams: [],
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: page,
-        error: error.message
-      });
-    }
-
-    res.json({
-      dreams: dreams || [],
-      totalCount: count || 0,
-      totalPages: Math.ceil((count || 0) / limit),
-      currentPage: page,
-      message: `Retrieved ${dreams?.length || 0} dreams from database`
-    });
-
-  } catch (error) {
-    next(error);
-  }
-}));
-
 // Test endpoint for dream interpretation (bypasses authentication)
-router.post('/test-interpret', (req, res, next) => {
-  // Temporarily disable all middleware for this test endpoint
-  req.skipAuth = true;
-  next();
-}, validateDreamSubmission, catchAsync(async (req, res, next) => {
+router.post('/test-interpret', validateDreamSubmission, catchAsync(async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const userId = 'test-user-id'; // Use test user ID
   const {
     dreamText,
     interpretationType = 'basic',
@@ -548,70 +396,42 @@ router.post('/test-interpret', (req, res, next) => {
   } = req.body;
 
   try {
-    // Start interpretation timer
     const startTime = Date.now();
-
-    // Call AI interpretation function
     const interpretation = await interpretDream(dreamText, locale, interpretationType);
-
-    // Calculate processing time
     const processingTime = Date.now() - startTime;
 
-    // Save dream to real Supabase database
-    const dreamData = {
-      user_id: userId,
-      dream_text: dreamText,
+    // Save to MongoDB with a test user ID
+    const dream = new Dream({
+      userId: new mongoose.Types.ObjectId(),
+      dreamText,
       interpretation,
       metadata: {
         interpretationType,
-        creditsUsed: 0, // No credits for test
+        creditsUsed: 0,
         processingTime,
-        modelUsed: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet:20241022',
-        temperature: parseFloat(process.env.OPENROUTER_TEMPERATURE) || 0.7,
-        maxTokens: parseInt(process.env.OPENROUTER_MAX_TOKENS) || 2000
+        modelUsed: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet:20241022'
       },
-      user_context: userContext,
+      userContext,
       tags,
-      is_recurring: isRecurring,
+      isRecurring,
       locale,
-      source: req.headers['x-source'] || 'test'
-    };
+      source: 'test'
+    });
 
-    // Try to save to Supabase dreams table
-    const { data: dream, error: dreamError } = await getSupabase()
-      .from('dreams')
-      .insert([dreamData])
-      .select()
-      .single();
-
-    if (dreamError) {
-      console.warn('Could not save dream to database:', dreamError);
-      // In test mode, manually add to mock database
-      if (getSupabase()._dreams) {
-        const mockDream = {
-          id: `test-dream-${Date.now()}`,
-          ...dreamData,
-          created_at: new Date().toISOString()
-        };
-        getSupabase()._dreams.push(mockDream);
-        console.log('✅ Dream saved to mock database in test mode');
-      }
-    } else {
-      console.log('✅ Dream saved to real Supabase database');
-    }
+    await dream.save();
 
     res.status(201).json({
       message: 'Dream interpreted and stored successfully (test mode)',
       dream: {
-        id: dream?.id || Date.now().toString(),
-        dreamText: dreamText,
-        interpretation: interpretation,
-        metadata: dreamData.metadata,
-        tags: tags,
-        isRecurring: isRecurring,
-        createdAt: dream?.created_at || new Date().toISOString()
+        id: dream._id,
+        dreamText: dream.dreamText,
+        interpretation: dream.interpretation,
+        metadata: dream.metadata,
+        tags: dream.tags,
+        isRecurring: dream.isRecurring,
+        createdAt: dream.createdAt
       },
-      savedToDatabase: !dreamError
+      savedToDatabase: true
     });
 
   } catch (error) {
@@ -619,134 +439,33 @@ router.post('/test-interpret', (req, res, next) => {
   }
 }));
 
-// Get dream statistics (NO AUTH for testing)
-router.get('/stats', catchAsync(async (req, res, next) => {
-  // Use test user for demo
-  const userId = 'test-user-id';
+// Get dream statistics
+router.get('/stats', authenticate, catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
 
   try {
-    console.log('📊 Fetching dream statistics for user:', userId);
-
-    // Get total dreams count
-    const { count: totalDreams, error: countError } = await getSupabase()
-      .from('dreams')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('is_deleted', false);
-
-    console.log('Total dreams count:', totalDreams, 'Error:', countError);
-
-    // Get dreams from this month
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const { count: thisMonthCount, error: monthError } = await getSupabase()
-      .from('dreams')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('is_deleted', false)
-      .gte('created_at', startOfMonth.toISOString());
-
-    console.log('This month dreams count:', thisMonthCount, 'Error:', monthError);
-
-    // Get recurring dreams count
-    const { count: recurringCount, error: recurringError } = await getSupabase()
-      .from('dreams')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('is_deleted', false)
-      .eq('is_recurring', true);
-
-    console.log('Recurring dreams count:', recurringCount, 'Error:', recurringError);
-
-    // Calculate credits used from dream metadata
-    const { data: dreamsData, error: creditsError } = await getSupabase()
-      .from('dreams')
-      .select('metadata')
-      .eq('user_id', userId)
-      .eq('is_deleted', false);
-
-    let creditsUsed = 0;
-    if (dreamsData && !creditsError) {
-      creditsUsed = dreamsData.reduce((sum, dream) => {
-        return sum + (dream.metadata?.creditsUsed || 0);
-      }, 0);
-    }
-
-    console.log('Credits used:', creditsUsed, 'Error:', creditsError);
-
-    // Get all dreams to calculate average rating and top themes
-    const { data: allDreams, error: dreamsError } = await getSupabase()
-      .from('dreams')
-      .select('rating, interpretation')
-      .eq('user_id', userId)
-      .eq('is_deleted', false)
-      .not('rating', 'is', null);
-
-    let averageRating = 0;
-    let topThemes = [];
-
-    if (allDreams && allDreams.length > 0) {
-      // Calculate average rating
-      const ratings = allDreams.filter(dream => dream.rating !== null && dream.rating !== undefined);
-      if (ratings.length > 0) {
-        const totalRating = ratings.reduce((sum, dream) => sum + (dream.rating || 0), 0);
-        averageRating = Math.round((totalRating / ratings.length) * 10) / 10; // Round to 1 decimal
-      }
-
-      // Calculate top themes
-      const themeCount = {};
-      allDreams.forEach(dream => {
-        if (dream.interpretation && dream.interpretation.mainThemes) {
-          dream.interpretation.mainThemes.forEach(theme => {
-            themeCount[theme] = (themeCount[theme] || 0) + 1;
-          });
-        }
-      });
-
-      // Get top 5 themes
-      topThemes = Object.entries(themeCount)
-        .sort(([,a], [,b]) => b - a)
-        .slice(0, 5)
-        .map(([theme, count]) => ({ theme, count }));
-    }
-
-    const stats = {
-      totalDreams: totalDreams || 0,
-      thisMonth: thisMonthCount || 0,
-      recurringDreams: recurringCount || 0,
-      averageRating: averageRating,
-      creditsUsed: creditsUsed,
-      topThemes: topThemes
-    };
-
-    console.log('📊 Final statistics:', stats);
-
+    const stats = await Dream.getUserStats(userId);
     res.json({ stats });
-
   } catch (error) {
-    console.error('Error fetching dream stats:', error);
+    logger.error('Error fetching dream stats:', error);
     next(error);
   }
 }));
 
-// Get user's dream history (alias for direct /dreams endpoint) - NO AUTH for testing
-router.get('/', catchAsync(async (req, res, next) => {
-  // Use test user for demo (no authentication required)
-  const userId = 'test-user-id';
+// Get user's dream history (root endpoint)
+router.get('/', authenticate, catchAsync(async (req, res, next) => {
+  const userId = req.user.id;
   const {
     page = 1,
     limit = 10,
-    sortBy = 'created_at',
-    order = 'desc',
-    filter = {}
+    sortBy = 'createdAt',
+    order = 'desc'
   } = req.query;
 
   try {
     // Check if user has enabled dream storage
-    const profile = await getUserProfile(userId);
-    if (profile?.preferences?.dreamStorage === false) {
+    const user = await User.findById(userId);
+    if (user?.preferences?.dreamStorage === false) {
       return res.json({
         message: 'Dream storage is disabled in your preferences',
         dreams: [],
@@ -756,38 +475,14 @@ router.get('/', catchAsync(async (req, res, next) => {
       });
     }
 
-    // Get dreams from Supabase
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    let query = getSupabase()
-      .from('dreams')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .eq('is_deleted', false)
-      .order(sortBy, { ascending: order === 'asc' })
-      .range(from, to);
-
-    const { data: dreams, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching dreams:', error);
-      // Fallback to empty response
-      return res.json({
-        dreams: [],
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: page
-      });
-    }
-
-    res.json({
-      dreams: dreams || [],
-      totalCount: count || 0,
-      totalPages: Math.ceil((count || 0) / limit),
-      currentPage: page
+    const result = await Dream.getUserDreams(userId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sortBy,
+      order
     });
 
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -799,15 +494,13 @@ router.get('/history', authenticate, catchAsync(async (req, res, next) => {
   const {
     page = 1,
     limit = 10,
-    sortBy = 'created_at',
-    order = 'desc',
-    filter = {}
+    sortBy = 'createdAt',
+    order = 'desc'
   } = req.query;
 
   try {
-    // Check if user has enabled dream storage
-    const profile = await getUserProfile(userId);
-    if (profile?.preferences?.dreamStorage === false) {
+    const user = await User.findById(userId);
+    if (user?.preferences?.dreamStorage === false) {
       return res.json({
         message: 'Dream storage is disabled in your preferences',
         dreams: [],
@@ -817,38 +510,14 @@ router.get('/history', authenticate, catchAsync(async (req, res, next) => {
       });
     }
 
-    // Get dreams from Supabase
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    let query = getSupabase()
-      .from('dreams')
-      .select('*', { count: 'exact' })
-      .eq('user_id', userId)
-      .eq('is_deleted', false)
-      .order(sortBy, { ascending: order === 'asc' })
-      .range(from, to);
-
-    const { data: dreams, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching dreams:', error);
-      // Fallback to empty response
-      return res.json({
-        dreams: [],
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: page
-      });
-    }
-
-    res.json({
-      dreams: dreams || [],
-      totalCount: count || 0,
-      totalPages: Math.ceil((count || 0) / limit),
-      currentPage: page
+    const result = await Dream.getUserDreams(userId, {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      sortBy,
+      order
     });
 
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -860,22 +529,21 @@ router.get('/:dreamId', authenticate, catchAsync(async (req, res, next) => {
   const { dreamId } = req.params;
 
   try {
-    const { data: dream, error } = await getSupabase()
-      .from('dreams')
-      .select('*')
-      .eq('id', dreamId)
-      .eq('user_id', userId)
-      .eq('is_deleted', false)
-      .single();
+    if (!mongoose.Types.ObjectId.isValid(dreamId)) {
+      throw new AppError('Invalid dream ID', 400);
+    }
 
-    if (error || !dream) {
+    const dream = await Dream.findOne({
+      _id: dreamId,
+      userId,
+      isDeleted: false
+    });
+
+    if (!dream) {
       throw new AppError('Dream not found', 404);
     }
 
-    res.json({
-      dream
-    });
-
+    res.json({ dream });
   } catch (error) {
     next(error);
   }
@@ -887,8 +555,7 @@ router.patch('/:dreamId', authenticate, catchAsync(async (req, res, next) => {
   const { dreamId } = req.params;
   const updates = req.body;
 
-  // Only allow certain fields to be updated
-  const allowedUpdates = ['tags', 'rating', 'user_context', 'is_recurring'];
+  const allowedUpdates = ['tags', 'rating', 'userContext', 'isRecurring'];
   const requestedUpdates = Object.keys(updates);
   const isValidOperation = requestedUpdates.every(update => allowedUpdates.includes(update));
 
@@ -897,22 +564,17 @@ router.patch('/:dreamId', authenticate, catchAsync(async (req, res, next) => {
   }
 
   try {
-    // Convert field names to snake_case for Supabase
-    const supabaseUpdates = {};
-    if (updates.tags) supabaseUpdates.tags = updates.tags;
-    if (updates.rating) supabaseUpdates.rating = updates.rating;
-    if (updates.userContext) supabaseUpdates.user_context = updates.userContext;
-    if (updates.isRecurring) supabaseUpdates.is_recurring = updates.isRecurring;
+    if (!mongoose.Types.ObjectId.isValid(dreamId)) {
+      throw new AppError('Invalid dream ID', 400);
+    }
 
-    const { data: dream, error } = await getSupabase()
-      .from('dreams')
-      .update(supabaseUpdates)
-      .eq('id', dreamId)
-      .eq('user_id', userId)
-      .select()
-      .single();
+    const dream = await Dream.findOneAndUpdate(
+      { _id: dreamId, userId, isDeleted: false },
+      { $set: updates },
+      { new: true }
+    );
 
-    if (error || !dream) {
+    if (!dream) {
       throw new AppError('Dream not found', 404);
     }
 
@@ -920,7 +582,6 @@ router.patch('/:dreamId', authenticate, catchAsync(async (req, res, next) => {
       message: 'Dream updated successfully',
       dream
     });
-
   } catch (error) {
     next(error);
   }
@@ -932,22 +593,23 @@ router.delete('/:dreamId', authenticate, catchAsync(async (req, res, next) => {
   const { dreamId } = req.params;
 
   try {
-    const { data: dream, error } = await getSupabase()
-      .from('dreams')
-      .update({ is_deleted: true })
-      .eq('id', dreamId)
-      .eq('user_id', userId)
-      .select()
-      .single();
+    if (!mongoose.Types.ObjectId.isValid(dreamId)) {
+      throw new AppError('Invalid dream ID', 400);
+    }
 
-    if (error || !dream) {
+    const dream = await Dream.findOneAndUpdate(
+      { _id: dreamId, userId, isDeleted: false },
+      { $set: { isDeleted: true, deletedAt: new Date() } },
+      { new: true }
+    );
+
+    if (!dream) {
       throw new AppError('Dream not found', 404);
     }
 
     res.json({
       message: 'Dream deleted successfully'
     });
-
   } catch (error) {
     next(error);
   }
@@ -963,36 +625,12 @@ router.get('/search/query', authenticate, catchAsync(async (req, res, next) => {
   }
 
   try {
-    // Search in Supabase using text search
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    const { data: dreams, error } = await getSupabase()
-      .from('dreams')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_deleted', false)
-      .or(`dream_text.ilike.%${q}%,tags.cs.{${q}}`)
-      .order('created_at', { ascending: false })
-      .range(from, to);
-
-    if (error) {
-      console.error('Error searching dreams:', error);
-      return res.json({
-        dreams: [],
-        query: q,
-        page,
-        limit
-      });
-    }
-
-    res.json({
-      dreams: dreams || [],
-      query: q,
-      page,
-      limit
+    const result = await Dream.searchDreams(userId, q, {
+      page: parseInt(page),
+      limit: parseInt(limit)
     });
 
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -1003,55 +641,8 @@ router.get('/patterns/recurring', authenticate, catchAsync(async (req, res, next
   const userId = req.user.id;
 
   try {
-    const { data: recurringDreams, error } = await getSupabase()
-      .from('dreams')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_deleted', false)
-      .eq('is_recurring', true)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching recurring dreams:', error);
-      return res.json({
-        patterns: {},
-        totalRecurringDreams: 0
-      });
-    }
-
-    // Group by recurring pattern
-    const patterns = {};
-    recurringDreams?.forEach(dream => {
-      const patternId = dream.recurring_dream_id || dream.id;
-      if (!patterns[patternId]) {
-        patterns[patternId] = {
-          firstOccurrence: dream.created_at,
-          lastOccurrence: dream.created_at,
-          count: 0,
-          themes: new Set(),
-          dreams: []
-        };
-      }
-      patterns[patternId].count++;
-      patterns[patternId].lastOccurrence = dream.created_at;
-      if (dream.interpretation?.mainThemes) {
-        dream.interpretation.mainThemes.forEach(theme => {
-          patterns[patternId].themes.add(theme);
-        });
-      }
-      patterns[patternId].dreams.push(dream);
-    });
-
-    // Convert sets to arrays
-    Object.keys(patterns).forEach(key => {
-      patterns[key].themes = Array.from(patterns[key].themes);
-    });
-
-    res.json({
-      patterns,
-      totalRecurringDreams: recurringDreams?.length || 0
-    });
-
+    const result = await Dream.getRecurringPatterns(userId);
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -1061,7 +652,6 @@ router.get('/patterns/recurring', authenticate, catchAsync(async (req, res, next
 const PDFDocument = require('pdfkit');
 const { requirePremiumFeature } = require('../middleware/quota');
 
-// GET /api/reports/pdf/:id
 router.get('/reports/pdf/:dreamId',
   authenticate,
   requirePremiumFeature('pdf_export'),
@@ -1070,15 +660,17 @@ router.get('/reports/pdf/:dreamId',
     const { dreamId } = req.params;
 
     try {
-      // Fetch dream from Supabase
-      const { data: dream, error } = await getSupabase()
-        .from('dreams')
-        .select('*')
-        .eq('id', dreamId)
-        .eq('user_id', userId)
-        .single();
+      if (!mongoose.Types.ObjectId.isValid(dreamId)) {
+        throw new AppError('Invalid dream ID', 400);
+      }
 
-      if (error || !dream) {
+      const dream = await Dream.findOne({
+        _id: dreamId,
+        userId,
+        isDeleted: false
+      });
+
+      if (!dream) {
         throw new AppError('Dream not found', 404);
       }
 
@@ -1093,7 +685,7 @@ router.get('/reports/pdf/:dreamId',
       doc.moveDown();
 
       doc.fontSize(14).text('Dream Text:');
-      doc.fontSize(12).text(dream.dream_text);
+      doc.fontSize(12).text(dream.dreamText);
       doc.moveDown();
 
       doc.fontSize(14).text('Interpretation:');

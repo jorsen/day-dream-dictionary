@@ -1,16 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { 
-  getSupabase, 
-  createUserProfile, 
-  getUserProfile,
-  checkUserRole 
-} = require('../config/supabase');
+const crypto = require('crypto');
+const { User, Event } = require('../models');
 const { AppError, catchAsync } = require('../middleware/errorHandler');
 const { auditLog } = require('../middleware/logger');
+const { logger } = require('../config/mongodb');
 
 // Validation middleware
 const validateSignup = [
@@ -30,13 +26,13 @@ const validateLogin = [
 // Helper function to generate tokens
 const generateTokens = (userId) => {
   const accessToken = jwt.sign(
-    { userId, type: 'access' },
+    { userId: userId.toString(), type: 'access' },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
   
   const refreshToken = jwt.sign(
-    { userId, type: 'refresh' },
+    { userId: userId.toString(), type: 'refresh' },
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '30d' }
   );
@@ -53,101 +49,50 @@ router.post('/signup', validateSignup, catchAsync(async (req, res, next) => {
   }
   
   const { email, password, displayName, locale = 'en' } = req.body;
-  const supabase = getSupabase();
   
   try {
-    // Create user with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          display_name: displayName,
-          locale
-        }
-      }
-    });
-    
-    if (authError) {
-      if (authError.message.includes('already registered')) {
-        throw new AppError('Email already registered', 409);
-      }
-      throw new AppError(authError.message, 400);
+    // Check if user already exists
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      throw new AppError('Email already registered', 409);
     }
     
-    const user = authData.user;
-    
-    // Create user profile
-    await createUserProfile(user.id, {
-      email: user.email,
-      display_name: displayName || email.split('@')[0],
+    // Create new user
+    const user = new User({
+      email,
+      password,
+      displayName: displayName || email.split('@')[0],
       locale,
+      credits: 5,
+      lifetimeCreditsEarned: 5,
       preferences: {
         emailNotifications: true,
         pushNotifications: false,
         theme: 'light',
-        dreamPrivacy: 'private'
+        dreamPrivacy: 'private',
+        dreamStorage: true
       }
     });
     
-    // Initialize user credits (free tier) - use admin client to bypass RLS
-    try {
-      const adminClient = require('../config/supabase').getSupabaseAdmin() || supabase;
-      const { error: creditsError } = await adminClient
-        .from('credits')
-        .insert([{
-          user_id: user.id,
-          balance: 5,
-          lifetime_earned: 5,
-          updated_at: new Date().toISOString()
-        }]);
-
-      if (creditsError) {
-        console.log('Credits table may not exist, skipping initialization:', creditsError.message);
-      } else {
-        console.log('✅ Added 5 free credits to new user:', user.id);
-      }
-    } catch (creditsError) {
-      console.log('Credits initialization skipped (table may not exist):', creditsError.message);
-    }
-
-    // Set default user role - use admin client to bypass RLS
-    try {
-      const adminClient = require('../config/supabase').getSupabaseAdmin() || supabase;
-      const { error: roleError } = await adminClient
-        .from('roles')
-        .insert([{
-          user_id: user.id,
-          role: 'user',
-          created_at: new Date().toISOString()
-        }]);
-
-      if (roleError) {
-        console.log('Roles table may not exist, skipping initialization:', roleError.message);
-      }
-    } catch (roleError) {
-      console.log('Role initialization skipped (table may not exist):', roleError.message);
-    }
+    await user.save();
+    logger.info(`✅ New user created: ${user._id}`);
     
-    // Track signup event (optional - skip if MongoDB is not available)
+    // Track signup event
     try {
-      const Event = require('../models/Event');
-      if (Event && Event.trackEvent) {
-        await Event.trackEvent(user.id, 'user_signup', {
-          email,
-          locale,
-          source: req.headers['x-source'] || 'web'
-        });
-      }
+      await Event.trackEvent(user._id, 'user_signup', {
+        email,
+        locale,
+        source: req.headers['x-source'] || 'web'
+      });
     } catch (eventError) {
-      console.log('Event tracking skipped (MongoDB not available):', eventError.message);
+      logger.warn('Event tracking failed:', eventError.message);
     }
     
     // Audit log
-    auditLog('user_signup', user.id, { email });
+    auditLog('user_signup', user._id.toString(), { email });
     
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user.id);
+    const { accessToken, refreshToken } = generateTokens(user._id);
     
     // Set refresh token as httpOnly cookie
     res.cookie('refreshToken', refreshToken, {
@@ -160,12 +105,12 @@ router.post('/signup', validateSignup, catchAsync(async (req, res, next) => {
     res.status(201).json({
       message: 'User created successfully',
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
-        displayName: displayName || email.split('@')[0],
-        locale,
-        emailVerified: false,
-        credits: 5
+        displayName: user.displayName,
+        locale: user.locale,
+        emailVerified: user.emailVerified,
+        credits: user.credits
       },
       accessToken
     });
@@ -184,25 +129,21 @@ router.post('/login', validateLogin, catchAsync(async (req, res, next) => {
   }
 
   const { email, password } = req.body;
-  const supabase = getSupabase();
 
   try {
-    // Check if we're in test mode
-    const { testMode } = require('../config/test-mode');
-    console.log('Login attempt - Test mode:', testMode, 'Email:', email);
-
+    // Check for test mode
+    const testMode = process.env.TEST_MODE === 'true';
+    
     if (testMode && (email === 'test@example.com' || email === 'sample1@gmail.com') && (password === 'test' || password === 'sample')) {
-      console.log('Using test mode authentication for email:', email);
+      logger.info('Using test mode authentication for email:', email);
 
-      // Generate tokens for test user
       const { accessToken, refreshToken } = generateTokens('test-user-id');
 
-      // Set refresh token as httpOnly cookie
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        maxAge: 30 * 24 * 60 * 60 * 1000
       });
 
       return res.json({
@@ -220,84 +161,72 @@ router.post('/login', validateLogin, catchAsync(async (req, res, next) => {
       });
     }
 
-    // Sign in with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (authError) {
+    // Find user by email
+    const user = await User.findByEmail(email);
+    
+    if (!user) {
       throw new AppError('Invalid email or password', 401);
     }
 
-    const user = authData.user;
-    const session = authData.session;
+    // Check password
+    const isPasswordValid = await user.comparePassword(password);
+    
+    if (!isPasswordValid) {
+      throw new AppError('Invalid email or password', 401);
+    }
 
-    // Get user profile
-    const profile = await getUserProfile(user.id);
+    // Update last login
+    user.lastLoginAt = new Date();
+    await user.save();
 
-    // Get user role
-    const role = await checkUserRole(user.id);
-
-    // Track login event (optional - skip if not available)
+    // Track login event
     try {
-      const Event = require('../models/Event');
-      if (Event && Event.trackEvent) {
-        await Event.trackEvent(user.id, 'user_login', {
-          email,
-          source: req.headers['x-source'] || 'web',
-          ip: req.ip
-        });
-      }
+      await Event.trackEvent(user._id, 'user_login', {
+        email,
+        source: req.headers['x-source'] || 'web',
+        ip: req.ip
+      });
     } catch (eventError) {
-      console.log('Event tracking skipped:', eventError.message);
+      logger.warn('Event tracking failed:', eventError.message);
     }
 
     // Audit log
-    auditLog('user_login', user.id, { email });
+    auditLog('user_login', user._id.toString(), { email });
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user.id);
+    const { accessToken, refreshToken } = generateTokens(user._id);
 
     // Set refresh token as httpOnly cookie
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      maxAge: 30 * 24 * 60 * 60 * 1000
     });
 
     res.json({
       message: 'Login successful',
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
-        displayName: profile?.display_name || email.split('@')[0],
-        locale: profile?.locale || 'en',
-        role,
-        emailVerified: user.email_confirmed_at ? true : false
+        displayName: user.displayName,
+        locale: user.locale,
+        role: user.role,
+        emailVerified: user.emailVerified,
+        credits: user.credits
       },
       accessToken
     });
 
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     next(error);
   }
 }));
 
 // Logout
 router.post('/logout', catchAsync(async (req, res, next) => {
-  const supabase = getSupabase();
-  
   try {
-    // Sign out from Supabase
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      throw new AppError(error.message, 400);
-    }
-    
     // Clear refresh token cookie
     res.clearCookie('refreshToken');
     
@@ -307,16 +236,9 @@ router.post('/logout', catchAsync(async (req, res, next) => {
       const token = authHeader.substring(7);
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        try {
-          const Event = require('../models/Event');
-          if (Event && Event.trackEvent) {
-            await Event.trackEvent(decoded.userId, 'user_logout', {
-              source: req.headers['x-source'] || 'web'
-            });
-          }
-        } catch (eventError) {
-          // Event tracking failed, continue with logout
-        }
+        await Event.trackEvent(decoded.userId, 'user_logout', {
+          source: req.headers['x-source'] || 'web'
+        });
         auditLog('user_logout', decoded.userId, {});
       } catch (err) {
         // Token invalid, but still allow logout
@@ -348,6 +270,12 @@ router.post('/refresh', catchAsync(async (req, res, next) => {
       throw new AppError('Invalid token type', 401);
     }
     
+    // Verify user still exists
+    const user = await User.findById(decoded.userId);
+    if (!user || user.isDeleted) {
+      throw new AppError('User not found', 401);
+    }
+    
     // Generate new tokens
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(decoded.userId);
     
@@ -356,7 +284,7 @@ router.post('/refresh', catchAsync(async (req, res, next) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      maxAge: 30 * 24 * 60 * 60 * 1000
     });
     
     res.json({
@@ -381,30 +309,30 @@ router.post('/forgot-password',
     }
     
     const { email } = req.body;
-    const supabase = getSupabase();
     
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.FRONTEND_URL}/reset-password`
-      });
+      const user = await User.findByEmail(email);
       
-      if (error) {
-        // Don't reveal if email exists or not
-        console.error('Password reset error:', error);
+      if (user) {
+        // Generate reset token
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        
+        user.passwordResetToken = hashedToken;
+        user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        await user.save();
+        
+        // TODO: Send email with reset link
+        // const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        
+        logger.info(`Password reset requested for: ${email}`);
       }
       
       // Track event
-      try {
-        const Event = require('../models/Event');
-        if (Event && Event.trackEvent) {
-          await Event.trackEvent('anonymous', 'password_reset_requested', {
-            email: email.substring(0, 3) + '***', // Partially masked for privacy
-            source: req.headers['x-source'] || 'web'
-          });
-        }
-      } catch (eventError) {
-        // Event tracking failed, continue
-      }
+      await Event.trackEvent('anonymous', 'password_reset_requested', {
+        email: email.substring(0, 3) + '***',
+        source: req.headers['x-source'] || 'web'
+      });
       
       // Always return success to prevent email enumeration
       res.json({
@@ -434,30 +362,34 @@ router.post('/reset-password',
     }
     
     const { token, password } = req.body;
-    const supabase = getSupabase();
     
     try {
-      const { data, error } = await supabase.auth.updateUser({
-        password
+      // Hash the token to compare with stored hash
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+      
+      // Find user with valid reset token
+      const user = await User.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpires: { $gt: Date.now() },
+        isDeleted: false
       });
       
-      if (error) {
+      if (!user) {
         throw new AppError('Invalid or expired reset token', 400);
       }
       
-      // Track event
-      try {
-        const Event = require('../models/Event');
-        if (Event && Event.trackEvent) {
-          await Event.trackEvent(data.user.id, 'password_reset_completed', {
-            source: req.headers['x-source'] || 'web'
-          });
-        }
-      } catch (eventError) {
-        // Event tracking failed, continue
-      }
+      // Update password
+      user.password = password;
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
       
-      auditLog('password_reset', data.user.id, {});
+      // Track event
+      await Event.trackEvent(user._id, 'password_reset_completed', {
+        source: req.headers['x-source'] || 'web'
+      });
+      
+      auditLog('password_reset', user._id.toString(), {});
       
       res.json({
         message: 'Password reset successful. Please login with your new password.'
@@ -477,29 +409,31 @@ router.get('/verify-email', catchAsync(async (req, res, next) => {
     throw new AppError('Verification token not provided', 400);
   }
   
-  const supabase = getSupabase();
-  
   try {
-    const { error } = await supabase.auth.verifyOtp({
-      token_hash: token,
-      type: 'email'
+    // Hash the token to compare with stored hash
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
+    // Find user with valid verification token
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: Date.now() },
+      isDeleted: false
     });
     
-    if (error) {
+    if (!user) {
       throw new AppError('Invalid or expired verification token', 400);
     }
     
+    // Verify email
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+    
     // Track event
-    try {
-      const Event = require('../models/Event');
-      if (Event && Event.trackEvent) {
-        await Event.trackEvent('anonymous', 'email_verified', {
-          source: 'email_link'
-        });
-      }
-    } catch (eventError) {
-      // Event tracking failed, continue
-    }
+    await Event.trackEvent(user._id, 'email_verified', {
+      source: 'email_link'
+    });
     
     res.json({
       message: 'Email verified successfully'
@@ -520,17 +454,23 @@ router.post('/resend-verification',
     }
     
     const { email } = req.body;
-    const supabase = getSupabase();
     
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email
-      });
+      const user = await User.findByEmail(email);
       
-      if (error) {
-        // Don't reveal if email exists or not
-        console.error('Resend verification error:', error);
+      if (user && !user.emailVerified) {
+        // Generate verification token
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+        
+        user.emailVerificationToken = hashedToken;
+        user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        await user.save();
+        
+        // TODO: Send verification email
+        // const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+        
+        logger.info(`Verification email requested for: ${email}`);
       }
       
       // Always return success to prevent email enumeration
@@ -546,26 +486,44 @@ router.post('/resend-verification',
 
 // Test mode status endpoint
 router.get('/test-status', (req, res) => {
-  const { testMode } = require('../config/test-mode');
   res.json({
-    testMode,
+    testMode: process.env.TEST_MODE === 'true',
     TEST_MODE_env: process.env.TEST_MODE,
     NODE_ENV: process.env.NODE_ENV,
+    database: 'MongoDB',
     timestamp: new Date().toISOString()
   });
 });
 
-// Temporary route for testing - DISABLED for security
-// router.get('/test-login', async (req, res) => {
-//   const supabase = getSupabase();
-//   const { data, error } = await supabase.auth.signInWithPassword({
-//     email: 'jorsenmejia@gmail.com',
-//     password: 'password123',
-//   });
-//   if (error) {
-//     return res.status(401).json({ error: error.message });
-//   }
-//   res.json(data);
-// });
+// Get current user (requires authentication)
+router.get('/me', catchAsync(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new AppError('No token provided', 401);
+  }
+  
+  const token = authHeader.substring(7);
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    const user = await User.findById(decoded.userId);
+    
+    if (!user || user.isDeleted) {
+      throw new AppError('User not found', 404);
+    }
+    
+    res.json({
+      user: user.toSafeObject()
+    });
+    
+  } catch (error) {
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      throw new AppError('Invalid or expired token', 401);
+    }
+    next(error);
+  }
+}));
 
 module.exports = router;

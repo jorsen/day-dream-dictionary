@@ -21,26 +21,23 @@ const profileRoutes = require('./routes/profile');
 const adminRoutes = require('./routes/admin');
 const webhookRoutes = require('./routes/webhooks');
 
-// Import database connections
-// const { connectMongoDB } = require('./config/mongodb'); // MongoDB disabled
-const { initSupabase } = require('./config/supabase');
+// Import MongoDB connection
+const { connectMongoDB, getConnectionStatus, logger } = require('./config/mongodb');
 
-// Import i18n configuration
-const { i18nMiddleware } = require('./config/i18n');
+// Import models
+const { Dream } = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Initialize databases
+// Initialize MongoDB database
 const initializeDatabases = async () => {
   try {
-    // MongoDB connection disabled
-    // await connectMongoDB();
-    await initSupabase();
-    console.log('✅ All databases connected successfully');
+    await connectMongoDB();
+    logger.info('✅ MongoDB connected successfully');
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
-    // Don't exit in production if Supabase fails, just log the error
+    logger.error('❌ MongoDB connection failed:', error.message);
+    // Don't exit in production if MongoDB fails, just log the error
     if (process.env.NODE_ENV !== 'production') {
       process.exit(1);
     }
@@ -94,7 +91,7 @@ const corsOptions = {
       }
     }
   },
-  credentials: false, // Set to false for preflight requests
+  credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'X-Source'],
   optionsSuccessStatus: 200,
@@ -124,18 +121,18 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser(process.env.SESSION_SECRET));
 app.use(compression());
 
-// i18n middleware - DISABLED for free mode
-// app.use(i18nMiddleware);
-
 // Request logging
 app.use(requestLogger);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  const dbStatus = getConnectionStatus();
   res.status(200).json({
     status: 'OK',
     message: 'Day Dream Dictionary API is running',
     version: process.env.API_VERSION || 'v1',
+    database: 'MongoDB',
+    databaseStatus: dbStatus.readyStateText,
     timestamp: new Date().toISOString()
   });
 });
@@ -236,7 +233,7 @@ app.get('/api/v1/payment/products', (req, res) => {
 
   res.json({
     products: products,
-    publishableKey: 'pk_test_mock_stripe_key'
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_mock_stripe_key'
   });
 });
 
@@ -249,47 +246,33 @@ app.get(`${apiPrefix}/test-dreams-history`, async (req, res) => {
     const {
       page = 1,
       limit = 10,
-      sortBy = 'created_at',
+      sortBy = 'createdAt',
       order = 'desc'
     } = req.query;
 
-    // Get dreams from real Supabase database
-    const { getSupabase } = require('./config/supabase');
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const sortOrder = order === 'desc' ? -1 : 1;
 
-    // Get dreams from Supabase
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+    const [dreams, totalCount] = await Promise.all([
+      Dream.find({ isDeleted: false })
+        .sort({ [sortBy]: sortOrder })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Dream.countDocuments({ isDeleted: false })
+    ]);
 
-    let query = getSupabase()
-      .from('dreams')
-      .select('*', { count: 'exact' })
-      .eq('is_deleted', false)
-      .order(sortBy, { ascending: order === 'asc' })
-      .range(from, to);
-
-    const { data: dreams, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching dreams:', error);
-      return res.json({
-        dreams: [],
-        totalCount: 0,
-        totalPages: 0,
-        currentPage: 1
-      });
-    }
-
-    console.log('Found dreams in Supabase:', dreams?.length || 0);
+    logger.info(`Found ${dreams.length} dreams in MongoDB`);
 
     res.json({
       dreams: dreams || [],
-      totalCount: count || 0,
-      totalPages: Math.ceil((count || 0) / limit),
-      currentPage: page
+      totalCount: totalCount || 0,
+      totalPages: Math.ceil((totalCount || 0) / parseInt(limit)),
+      currentPage: parseInt(page)
     });
 
   } catch (error) {
-    console.error('Error in test endpoint:', error);
+    logger.error('Error in test endpoint:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -305,7 +288,6 @@ app.use(`${apiPrefix}/webhooks`, webhookRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Serve frontend static files (HTML, CSS, JS)
-// This serves all files from the root directory (where index.html is)
 app.use(express.static(path.join(__dirname, '../../')));
 
 // Serve index.html for root route
@@ -354,8 +336,12 @@ const gracefulShutdown = () => {
     console.log('✅ HTTP server closed');
     
     // Close database connections
-    // MongoDB and Supabase connections will be closed here
-    process.exit(0);
+    const { disconnectMongoDB } = require('./config/mongodb');
+    disconnectMongoDB().then(() => {
+      process.exit(0);
+    }).catch(() => {
+      process.exit(1);
+    });
   });
 
   // Force close after 10 seconds
@@ -388,6 +374,7 @@ const server = app.listen(PORT, async () => {
 ║     Version: ${process.env.API_VERSION || 'v1'}                                    ║
 ║     Port: ${PORT}                                   ║
 ║     Environment: ${process.env.NODE_ENV || 'development'}                       ║
+║     Database: MongoDB                               ║
 ║     API Base: http://localhost:${PORT}/api/${process.env.API_VERSION || 'v1'}       ║
 ║     JWT_SECRET: ${process.env.JWT_SECRET ? '✅ Loaded' : '❌ Missing'}           ║
 ║                                                      ║

@@ -1,26 +1,27 @@
-const { getUserSubscription, getUserCredits, supabase } = require('../config/supabase');
+const { User, Dream, Event } = require('../models');
 const { AppError, catchAsync } = require('./errorHandler');
+const { logger } = require('../config/mongodb');
 
 // Check user's quota for dream interpretations
 const checkQuota = catchAsync(async (req, res, next) => {
   const userId = req.user.id;
   const { interpretationType = 'basic' } = req.body;
   
-  // Get user's subscription status
-  const subscription = await getUserSubscription(userId);
+  // Get user from MongoDB
+  const user = await User.findById(userId);
   
   // If user has active subscription, no quota limits apply
-  if (subscription && subscription.status === 'active') {
+  if (user?.subscription?.status === 'active' && user?.subscription?.plan !== 'free') {
     req.quotaInfo = {
       hasSubscription: true,
-      subscriptionTier: subscription.plan,
+      subscriptionTier: user.subscription.plan,
       quotaRemaining: 'unlimited'
     };
     return next();
   }
   
   // Check credits for non-subscribed users
-  const credits = await getUserCredits(userId);
+  const credits = user?.credits || 0;
   
   // Calculate credits needed
   let creditsNeeded = 1;
@@ -33,9 +34,8 @@ const checkQuota = catchAsync(async (req, res, next) => {
     const freeQuotaRemaining = await checkFreeQuota(userId);
     
     if (freeQuotaRemaining <= 0) {
-      // Track paywall view event (optional - skip if MongoDB not available)
+      // Track paywall view event
       try {
-        const Event = require('../models/Event');
         await Event.trackEvent(userId, 'paywall_view', {
           reason: 'quota_exceeded',
           interpretationType,
@@ -43,7 +43,7 @@ const checkQuota = catchAsync(async (req, res, next) => {
           creditsAvailable: credits
         });
       } catch (error) {
-        console.log('Event tracking skipped');
+        logger.warn('Event tracking failed:', error.message);
       }
       
       throw new AppError(
@@ -79,22 +79,20 @@ const checkFreeQuota = async (userId) => {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   
   try {
-    // Try to count deep interpretations from Supabase
-    const { data, error, count } = await supabase
-      .from('dreams')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', startOfMonth.toISOString())
-      .eq('metadata->>interpretationType', 'deep')
-      .eq('is_deleted', false);
+    // Count deep interpretations from MongoDB
+    const deepInterpretations = await Dream.countDocuments({
+      userId,
+      createdAt: { $gte: startOfMonth },
+      'metadata.interpretationType': 'deep',
+      isDeleted: false
+    });
     
-    const deepInterpretations = count || 0;
     const freeDeepLimit = parseInt(process.env.FREE_DEEP_INTERPRETATIONS_MONTHLY) || 3;
     const remainingDeep = Math.max(0, freeDeepLimit - deepInterpretations);
     
     return remainingDeep;
   } catch (error) {
-    console.log('Could not check quota from database, using default limits');
+    logger.warn('Could not check quota from database:', error.message);
     // If database is not available, return default limit
     const freeDeepLimit = parseInt(process.env.FREE_DEEP_INTERPRETATIONS_MONTHLY) || 3;
     return freeDeepLimit;
@@ -110,68 +108,60 @@ const getUserUsageStats = catchAsync(async (req, res, next) => {
   const startOfWeek = new Date(now);
   startOfWeek.setDate(now.getDate() - now.getDay());
   startOfWeek.setHours(0, 0, 0, 0);
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
-  // Get subscription
-  const subscription = await getUserSubscription(userId);
-  
-  // Get credits
-  const credits = await getUserCredits(userId);
+  // Get user
+  const user = await User.findById(userId);
   
   let monthlyCount = 0, weeklyCount = 0, todayCount = 0;
   let typeBreakdown = {};
   
   try {
-    // Try to get counts from Supabase
-    const [monthlyResult, weeklyResult, todayResult] = await Promise.all([
-      supabase
-        .from('dreams')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .gte('created_at', startOfMonth.toISOString())
-        .eq('is_deleted', false),
-      supabase
-        .from('dreams')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .gte('created_at', startOfWeek.toISOString())
-        .eq('is_deleted', false),
-      supabase
-        .from('dreams')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .gte('created_at', new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString())
-        .eq('is_deleted', false)
+    // Get counts from MongoDB
+    const [monthly, weekly, today] = await Promise.all([
+      Dream.countDocuments({
+        userId,
+        createdAt: { $gte: startOfMonth },
+        isDeleted: false
+      }),
+      Dream.countDocuments({
+        userId,
+        createdAt: { $gte: startOfWeek },
+        isDeleted: false
+      }),
+      Dream.countDocuments({
+        userId,
+        createdAt: { $gte: startOfDay },
+        isDeleted: false
+      })
     ]);
     
-    monthlyCount = monthlyResult.count || 0;
-    weeklyCount = weeklyResult.count || 0;
-    todayCount = todayResult.count || 0;
+    monthlyCount = monthly;
+    weeklyCount = weekly;
+    todayCount = today;
     
     // Get type breakdown
-    const { data: dreams } = await supabase
-      .from('dreams')
-      .select('metadata')
-      .eq('user_id', userId)
-      .gte('created_at', startOfMonth.toISOString())
-      .eq('is_deleted', false);
+    const dreams = await Dream.find({
+      userId,
+      createdAt: { $gte: startOfMonth },
+      isDeleted: false
+    }).select('metadata.interpretationType').lean();
     
-    if (dreams) {
-      dreams.forEach(dream => {
-        const type = dream.metadata?.interpretationType || 'basic';
-        typeBreakdown[type] = (typeBreakdown[type] || 0) + 1;
-      });
-    }
+    dreams.forEach(dream => {
+      const type = dream.metadata?.interpretationType || 'basic';
+      typeBreakdown[type] = (typeBreakdown[type] || 0) + 1;
+    });
   } catch (error) {
-    console.log('Could not get usage stats from database');
+    logger.warn('Could not get usage stats from database:', error.message);
   }
   
   const stats = {
-    subscription: subscription ? {
-      plan: subscription.plan_type,
-      status: subscription.status,
-      currentPeriodEnd: subscription.current_period_end
+    subscription: user?.subscription ? {
+      plan: user.subscription.plan,
+      status: user.subscription.status,
+      currentPeriodEnd: user.subscription.currentPeriodEnd
     } : null,
-    credits,
+    credits: user?.credits || 0,
     usage: {
       monthly: monthlyCount,
       weekly: weeklyCount,
@@ -193,8 +183,8 @@ const requirePremiumFeature = (feature) => {
   return catchAsync(async (req, res, next) => {
     const userId = req.user.id;
     
-    // Get subscription
-    const subscription = await getUserSubscription(userId);
+    // Get user
+    const user = await User.findById(userId);
     
     // Define feature requirements
     const featureRequirements = {
@@ -214,17 +204,16 @@ const requirePremiumFeature = (feature) => {
       return next();
     }
     
-    if (!subscription || subscription.status !== 'active') {
-      // Track paywall view (optional - skip if MongoDB not available)
+    if (!user?.subscription || user.subscription.status !== 'active' || user.subscription.plan === 'free') {
+      // Track paywall view
       try {
-        const Event = require('../models/Event');
         await Event.trackEvent(userId, 'paywall_view', {
           reason: 'premium_feature',
           feature,
           requiredPlans
         });
       } catch (error) {
-        console.log('Event tracking skipped');
+        logger.warn('Event tracking failed:', error.message);
       }
       
       throw new AppError(
@@ -234,9 +223,9 @@ const requirePremiumFeature = (feature) => {
       );
     }
     
-    if (!requiredPlans.includes(subscription.plan)) {
+    if (!requiredPlans.includes(user.subscription.plan)) {
       throw new AppError(
-        `This feature requires a ${requiredPlans.join(' or ')} subscription. Your current plan is ${subscription.plan}.`,
+        `This feature requires a ${requiredPlans.join(' or ')} subscription. Your current plan is ${user.subscription.plan}.`,
         402,
         true
       );
@@ -252,9 +241,8 @@ const trackApiUsage = catchAsync(async (req, res, next) => {
   const endpoint = req.originalUrl;
   const method = req.method;
   
-  // Track API usage event (optional - skip if MongoDB not available)
+  // Track API usage event
   try {
-    const Event = require('../models/Event');
     await Event.trackEvent(userId, 'api_usage', {
       endpoint,
       method,
@@ -262,7 +250,7 @@ const trackApiUsage = catchAsync(async (req, res, next) => {
       userAgent: req.get('user-agent')
     });
   } catch (error) {
-    console.log('API usage tracking skipped');
+    logger.warn('API usage tracking failed:', error.message);
   }
   
   next();
@@ -278,15 +266,13 @@ const enforceDailyLimit = (feature, limit) => {
     let usageToday = 0;
     
     try {
-      // Try to count feature usage from MongoDB
-      const Event = require('../models/Event');
-      usageToday = await Event.countDocuments({
+      usageToday = await Event.countEvents({
         userId,
         type: feature,
         createdAt: { $gte: today }
       });
     } catch (error) {
-      console.log('Could not check daily limit, allowing request');
+      logger.warn('Could not check daily limit:', error.message);
       // If MongoDB is not available, allow the request
       return next();
     }

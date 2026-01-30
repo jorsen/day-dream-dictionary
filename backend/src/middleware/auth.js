@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
-const { getSupabase, getUserById, checkUserRole } = require('../config/supabase');
+const { User } = require('../models');
 const { AppError, catchAsync } = require('./errorHandler');
+const { logger } = require('../config/mongodb');
 
 // Authenticate user middleware
 const authenticate = catchAsync(async (req, res, next) => {
@@ -19,8 +20,9 @@ const authenticate = catchAsync(async (req, res, next) => {
   const token = authHeader.substring(7);
 
   try {
-    // Check if we're in test mode and using test token
-    const { testMode } = require('../config/test-mode');
+    // Check if we're in test mode
+    const testMode = process.env.TEST_MODE === 'true';
+    
     if (testMode && token === 'test-token') {
       req.user = {
         id: 'test-user-id',
@@ -38,7 +40,7 @@ const authenticate = catchAsync(async (req, res, next) => {
       throw new AppError('Invalid token type', 401);
     }
 
-    // For test mode, create a mock user
+    // For test mode with test-user-id
     if (testMode && decoded.userId === 'test-user-id') {
       req.user = {
         id: decoded.userId,
@@ -49,13 +51,12 @@ const authenticate = catchAsync(async (req, res, next) => {
       return next();
     }
 
-    // Get user from Supabase
+    // Get user from MongoDB
     let user;
     try {
-      user = await getUserById(decoded.userId);
+      user = await User.findById(decoded.userId);
     } catch (error) {
-      console.log('Could not fetch user from Supabase, using test mode user');
-      // In test mode, create a mock user if Supabase fails
+      logger.warn('Could not fetch user from MongoDB:', error.message);
       if (testMode) {
         req.user = {
           id: decoded.userId,
@@ -68,8 +69,7 @@ const authenticate = catchAsync(async (req, res, next) => {
       throw new AppError('User not found', 401);
     }
 
-    if (!user) {
-      // In test mode, create a mock user if user doesn't exist
+    if (!user || user.isDeleted) {
       if (testMode) {
         req.user = {
           id: decoded.userId,
@@ -82,26 +82,20 @@ const authenticate = catchAsync(async (req, res, next) => {
       throw new AppError('User not found', 401);
     }
 
-    // Check if user is active
-    if (user.banned_until && new Date(user.banned_until) > new Date()) {
-      throw new AppError('Account suspended. Please contact support.', 403);
-    }
+    // Update last activity
+    user.lastActivityAt = new Date();
+    await user.save();
 
     // Add user to request
     req.user = {
-      id: user.id,
+      id: user._id.toString(),
       email: user.email,
-      emailVerified: user.email_confirmed_at ? true : false,
-      role: 'user' // Default role
+      emailVerified: user.emailVerified || false,
+      role: user.role || 'user',
+      displayName: user.displayName,
+      credits: user.credits,
+      subscription: user.subscription
     };
-
-    // Try to get user role, but don't fail if it doesn't exist
-    try {
-      req.user.role = await checkUserRole(user.id);
-    } catch (roleError) {
-      console.log('Could not fetch user role, using default:', roleError.message);
-      req.user.role = 'user';
-    }
 
     next();
   } catch (error) {
@@ -130,13 +124,13 @@ const optionalAuth = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     if (decoded.type === 'access') {
-      const user = await getUserById(decoded.userId);
-      if (user) {
+      const user = await User.findById(decoded.userId);
+      if (user && !user.isDeleted) {
         req.user = {
-          id: user.id,
+          id: user._id.toString(),
           email: user.email,
-          emailVerified: user.email_confirmed_at ? true : false,
-          role: await checkUserRole(user.id)
+          emailVerified: user.emailVerified || false,
+          role: user.role || 'user'
         };
       }
     }
@@ -232,15 +226,13 @@ const authenticateApiKey = catchAsync(async (req, res, next) => {
     throw new AppError('API key required', 401);
   }
   
-  // Validate API key (you would typically check this against a database)
-  // For now, we'll use a simple check
+  // Validate API key
   const validApiKeys = process.env.VALID_API_KEYS?.split(',') || [];
   
   if (!validApiKeys.includes(apiKey)) {
     throw new AppError('Invalid API key', 401);
   }
   
-  // You might want to load the associated user/account for this API key
   req.apiKey = apiKey;
   
   next();
