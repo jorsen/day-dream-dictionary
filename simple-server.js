@@ -248,17 +248,49 @@ const server = http.createServer((req, res) => {
 
             console.log(`Processing authenticated dream interpretation for user: ${userId}`);
 
+            // Check and deduct credits before processing
+            initializeUserData(userId);
+            const subscription = userSubscriptions.get(userId);
+            const interpretationType = data.interpretationType || 'basic';
+
+            // Check if user has enough credits
+            if (interpretationType === 'basic' && subscription.monthlyUsage.basic >= SUBSCRIPTION_PLANS.basic.monthlyLimits.basic) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Monthly basic interpretation limit reached. Upgrade to continue.' }));
+              return;
+            }
+
+            if (interpretationType === 'deep' && subscription.monthlyUsage.deep >= SUBSCRIPTION_PLANS.basic.monthlyLimits.deep) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Monthly deep interpretation limit reached. Upgrade to continue.' }));
+              return;
+            }
+
+            // Deduct credit
+            if (interpretationType === 'basic') {
+              subscription.monthlyUsage.basic += 1;
+            } else if (interpretationType === 'deep') {
+              subscription.monthlyUsage.deep += 1;
+            }
+
+            // Calculate remaining credits for response
+            const monthlyLimits = SUBSCRIPTION_PLANS.basic.monthlyLimits;
+            const basicRemaining = Math.max(0, monthlyLimits.basic - subscription.monthlyUsage.basic);
+            const deepRemaining = Math.max(0, monthlyLimits.deep - subscription.monthlyUsage.deep);
+
+            console.log(`User ${userId} credit usage: Basic=${subscription.monthlyUsage.basic}/${monthlyLimits.basic}, Deep=${subscription.monthlyUsage.deep}/${monthlyLimits.deep}`);
+
             const interpretation = getMockInterpretation(data.dreamText);
 
             const dreamData = {
               id: dreamIdCounter.toString(),
               dream_text: data.dreamText,
-              interpretation_type: data.interpretationType || 'basic',
+              interpretation_type: interpretationType,
               interpretation: interpretation,
               created_at: new Date().toISOString(),
-              user_id: userId, // SECURE: Use authenticated user ID
-              credits_consumed: 0, // FREE MODE
-              credits_remaining: 'unlimited'
+              user_id: userId,
+              credits_consumed: interpretationType === 'basic' ? 1 : 2, // Basic = 1 credit, Deep = 2 credits
+              credits_remaining: `${basicRemaining} basic / ${deepRemaining} deep`
             };
 
             // Store in Supabase (required - no fallback to local)
@@ -400,6 +432,24 @@ const server = http.createServer((req, res) => {
       const subscription = userSubscriptions.get(userId);
       const credits = userCredits.get(userId);
 
+      // Calculate proper credits based on plan type
+      let creditsDisplay;
+      if (planType === 'pro') {
+        creditsDisplay = 'unlimited';
+      } else if (planType === 'basic') {
+        // For Basic Plan, show remaining credits based on usage
+        const monthlyLimits = SUBSCRIPTION_PLANS.basic.monthlyLimits;
+        const monthlyUsage = subscription.monthlyUsage;
+        const basicUsed = monthlyUsage.basic || 0;
+        const deepUsed = monthlyUsage.deep || 0;
+        const basicRemaining = Math.max(0, monthlyLimits.basic - basicUsed);
+        const deepRemaining = Math.max(0, monthlyLimits.deep - deepUsed);
+
+        creditsDisplay = `${basicRemaining} basic / ${deepRemaining} deep`;
+      } else {
+        creditsDisplay = '5'; // Free plan default
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         profile: {
@@ -407,7 +457,7 @@ const server = http.createServer((req, res) => {
           email: `${userId}@demo.com`,
           display_name: `User ${userId}`,
           locale: 'en',
-          credits: 'unlimited', // FREE MODE
+          credits: creditsDisplay,
           subscription: {
             plan: planType,
             planName: SUBSCRIPTION_PLANS[planType].name,
