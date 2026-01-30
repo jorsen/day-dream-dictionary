@@ -310,6 +310,7 @@ const server = http.createServer((req, res) => {
 
     // Handle dreams stats API
     if (pathname === '/api/v1/dreams/stats' && method === 'GET') {
+      // Calculate stats from all dreams stored locally (since local storage mirrors Supabase)
       const now = new Date();
       const thisMonth = now.getMonth();
       const thisYear = now.getFullYear();
@@ -331,6 +332,7 @@ const server = http.createServer((req, res) => {
         }
       };
 
+      console.log(`📊 Calculated stats: ${stats.totalDreams} total dreams, ${stats.thisMonth} this month`);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(stats));
       return;
