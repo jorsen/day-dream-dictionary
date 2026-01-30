@@ -177,7 +177,7 @@ const server = http.createServer((req, res) => {
   res.end(JSON.stringify({ error: 'Endpoint not found' }));
 });
 
-const PORT = 5002;
+const PORT = 5001;
 server.listen(PORT, () => {
   console.log(`Mock API server v3 running on http://localhost:${PORT}`);
   console.log('Available endpoints:');
