@@ -30,17 +30,17 @@ const SUBSCRIPTION_PLANS = {
         description: '5 basic + 1 deep interpretation per month'
     },
     basic: {
-        name: 'Basic',
+        name: 'Basic Plan',
         price: 4.99,
         monthlyLimits: {
             basic: 20,
             deep: 5
         },
-        features: ['basic_interpretations', 'deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads'],
-        description: '20 basic + 5 deep interpretations per month'
+        features: ['20_basic_interpretations', '5_deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads'],
+        description: '20 basic interpretations, 5 deep interpretations per month'
     },
     pro: {
-        name: 'Pro',
+        name: 'Pro Plan',
         price: 12.99,
         monthlyLimits: {
             basic: -1, // unlimited
@@ -384,22 +384,38 @@ const server = http.createServer((req, res) => {
 
     // Handle profile API
     if (pathname === '/api/v1/profile' && method === 'GET') {
-      initializeUserData('demo-user');
-      const subscription = userSubscriptions.get('demo-user');
-      const credits = userCredits.get('demo-user');
+      // Extract user ID from token for authenticated profile
+      const authHeader = req.headers.authorization || req.headers['Authorization'];
+      let userId = 'demo-user';
+      let planType = 'basic';
+
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const tokenUserId = extractUserIdFromToken(authHeader);
+        if (tokenUserId) {
+          userId = tokenUserId;
+          initializeUserData(userId);
+        }
+      }
+
+      const subscription = userSubscriptions.get(userId);
+      const credits = userCredits.get(userId);
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         profile: {
-          id: 'demo-user',
-          email: 'demo@example.com',
-          display_name: 'Demo User',
+          id: userId,
+          email: `${userId}@demo.com`,
+          display_name: `User ${userId}`,
           locale: 'en',
           credits: 'unlimited', // FREE MODE
           subscription: {
-            plan: 'basic',
-            features: subscription.features,
-            monthlyLimits: SUBSCRIPTION_PLANS.basic.monthlyLimits
+            plan: planType,
+            planName: SUBSCRIPTION_PLANS[planType].name,
+            planType: planType,
+            price: SUBSCRIPTION_PLANS[planType].price,
+            features: SUBSCRIPTION_PLANS[planType].features,
+            monthlyLimits: SUBSCRIPTION_PLANS[planType].monthlyLimits,
+            monthlyUsage: subscription.monthlyUsage
           }
         }
       }));

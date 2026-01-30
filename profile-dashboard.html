@@ -689,59 +689,87 @@
             }
 
             // Use enhanced subscription data if available
-            const planType = subscription.planType || subscription.plan || 'free';
-            const planName = subscription.planName || 
-                           (planType === 'basic' ? 'Basic Plan' : 
-                            planType === 'pro' ? 'Pro Plan' : 'Free Plan');
+            const planType = subscription.planType || subscription.plan || 'basic';
+            const planName = subscription.planName ||
+                           (planType === 'basic' ? 'Basic Plan' :
+                            planType === 'pro' ? 'Pro Plan' : 'Free Mode');
+            const price = subscription.price;
 
-            // Update plan badge with proper name
+            // Update plan badge with proper name and price
             planBadge.className = `badge badge-${planType}`;
-            planBadge.textContent = planName;
+            planBadge.innerHTML = `${planName}${price ? ` - $${price}` : ''}`;
 
+            // Show credits as unlimited for Basic/Free mode
+            userCredits.innerHTML = '♾️ Unlimited';
+
+            // Display features based on plan type
             if (planType === 'pro') {
-                // Pro plan: Show unlimited credits, hide monthly limits and usage
-                userCredits.innerHTML = '♾️ Unlimited';
+                // Pro plan: Hide monthly limits, show feature list
                 creditsRow.style.display = 'block';
                 monthlyLimitRow.style.display = 'none';
                 monthlyUsageRow.style.display = 'none';
+
+                // Add feature list display (unlimited interpretations, analytics, voice journaling, reminders, symbol encyclopedia, no ads)
+                if (!document.getElementById('proFeatures')) {
+                    const card = document.querySelector('.card');
+                    const proFeaturesDiv = document.createElement('div');
+                    proFeaturesDiv.id = 'proFeatures';
+                    proFeaturesDiv.innerHTML = `
+                        <div class="info-row">
+                            <span class="info-label">Features:</span>
+                            <span class="info-value">Unlimited interpretations, Analytics, Voice journaling, Reminders, Symbol encyclopedia, No ads</span>
+                        </div>
+                    `;
+                    card.insertBefore(proFeaturesDiv, card.lastElementChild);
+                }
+
             } else {
-                // Free/Basic plans: Show credits and limits
+                // Basic/Free plans: Show credits and limits based on features
                 creditsRow.style.display = 'block';
                 monthlyLimitRow.style.display = 'block';
                 monthlyUsageRow.style.display = 'block';
-                
-                // Update monthly limits display using enhanced data
+
+                // Remove pro features if they exist
+                const proFeatures = document.getElementById('proFeatures');
+                if (proFeatures) {
+                    proFeatures.remove();
+                }
+
+                // Update monthly limits display based on features
+                const features = subscription.features || [];
+                let basicLimit = 20; // Default for Basic
+                let deepLimit = 5;   // Default for Basic
+
+                if (features.includes('20_basic_interpretations')) {
+                    basicLimit = 20;
+                } else if (features.includes('5_deep_interpretations')) {
+                    deepLimit = 5;
+                }
+
+                document.getElementById('monthlyLimit').textContent = `${basicLimit} basic / ${deepLimit} deep`;
+
+                // Update usage display
                 const limits = subscription.monthlyLimits || subscription.monthly_limits || {};
                 const usage = subscription.monthlyUsage || subscription.monthly_usage || {};
-                
-                let limitText = '';
-                if (limits.basic === -1) {
-                    limitText = 'Unlimited basic';
-                } else {
-                    limitText = `${limits.basic || 0} basic`;
+
+                const usageBasic = usage.basic || 0;
+                const usageDeep = usage.deep || 0;
+
+                document.getElementById('monthlyUsage').textContent = `${usageBasic} / ${basicLimit} / ${usageDeep} deep`;
+
+                // Add feature list for Basic plan
+                if (planType === 'basic' && !document.getElementById('basicFeatures')) {
+                    const card = document.querySelector('.card');
+                    const basicFeaturesDiv = document.createElement('div');
+                    basicFeaturesDiv.id = 'basicFeatures';
+                    basicFeaturesDiv.innerHTML = `
+                        <div class="info-row">
+                            <span class="info-label">Features:</span>
+                            <span class="info-value">Unlimited history, PDF export, No ads</span>
+                        </div>
+                    `;
+                    card.insertBefore(basicFeaturesDiv, card.lastElementChild);
                 }
-                
-                if (limits.deep === -1) {
-                    limitText += ' / Unlimited deep';
-                } else {
-                    limitText += ` / ${limits.deep || 0} deep`;
-                }
-                
-                document.getElementById('monthlyLimit').textContent = limitText;
-                
-                // Update usage display
-                let usageText = '';
-                if (limits.basic === -1) {
-                    usageText = 'Unlimited';
-                } else {
-                    usageText = `${usage.basic || 0} / ${limits.basic || 0}`;
-                }
-                
-                if (limits.deep !== -1) {
-                    usageText += ` / ${usage.deep || 0} deep`;
-                }
-                
-                document.getElementById('monthlyUsage').textContent = usageText;
             }
         }
 
