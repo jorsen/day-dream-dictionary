@@ -26,10 +26,25 @@ const corsOptions = {
 };
 
 // Middleware
+// Explicit CORS headers middleware to ensure every response (including OPTIONS)
+// includes the required CORS headers. This avoids missing headers on some
+// error or proxy responses in hosted environments.
+app.use((req, res, next) => {
+  const allowed = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : ['*'];
+  const origin = req.headers.origin;
+  const allowOrigin = allowed.includes('*') ? '*' : (allowed.includes(origin) ? origin : allowed[0]);
+  res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  // If the browser sends credentials, reflect origin and allow credentials
+  if (allowOrigin !== '*') res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(__dirname));
-app.options('*', cors(corsOptions)); // Enable preflight for all routes
 
 // Connect to MongoDB with retry
 async function connect() {
