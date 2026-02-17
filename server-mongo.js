@@ -241,10 +241,10 @@ app.use((err, req, res, next) => {
 // Start
 async function start() {
   await connect();
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🌙 Day Dream Dictionary API`);
     console.log(`📍 Listening on port ${PORT}`);
-    console.log(`🔗 http://localhost:${PORT}/health`);
+    console.log(`🔗 http://0.0.0.0:${PORT}/health`);
     console.log(`💾 MongoDB: ${MONGODB_DB}\n`);
   });
 }
