@@ -498,6 +498,20 @@
                 return;
             }
 
+            // Display credit usage warning if applicable
+            if (dream.warning) {
+                showMessage('error', dream.warning);
+            }
+            
+            // Display remaining credits if available
+            if (dream.creditsRemaining) {
+                const creditsMsg = `📊 Credits Remaining: ${dream.creditsRemaining.display}`;
+                const existingMsg = document.getElementById('message').textContent;
+                if (!existingMsg.includes('Credits Remaining')) {
+                    showMessage('info', creditsMsg);
+                }
+            }
+
             // Display main themes
             const themesContainer = document.getElementById('mainThemes');
             themesContainer.innerHTML = '';

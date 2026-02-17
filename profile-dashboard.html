@@ -747,27 +747,19 @@
                     proFeatures.remove();
                 }
 
-                // Update monthly limits display based on features
-                const features = subscription.features || [];
-                let basicLimit = 20; // Default for Basic
-                let deepLimit = 5;   // Default for Basic
-
-                if (features.includes('20_basic_interpretations')) {
-                    basicLimit = 20;
-                } else if (features.includes('5_deep_interpretations')) {
-                    deepLimit = 5;
-                }
-
+                // Update monthly limits display from subscription data
+                const basicLimit = subscription.monthlyLimits?.basic || 20;
+                const deepLimit = subscription.monthlyLimits?.deep || 5;
                 document.getElementById('monthlyLimit').textContent = `${basicLimit} basic / ${deepLimit} deep`;
 
-                // Update usage display
-                const limits = subscription.monthlyLimits || subscription.monthly_limits || {};
-                const usage = subscription.monthlyUsage || subscription.monthly_usage || {};
-
-                const usageBasic = usage.basic || 0;
-                const usageDeep = usage.deep || 0;
-
-                document.getElementById('monthlyUsage').textContent = `${usageBasic} / ${basicLimit} / ${usageDeep} deep`;
+                // Update monthly usage display with real-time data
+                const basicUsed = subscription.monthlyUsage?.basic || 0;
+                const deepUsed = subscription.monthlyUsage?.deep || 0;
+                const basicRemaining = subscription.monthlyRemaining?.basic || (basicLimit - basicUsed);
+                const deepRemaining = subscription.monthlyRemaining?.deep || (deepLimit - deepUsed);
+                
+                document.getElementById('monthlyUsage').textContent = 
+                  `${basicUsed}/${basicLimit} basic | ${deepUsed}/${deepLimit} deep (↓ ${basicRemaining} basic, ${deepRemaining} deep)`;
 
                 // Add feature list for Basic plan
                 if (planType === 'basic' && !document.getElementById('basicFeatures')) {

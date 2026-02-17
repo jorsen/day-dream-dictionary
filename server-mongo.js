@@ -332,8 +332,21 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
       const interpretationType = metadata.interpretation_type || metadata.interpretationType || 'basic';
       const interpretation = generateMockInterpretation(dream_text, { type: interpretationType });
 
-    // Log input + interpretation for debugging (helps verify generator runs)
-    console.log('Interpret request:', { input: dream_text.slice(0,200), interpretation });
+    // Get current monthly usage
+    const monthlyUsage = await getMonthlyUsage(req.user_id);
+    
+    // Get user subscription to check limits
+    const profile = await db.collection('profiles').findOne({ user_id: req.user_id }) || {};
+    const userSub = profile.subscription || {
+      plan: 'basic',
+      monthlyLimits: { basic: 20, deep: 5 }
+    };
+    
+    // Check if user has exceeded their monthly limit
+    const typeKey = interpretationType === 'deep' ? 'deep' : 'basic';
+    const currentUsage = monthlyUsage[typeKey] || 0;
+    const limit = userSub.monthlyLimits?.[typeKey] || (typeKey === 'deep' ? 5 : 20);
+    const hasExceededLimit = currentUsage >= limit;
 
     const dream = {
       _id: new ObjectId(),
@@ -344,11 +357,31 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
     };
 
     await db.collection('dreams').insertOne(dream);
+    
+    // Calculate remaining credits for this month
+    const newUsage = monthlyUsage;
+    newUsage[typeKey] = (newUsage[typeKey] || 0) + 1;
+    const basicRemaining = Math.max(0, (userSub.monthlyLimits?.basic || 20) - newUsage.basic);
+    const deepRemaining = Math.max(0, (userSub.monthlyLimits?.deep || 5) - newUsage.deep);
+    
+    console.log('Interpret request:', { input: dream_text.slice(0,200), type: interpretationType, usage: newUsage });
+    
     res.json({ 
       id: dream._id.toString(), 
       dream_text,
       interpretation,
-      created_at: dream.created_at.toISOString()
+      created_at: dream.created_at.toISOString(),
+      limitExceeded: hasExceededLimit,
+      warning: hasExceededLimit ? `⚠️ You've reached your ${typeKey} interpretation limit for this month (${limit}/${limit})` : null,
+      creditsRemaining: {
+        basic: basicRemaining,
+        deep: deepRemaining,
+        display: `${basicRemaining} basic / ${deepRemaining} deep remaining`
+      },
+      monthlyUsage: {
+        basic: newUsage.basic,
+        deep: newUsage.deep
+      }
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -365,6 +398,9 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
       // Get dream stats for subscription validation
       const dreamCount = await db.collection('dreams').countDocuments({ user_id: req.user_id });
       
+      // Get monthly usage
+      const monthlyUsage = await getMonthlyUsage(req.user_id);
+      
       // Default subscription data (Basic plan - paid version with good limits)
       const defaultSubscription = {
         plan: 'basic',
@@ -378,13 +414,32 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
           deep: 5
         },
         monthlyUsage: {
-          basic: 0,
-          deep: 0
+          basic: monthlyUsage.basic,
+          deep: monthlyUsage.deep
+        },
+        monthlyRemaining: {
+          basic: Math.max(0, 20 - monthlyUsage.basic),
+          deep: Math.max(0, 5 - monthlyUsage.deep)
         },
         features: ['20_basic_interpretations', '5_deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads']
       };
       
       const subscription = profile?.subscription || defaultSubscription;
+      
+      // Ensure monthly usage and remaining are always calculated
+      if (!subscription.monthlyUsage) {
+        subscription.monthlyUsage = {
+          basic: monthlyUsage.basic,
+          deep: monthlyUsage.deep
+        };
+      }
+      if (!subscription.monthlyRemaining) {
+        subscription.monthlyRemaining = {
+          basic: Math.max(0, (subscription.monthlyLimits?.basic || 20) - monthlyUsage.basic),
+          deep: Math.max(0, (subscription.monthlyLimits?.deep || 5) - monthlyUsage.deep)
+        };
+      }
+      
       const credits = profile?.credits || 'unlimited';
       
       if (profile) {
@@ -415,7 +470,31 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
     }
   });
 
-  // Get dream statistics
+  // Helper: Get monthly usage for user
+  async function getMonthlyUsage(userId) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    
+    const dreamsThisMonth = await db.collection('dreams')
+      .find({
+        user_id: userId,
+        created_at: { $gte: startOfMonth, $lte: endOfMonth }
+      }).toArray();
+    
+    let basicUsed = 0;
+    let deepUsed = 0;
+    dreamsThisMonth.forEach(d => {
+      if (d.interpretation && d.interpretation.type) {
+        if (d.interpretation.type === 'deep') deepUsed++;
+        else if (d.interpretation.type === 'basic') basicUsed++;
+      }
+    });
+    
+    return { basic: basicUsed, deep: deepUsed };
+  }
+
+  // Get dream statistics with real-time credit info
   app.get('/api/v1/dreams/stats', authMiddleware, checkDB, async (req, res) => {
     try {
       const dreamCollection = db.collection('dreams');
@@ -423,23 +502,32 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
       // Get all dreams for the user
       const userDreams = await dreamCollection.find({ user_id: req.user_id }).toArray();
       
-      // Calculate stats
-      const totalDreams = userDreams.length;
-      const totalInterpretations = userDreams.filter(d => d.interpretation).length;
+      // Get user credits and subscription
+      const profile = await db.collection('profiles').findOne({ user_id: req.user_id }) || {};
+      const userSub = profile.subscription || {
+        plan: 'basic',
+        monthlyLimits: { basic: 20, deep: 5 }
+      };
       
-      // Get dreams from this month
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const dreamsThisMonth = userDreams.filter(d => new Date(d.created_at) >= startOfMonth).length;
+      // Get monthly usage
+      const monthlyUsage = await getMonthlyUsage(req.user_id);
       
-      // Calculate approximate credits used (basic = 1, deep = 3, premium = 5)
-      let creditsUsed = 0;
+      // Calculate remaining credits for this month
+      const basicRemaining = Math.max(0, (userSub.monthlyLimits?.basic || 20) - monthlyUsage.basic);
+      const deepRemaining = Math.max(0, (userSub.monthlyLimits?.deep || 5) - monthlyUsage.deep);
+      
+      // Calculate total credits used ever
+      let totalCreditsUsed = 0;
       userDreams.forEach(d => {
         if (d.interpretation && d.interpretation.type) {
           const typeMap = { basic: 1, deep: 3, premium: 5 };
-          creditsUsed += typeMap[d.interpretation.type] || 1;
+          totalCreditsUsed += typeMap[d.interpretation.type] || 1;
         }
       });
+      
+      const totalDreams = userDreams.length;
+      const totalInterpretations = userDreams.filter(d => d.interpretation).length;
+      const dreamsThisMonth = monthlyUsage.basic + monthlyUsage.deep;
       
       res.json({
         stats: {
@@ -449,8 +537,17 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
           total_interpretations: totalInterpretations,
           thisMonth: dreamsThisMonth,
           this_month: dreamsThisMonth,
-          creditsUsed,
-          credits_used: creditsUsed
+          creditsUsed: totalCreditsUsed,
+          credits_used: totalCreditsUsed,
+          monthlyUsage: {
+            basic: monthlyUsage.basic,
+            deep: monthlyUsage.deep
+          },
+          monthlyRemaining: {
+            basic: basicRemaining,
+            deep: deepRemaining
+          },
+          creditsRemaining: `${basicRemaining} basic / ${deepRemaining} deep`
         }
       });
     } catch (err) {
