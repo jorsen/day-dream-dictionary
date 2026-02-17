@@ -195,12 +195,24 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
     const { dream_text } = req.body;
     if (!dream_text) return res.status(400).json({ error: 'Dream text required' });
 
-    // Mock interpretation
-    const interpretation = `This dream about "${dream_text.substring(0, 30)}..." suggests deeper psychological themes. In development mode, full interpretation requires MongoDB.`;
+    // Mock interpretation with proper structure
+    const interpretation = {
+      mainThemes: ['transformation', 'freedom', 'self-discovery'],
+      emotionalTone: 'hopeful and introspective',
+      symbols: [
+        { symbol: 'flying', meaning: 'Liberation and transcendence', significance: 'high' },
+        { symbol: 'sky', meaning: 'Limitless possibilities', significance: 'high' },
+        { symbol: 'journey', meaning: 'Personal growth and exploration', significance: 'medium' }
+      ],
+      personalInsight: 'This dream suggests you are going through a period of personal transformation and seeking freedom in some aspect of your life.',
+      guidance: 'Embrace the changes ahead with confidence and trust your intuition. The dream encourages you to explore new possibilities.'
+    };
     
     res.json({
+      id: `dream-${Date.now()}`,
       dream_text,
       interpretation,
+      created_at: new Date().toISOString(),
       mode: 'mock'
     });
   } catch (err) {

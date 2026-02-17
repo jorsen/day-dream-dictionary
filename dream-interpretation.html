@@ -452,18 +452,20 @@
 
             try {
                 // AUTHENTICATED: Include Bearer token in headers
-                const response = await fetch(`${API_URL}/dreams/test-interpret`, {
+                const response = await fetch(`${API_URL}/dreams/interpret`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${authToken}`
                     },
                     body: JSON.stringify({
-                        dreamText,
-                        interpretationType,
-                        tags,
-                        isRecurring,
-                        locale: 'en'
+                        dream_text: dreamText,
+                        metadata: {
+                            interpretation_type: interpretationType,
+                            tags,
+                            is_recurring: isRecurring,
+                            locale: 'en'
+                        }
                     })
                 });
 
@@ -471,13 +473,14 @@
 
                 if (response.ok) {
                     showMessage('success', 'Dream interpreted and saved successfully!');
-                    displayInterpretation(data.dream);
+                    displayInterpretation(data);
                 } else {
-                    showMessage('error', data.message || 'No Credits');
+                    showMessage('error', data.error || data.message || 'Failed to interpret dream');
                 }
             } catch (error) {
                 console.error('Error:', error);
                 showMessage('error', 'An error occurred. Please try again.');
+            }
             } finally {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('submitBtn').disabled = false;
