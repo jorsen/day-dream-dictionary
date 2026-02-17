@@ -13,7 +13,7 @@ The server is running but can't connect to MongoDB Atlas. Here's what to do NOW:
 
 | Key | Value |
 |-----|-------|
-| `MONGODB_URI` | `mongodb+srv://jorsenmejia_db_user:3FpvXNyPmTL6k2ug@daydream.7riem3f.mongodb.net/daydreamdictionary?retryWrites=true&w=majority&appName=daydream` |
+| `MONGODB_URI` | `mongodb+srv://jorsenmejia_db_user:84aFJF1jAzKyMz6O@daydream.7riem3f.mongodb.net/daydreamdictionary?retryWrites=true&w=majority&appName=daydream` |
 | `MONGODB_DB` | `daydreamdictionary` |
 | `NODE_ENV` | `production` |
 | `CORS_ORIGIN` | `*` |
