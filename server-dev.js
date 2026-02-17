@@ -52,6 +52,51 @@ function checkDB(req, res, next) {
   next();
 }
 
+// Dynamic mock interpretation generator (same logic as production mock)
+function generateMockInterpretation(text) {
+  const raw = (text || '').toLowerCase();
+  const words = raw.match(/\b[a-z]{3,}\b/g) || [];
+  const stop = new Set(['the','and','you','for','with','that','this','are','was','were','but','your','have','has','had','not','from','they','them','their','what','who','when','where']);
+  const freqs = {};
+  for (const w of words) if (!stop.has(w)) freqs[w] = (freqs[w] || 0) + 1;
+  const entries = Object.entries(freqs).sort((a,b) => b[1]-a[1]);
+  const themes = entries.slice(0,3).map(e => e[0]).filter(Boolean);
+
+  const symbolMap = {
+    'water': 'Emotions and the unconscious',
+    'fire': 'Passion, transformation, or destruction',
+    'flying': 'Freedom and escape',
+    'horse': 'Strength and drive',
+    'teeth': 'Anxiety about appearance or loss',
+    'death': 'Transition and change',
+    'house': 'Self or family life',
+    'baby': 'New beginnings',
+  };
+
+  const pickSymbols = [];
+  for (const t of themes) {
+    if (symbolMap[t]) pickSymbols.push({ symbol: t, meaning: symbolMap[t], significance: 'high' });
+    else pickSymbols.push({ symbol: t, meaning: `Related to ${t}`, significance: 'medium' });
+  }
+
+  if (pickSymbols.length === 0) {
+    pickSymbols.push({ symbol: 'journey', meaning: 'Personal growth and exploration', significance: 'medium' });
+  }
+
+  const emotionalTone = raw.includes('sad') || raw.includes('cry') ? 'sad' : raw.includes('happy') || raw.includes('joy') ? 'joyful' : 'reflective';
+
+  const personalInsight = themes.length ? `Your dream repeatedly mentions ${themes.join(', ')} — those may point to what your mind is focusing on.` : `This dream points to emotions and themes worth reflecting on.`;
+  const guidance = themes.length ? `Consider how ${themes[0]} shows up in your waking life and what change you'd like to see.` : `Spend time journaling how the dream made you feel and any parallels to your daily life.`;
+
+  return {
+    mainThemes: themes.length ? themes : ['introspection','emotion'],
+    emotionalTone,
+    symbols: pickSymbols,
+    personalInsight,
+    guidance
+  };
+}
+
 // Routes
 
 app.get('/health', (req, res) => {
@@ -194,19 +239,8 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
   try {
     const { dream_text } = req.body;
     if (!dream_text) return res.status(400).json({ error: 'Dream text required' });
-
-    // Mock interpretation with proper structure
-    const interpretation = {
-      mainThemes: ['transformation', 'freedom', 'self-discovery'],
-      emotionalTone: 'hopeful and introspective',
-      symbols: [
-        { symbol: 'flying', meaning: 'Liberation and transcendence', significance: 'high' },
-        { symbol: 'sky', meaning: 'Limitless possibilities', significance: 'high' },
-        { symbol: 'journey', meaning: 'Personal growth and exploration', significance: 'medium' }
-      ],
-      personalInsight: 'This dream suggests you are going through a period of personal transformation and seeking freedom in some aspect of your life.',
-      guidance: 'Embrace the changes ahead with confidence and trust your intuition. The dream encourages you to explore new possibilities.'
-    };
+    // Dynamic mock interpretation based on dream text
+    const interpretation = generateMockInterpretation(dream_text);
     
     res.json({
       id: `dream-${Date.now()}`,

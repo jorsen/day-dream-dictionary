@@ -110,6 +110,60 @@ function checkDB(req, res, next) {
   next();
 }
 
+// Generate a simple dynamic mock interpretation based on the dream text
+function generateMockInterpretation(text) {
+  const raw = (text || '').toLowerCase();
+  const words = raw.match(/\b[a-z]{3,}\b/g) || [];
+  const stop = new Set(['the','and','you','for','with','that','this','are','was','were','but','your','have','has','had','not','from','they','them','their','what','who','when','where']);
+  const freqs = {};
+  for (const w of words) if (!stop.has(w)) freqs[w] = (freqs[w] || 0) + 1;
+  const entries = Object.entries(freqs).sort((a,b) => b[1]-a[1]);
+  const themes = entries.slice(0,3).map(e => e[0]).filter(Boolean);
+
+  // Normalize themes to be human-friendly short phrases
+  const normalizedThemes = themes.map(t => t.replace(/[-_]/g, ' ').trim()).map(t => {
+    // Expand some common tokens to friendlier words
+    if (t === 'dreams' || t === 'dream') return 'dreaming';
+    if (t === 'testing') return 'testing/analysis';
+    if (t === 'self') return 'self';
+    return t;
+  }).slice(0,3);
+
+  const symbolMap = {
+    'water': 'Emotions and the unconscious',
+    'fire': 'Passion, transformation, or destruction',
+    'flying': 'Freedom and escape',
+    'horse': 'Strength and drive',
+    'teeth': 'Anxiety about appearance or loss',
+    'death': 'Transition and change',
+    'house': 'Self or family life',
+    'baby': 'New beginnings',
+  };
+
+  const pickSymbols = [];
+  for (const t of themes) {
+    if (symbolMap[t]) pickSymbols.push({ symbol: t, meaning: symbolMap[t], significance: 'high' });
+    else pickSymbols.push({ symbol: t, meaning: `Related to ${t}`, significance: 'medium' });
+  }
+
+  if (pickSymbols.length === 0) {
+    pickSymbols.push({ symbol: 'journey', meaning: 'Personal growth and exploration', significance: 'medium' });
+  }
+
+  const emotionalTone = raw.includes('sad') || raw.includes('cry') ? 'sad' : raw.includes('happy') || raw.includes('joy') ? 'joyful' : 'reflective';
+
+  const personalInsight = normalizedThemes.length ? `Your dream repeatedly mentions ${normalizedThemes.join(', ')} — those may point to what your mind is focusing on.` : `This dream points to emotions and themes worth reflecting on.`;
+  const guidance = normalizedThemes.length ? `Consider how ${normalizedThemes[0]} shows up in your waking life and what change you'd like to see.` : `Spend time journaling how the dream made you feel and any parallels to your daily life.`;
+
+  return {
+    mainThemes: normalizedThemes.length ? normalizedThemes : ['introspection','emotion'],
+    emotionalTone,
+    symbols: pickSymbols,
+    personalInsight,
+    guidance
+  };
+}
+
 // Routes
 
 app.get('/health', (req, res) => {
@@ -252,18 +306,11 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
     const { dream_text } = req.body;
     if (!dream_text) return res.status(400).json({ error: 'Dream text required' });
 
-    // Mock interpretation (replace with OpenRouter call)
-    const interpretation = {
-      mainThemes: ['transformation', 'freedom', 'self-discovery'],
-      emotionalTone: 'hopeful and introspective',
-      symbols: [
-        { symbol: 'flying', meaning: 'Liberation and transcendence', significance: 'high' },
-        { symbol: 'sky', meaning: 'Limitless possibilities', significance: 'high' },
-        { symbol: 'journey', meaning: 'Personal growth and exploration', significance: 'medium' }
-      ],
-      personalInsight: 'This dream suggests you are going through a period of personal transformation and seeking freedom in some aspect of your life.',
-      guidance: 'Embrace the changes ahead with confidence and trust your intuition.'
-    };
+    // Dynamic mock interpretation based on dream text
+    const interpretation = generateMockInterpretation(dream_text);
+
+    // Log input + interpretation for debugging (helps verify generator runs)
+    console.log('Interpret request:', { input: dream_text.slice(0,200), interpretation });
 
     const dream = {
       _id: new ObjectId(),
