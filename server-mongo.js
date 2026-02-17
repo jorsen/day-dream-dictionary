@@ -285,6 +285,48 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
   }
 });
 
+  // ===== Profile Endpoints =====
+
+  // Get profile
+  app.get('/api/v1/profile', authMiddleware, checkDB, async (req, res) => {
+    try {
+      const profile = await db.collection('profiles').findOne({ user_id: req.user_id });
+      if (profile) return res.json({ profile });
+      return res.json({ profile: { user_id: req.user_id, display_name: 'User', locale: 'en', preferences: {} } });
+    } catch (err) {
+      console.error('Profile fetch error:', err);
+      res.status(500).json({ error: 'Failed to fetch profile', message: err.message });
+    }
+  });
+
+  // Update profile
+  app.put('/api/v1/profile', authMiddleware, checkDB, async (req, res) => {
+    try {
+      const { display_name, locale, preferences } = req.body;
+      const update = { updated_at: new Date().toISOString() };
+      if (display_name) update.display_name = display_name;
+      if (locale) update.locale = locale;
+      if (preferences) update.preferences = preferences;
+      const result = await db.collection('profiles').updateOne({ user_id: req.user_id }, { $set: update }, { upsert: true });
+      res.json({ message: 'Profile updated', modified: result.modifiedCount || 0 });
+    } catch (err) {
+      console.error('Profile update error:', err);
+      res.status(500).json({ error: 'Failed to update profile', message: err.message });
+    }
+  });
+
+  // Get credits
+  app.get('/api/v1/profile/credits', authMiddleware, checkDB, async (req, res) => {
+    try {
+      const creditDoc = await db.collection('credits').findOne({ user_id: req.user_id });
+      if (creditDoc) return res.json(creditDoc);
+      return res.json({ user_id: req.user_id, balance: 0, lifetime_earned: 0 });
+    } catch (err) {
+      console.error('Credits fetch error:', err);
+      res.status(500).json({ error: 'Failed to fetch credits', message: err.message });
+    }
+  });
+
 // 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
