@@ -17,33 +17,19 @@ if (!MONGODB_URI) {
 
 let db;
 
-// CORS configuration
+// CORS configuration - permissive for all origins
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    // Allow specific origins from env var
-    const allowedOrigins = process.env.CORS_ORIGIN 
-      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-      : ['*'];
-    
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS blocked origin: ${origin}`);
-      callback(null, true); // Allow anyway for now
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
 };
 
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(__dirname));
+app.options('*', cors(corsOptions)); // Enable preflight for all routes
 
 // Connect to MongoDB with retry
 async function connect() {
