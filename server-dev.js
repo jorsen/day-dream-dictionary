@@ -11,7 +11,8 @@ const PORT = process.env.PORT || 5000;
 const storage = {
   users: new Map(),
   dreams: new Map(),
-  profiles: new Map()
+  profiles: new Map(),
+  subscriptions: new Map()
 };
 
 // CORS configuration
@@ -278,6 +279,95 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
   } catch (err) {
     console.error('Interpretation error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Get profile with subscription
+app.get('/api/v1/profile', authMiddleware, checkDB, async (req, res) => {
+  try {
+    const profile = storage.profiles.get(req.user_id) || {};
+    
+    // Count dreams for the user
+    const dreamCount = Array.from(storage.dreams.values())
+      .filter(d => d.user_id === req.user_id).length;
+    
+    // Default subscription data
+    const defaultSubscription = {
+      plan: 'basic',
+      planName: 'Basic Plan',
+      planType: 'basic',
+      price: 4.99,
+      status: 'active',
+      renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      monthlyLimits: {
+        basic: 20,
+        deep: 5
+      },
+      monthlyUsage: {
+        basic: 0,
+        deep: 0
+      },
+      features: ['20_basic_interpretations', '5_deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads']
+    };
+    
+    const subscription = profile.subscription || defaultSubscription;
+    const credits = profile.credits || 'unlimited';
+    
+    res.json({
+      profile: {
+        user_id: req.user_id,
+        display_name: profile.display_name || 'User',
+        locale: profile.locale || 'en',
+        preferences: profile.preferences || {},
+        subscription,
+        credits,
+        dream_count: dreamCount
+      }
+    });
+  } catch (err) {
+    console.error('Profile fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch profile', message: err.message });
+  }
+});
+
+// Get dream statistics
+app.get('/api/v1/dreams/stats', authMiddleware, checkDB, async (req, res) => {
+  try {
+    const userDreams = Array.from(storage.dreams.values())
+      .filter(d => d.user_id === req.user_id);
+    
+    const totalDreams = userDreams.length;
+    const totalInterpretations = userDreams.filter(d => d.interpretation).length;
+    
+    // Get dreams from this month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const dreamsThisMonth = userDreams.filter(d => new Date(d.created_at) >= startOfMonth).length;
+    
+    // Calculate credits used
+    let creditsUsed = 0;
+    userDreams.forEach(d => {
+      if (d.interpretation && d.interpretation.type) {
+        const typeMap = { basic: 1, deep: 3, premium: 5 };
+        creditsUsed += typeMap[d.interpretation.type] || 1;
+      }
+    });
+    
+    res.json({
+      stats: {
+        totalDreams,
+        total_dreams: totalDreams,
+        totalInterpretations,
+        total_interpretations: totalInterpretations,
+        thisMonth: dreamsThisMonth,
+        this_month: dreamsThisMonth,
+        creditsUsed,
+        credits_used: creditsUsed
+      }
+    });
+  } catch (err) {
+    console.error('Dream stats error:', err);
+    res.status(500).json({ error: 'Failed to fetch stats', message: err.message });
   }
 });
 

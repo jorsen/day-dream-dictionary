@@ -361,11 +361,101 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
   app.get('/api/v1/profile', authMiddleware, checkDB, async (req, res) => {
     try {
       const profile = await db.collection('profiles').findOne({ user_id: req.user_id });
-      if (profile) return res.json({ profile });
-      return res.json({ profile: { user_id: req.user_id, display_name: 'User', locale: 'en', preferences: {} } });
+      
+      // Get dream stats for subscription validation
+      const dreamCount = await db.collection('dreams').countDocuments({ user_id: req.user_id });
+      
+      // Default subscription data (Basic plan - paid version with good limits)
+      const defaultSubscription = {
+        plan: 'basic',
+        planName: 'Basic Plan',
+        planType: 'basic',
+        price: 4.99,
+        status: 'active',
+        renewalDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        monthlyLimits: {
+          basic: 20,
+          deep: 5
+        },
+        monthlyUsage: {
+          basic: 0,
+          deep: 0
+        },
+        features: ['20_basic_interpretations', '5_deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads']
+      };
+      
+      const subscription = profile?.subscription || defaultSubscription;
+      const credits = profile?.credits || 'unlimited';
+      
+      if (profile) {
+        return res.json({ 
+          profile: {
+            ...profile,
+            subscription,
+            credits,
+            dream_count: dreamCount
+          } 
+        });
+      }
+      
+      return res.json({ 
+        profile: { 
+          user_id: req.user_id, 
+          display_name: 'User', 
+          locale: 'en', 
+          preferences: {},
+          subscription,
+          credits,
+          dream_count: dreamCount
+        } 
+      });
     } catch (err) {
       console.error('Profile fetch error:', err);
       res.status(500).json({ error: 'Failed to fetch profile', message: err.message });
+    }
+  });
+
+  // Get dream statistics
+  app.get('/api/v1/dreams/stats', authMiddleware, checkDB, async (req, res) => {
+    try {
+      const dreamCollection = db.collection('dreams');
+      
+      // Get all dreams for the user
+      const userDreams = await dreamCollection.find({ user_id: req.user_id }).toArray();
+      
+      // Calculate stats
+      const totalDreams = userDreams.length;
+      const totalInterpretations = userDreams.filter(d => d.interpretation).length;
+      
+      // Get dreams from this month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const dreamsThisMonth = userDreams.filter(d => new Date(d.created_at) >= startOfMonth).length;
+      
+      // Calculate approximate credits used (basic = 1, deep = 3, premium = 5)
+      let creditsUsed = 0;
+      userDreams.forEach(d => {
+        if (d.interpretation && d.interpretation.type) {
+          const typeMap = { basic: 1, deep: 3, premium: 5 };
+          creditsUsed += typeMap[d.interpretation.type] || 1;
+        }
+      });
+      
+      res.json({
+        stats: {
+          totalDreams,
+          total_dreams: totalDreams,
+          totalInterpretations,
+          total_interpretations: totalInterpretations,
+          thisMonth: dreamsThisMonth,
+          this_month: dreamsThisMonth,
+          creditsUsed,
+          credits_used: creditsUsed
+        }
+      });
+    } catch (err) {
+      console.error('Dream stats error:', err);
+      res.status(500).json({ error: 'Failed to fetch stats', message: err.message });
     }
   });
 
