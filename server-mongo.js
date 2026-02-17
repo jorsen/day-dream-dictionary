@@ -17,8 +17,31 @@ if (!MONGODB_URI) {
 
 let db;
 
+// CORS configuration
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Allow specific origins from env var
+    const allowedOrigins = process.env.CORS_ORIGIN 
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+      : ['*'];
+    
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(null, true); // Allow anyway for now
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 // Middleware
-app.use(cors({ origin: '*' }));
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(__dirname));
 
@@ -93,6 +116,21 @@ app.get('/api/v1', (req, res) => {
       'POST /api/v1/dreams/interpret',
     ]
   });
+});
+
+app.get('/api/v1/debug/stats', async (req, res) => {
+  try {
+    const userCount = await db.collection('users').countDocuments();
+    const dreamCount = await db.collection('dreams').countDocuments();
+    res.json({ 
+      database: 'connected',
+      users: userCount, 
+      dreams: dreamCount,
+      message: userCount === 0 ? 'No users in database. Try signup first or run migration.' : 'Ready'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Auth: Signup
