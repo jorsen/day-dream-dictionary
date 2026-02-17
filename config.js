@@ -5,10 +5,12 @@ const API_CONFIG = (() => {
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
         
-        // Production environment (Render)
+        // Production environment (Render or custom domain)
         if (hostname.includes('onrender.com') || hostname.includes('daydreamdictionary.com')) {
+            // Use the same host as the frontend so API calls are same-origin
+            const protocol = window.location.protocol || 'https:';
             return {
-                API_BASE_URL: 'https://day-dream-dictionary-api.onrender.com/api/v1',
+                API_BASE_URL: `${protocol}//${hostname}/api/v1`,
                 FALLBACK_URLS: ['/api/v1'] // Fallback to same-host relative URL
             };
         }
