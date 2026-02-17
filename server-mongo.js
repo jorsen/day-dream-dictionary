@@ -34,8 +34,10 @@ app.options('*', cors(corsOptions)); // Enable preflight for all routes
 // Connect to MongoDB with retry
 async function connect() {
   let retries = 5;
+  let lastError;
   while (retries > 0) {
     try {
+      console.log(`⏳ Connecting to MongoDB (attempt ${6-retries}/5)...`);
       const client = new MongoClient(MONGODB_URI, {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 10000,
@@ -52,17 +54,18 @@ async function connect() {
       await db.collection('dreams').createIndex({ user_id: 1, created_at: -1 }).catch(() => {});
       return; // Success
     } catch (err) {
+      lastError = err;
       retries--;
-      console.error(`❌ MongoDB connection failed (${retries} retries left):`, err.message);
+      console.error(`❌ Attempt failed (${retries} retries left): ${err.message}`);
       if (retries > 0) {
-        console.log('Retrying in 5 seconds...');
-        await new Promise(r => setTimeout(r, 5000));
-      } else {
-        console.error('Failed to connect to MongoDB after retries. Exiting.');
-        process.exit(1);
+        console.log('⏳ Retrying in 3 seconds...');
+        await new Promise(r => setTimeout(r, 3000));
       }
     }
   }
+  
+  // All retries exhausted
+  throw new Error(`MongoDB connection failed after retries: ${lastError?.message || 'Unknown error'}`);
 }
 
 // Helpers
@@ -83,10 +86,19 @@ function authMiddleware(req, res, next) {
   next();
 }
 
+// Middleware: Check database connection
+function checkDB(req, res, next) {
+  if (!db) {
+    console.error('Database not connected!');
+    return res.status(503).json({ error: 'Database not connected. Server starting up.' });
+  }
+  next();
+}
+
 // Routes
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', db: db ? 'connected' : 'disconnected' });
 });
 
 app.get('/api/v1', (req, res) => {
@@ -120,7 +132,7 @@ app.get('/api/v1/debug/stats', async (req, res) => {
 });
 
 // Auth: Signup
-app.post('/api/v1/auth/signup', async (req, res) => {
+app.post('/api/v1/auth/signup', checkDB, async (req, res) => {
   try {
     const { email, password, displayName } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
@@ -151,7 +163,7 @@ app.post('/api/v1/auth/signup', async (req, res) => {
 });
 
 // Auth: Login
-app.post('/api/v1/auth/login', async (req, res) => {
+app.post('/api/v1/auth/login', checkDB, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
@@ -184,7 +196,7 @@ app.get('/api/v1/auth/me', authMiddleware, async (req, res) => {
 });
 
 // Dreams: Create
-app.post('/api/v1/dreams', authMiddleware, async (req, res) => {
+app.post('/api/v1/dreams', checkDB, authMiddleware, async (req, res) => {
   try {
     const { dream_text, interpretation, metadata } = req.body;
     if (!dream_text) return res.status(400).json({ error: 'Dream text required' });
@@ -207,7 +219,7 @@ app.post('/api/v1/dreams', authMiddleware, async (req, res) => {
 });
 
 // Dreams: Get all for user
-app.get('/api/v1/dreams', authMiddleware, async (req, res) => {
+app.get('/api/v1/dreams', checkDB, authMiddleware, async (req, res) => {
   try {
     const dreams = await db.collection('dreams')
       .find({ user_id: req.user_id })
@@ -220,7 +232,7 @@ app.get('/api/v1/dreams', authMiddleware, async (req, res) => {
 });
 
 // Dreams: Interpret
-app.post('/api/v1/dreams/interpret', authMiddleware, async (req, res) => {
+app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) => {
   try {
     const { dream_text } = req.body;
     if (!dream_text) return res.status(400).json({ error: 'Dream text required' });
@@ -264,7 +276,22 @@ app.use((err, req, res, next) => {
 
 // Start
 async function start() {
-  await connect();
+  console.log('🚀 Starting app...');
+  console.log(`📡 Connecting to MongoDB: ${MONGODB_URI.substring(0, 50)}...`);
+  
+  try {
+    await connect();
+  } catch (err) {
+    console.error('Failed to connect to MongoDB:', err.message);
+    console.error('App cannot start without database connection.');
+    process.exit(1);
+  }
+  
+  if (!db) {
+    console.error('Database connection failed (db is null)');
+    process.exit(1);
+  }
+  
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🌙 Day Dream Dictionary API`);
     console.log(`📍 Listening on port ${PORT}`);
