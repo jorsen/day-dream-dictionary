@@ -66,8 +66,10 @@ FRONTEND_URL=https://daydreamdictionary.com
 FREE_DEEP_INTERPRETATIONS_MONTHLY=1000
 FREE_BASIC_INTERPRETATIONS_MONTHLY=1000
 
-# Leave MongoDB empty (using Supabase)
+# MongoDB (for migrated data)
+# Set this to your MongoDB connection string (e.g. mongodb+srv://user:pass@cluster.mongodb.net)
 MONGODB_URI=
+MONGODB_DB=daydream
 ```
 
 6. **Click "Create Web Service"**
@@ -174,6 +176,27 @@ Your Day Dream Dictionary API is now live and running in FREE MODE:
 - Ready for testing and development
 
 ## 🧪 Test Your Deployment
+
+### Optional: Run migration (Supabase -> MongoDB)
+
+If you want to migrate existing Supabase data into MongoDB and host it on Render you can run the included migration script.
+
+Locally (recommended first):
+```bash
+# install deps
+npm install
+
+# create a .env with SUPABASE_SERVICE_KEY, SUPABASE_URL and MONGODB_URI
+node migrate-supabase-to-mongo.js
+```
+
+On Render (one-off job):
+1. In Render dashboard, go to your service and open "Manual Deploys" → "Create Job" (or use the "Run Job" / "Run One-off" feature).
+2. Use command: `node migrate-supabase-to-mongo.js`
+3. Ensure environment variables `SUPABASE_SERVICE_KEY`, `SUPABASE_URL`, and `MONGODB_URI` are set for the job.
+
+The migration upserts documents into collections: `dreams`, `profiles`, `events`, `credits`, `subscriptions`, `roles`.
+
 
 1. Open `test-dream-free.html` in your browser
 2. Update the API_BASE to your Render URL:

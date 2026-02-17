@@ -6,6 +6,7 @@
     "start": "node mock-api-server-v3.js",
     "dev": "nodemon mock-api-server-v3.js",
     "serve": "node simple-server.js",
+    "migrate": "node migrate-supabase-to-mongo.js",
     "test": "echo 'No tests configured'"
   },
   "keywords": [
@@ -18,8 +19,11 @@
   "author": "Day Dream Dictionary Team",
   "license": "MIT",
   "dependencies": {
+    "@supabase/supabase-js": "^2.18.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
     "express": "^4.18.2",
+    "mongodb": "^5.9.0",
     "nodemon": "^3.0.1"
   },
   "engines": {
