@@ -22,26 +22,37 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Connect to MongoDB
+// Connect to MongoDB with retry
 async function connect() {
-  try {
-    const client = new MongoClient(MONGODB_URI, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-    });
-    await client.connect();
-    db = client.db(MONGODB_DB);
-    console.log('✅ MongoDB connected');
-   
-    // Create indexes
-    await Promise.all([
-      db.collection('users').createIndex({ email: 1 }, { unique: true }),
-      db.collection('dreams').createIndex({ user_id: 1, created_at: -1 }),
-      db.collection('profiles').createIndex({ user_id: 1 }, { unique: true }),
-     ].catch(() => {}));
-  } catch (err) {
-    console.error('MongoDB connection failed:', err.message);
-    process.exit(1);
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      const client = new MongoClient(MONGODB_URI, {
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      await client.connect();
+      db = client.db(MONGODB_DB);
+      console.log('✅ MongoDB connected');
+     
+      // Create indexes
+      await db.collection('users').createIndex({ email: 1 }, { unique: true }).catch(() => {});
+      await db.collection('dreams').createIndex({ user_id: 1, created_at: -1 }).catch(() => {});
+      return; // Success
+    } catch (err) {
+      retries--;
+      console.error(`❌ MongoDB connection failed (${retries} retries left):`, err.message);
+      if (retries > 0) {
+        console.log('Retrying in 5 seconds...');
+        await new Promise(r => setTimeout(r, 5000));
+      } else {
+        console.error('Failed to connect to MongoDB after retries. Exiting.');
+        process.exit(1);
+      }
+    }
   }
 }
 
