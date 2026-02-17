@@ -8,8 +8,8 @@ const API_CONFIG = (() => {
         // Production environment (Render)
         if (hostname.includes('onrender.com') || hostname.includes('daydreamdictionary.com')) {
             return {
-                API_BASE_URL: '/api/v1', // Now using relative URL to same server
-                FALLBACK_URLS: []
+                API_BASE_URL: 'https://day-dream-dictionary-api.onrender.com/api/v1',
+                FALLBACK_URLS: ['/api/v1'] // Fallback to same-host relative URL
             };
         }
         

@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "Day Dream Dictionary - Dream Interpretation App (Rollback to HTML/JS with Mock API)",
   "scripts": {
-    "start": "node mock-api-server-v3.js",
-    "dev": "nodemon mock-api-server-v3.js",
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "dev:mock": "nodemon mock-api-server-v3.js",
     "serve": "node simple-server.js",
     "migrate": "node migrate-supabase-to-mongo.js",
     "test": "echo 'No tests configured'"
