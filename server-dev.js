@@ -53,14 +53,16 @@ function checkDB(req, res, next) {
 }
 
 // Dynamic mock interpretation generator (same logic as production mock)
-function generateMockInterpretation(text) {
+function generateMockInterpretation(text, opts = {}) {
+  const { type = 'basic' } = opts;
   const raw = (text || '').toLowerCase();
   const words = raw.match(/\b[a-z]{3,}\b/g) || [];
   const stop = new Set(['the','and','you','for','with','that','this','are','was','were','but','your','have','has','had','not','from','they','them','their','what','who','when','where']);
   const freqs = {};
   for (const w of words) if (!stop.has(w)) freqs[w] = (freqs[w] || 0) + 1;
   const entries = Object.entries(freqs).sort((a,b) => b[1]-a[1]);
-  const themes = entries.slice(0,3).map(e => e[0]).filter(Boolean);
+  const themeCount = type === 'deep' ? 5 : type === 'premium' ? 6 : 3;
+  const themes = entries.slice(0, themeCount).map(e => e[0]).filter(Boolean);
 
   const symbolMap = {
     'water': 'Emotions and the unconscious',
@@ -75,8 +77,9 @@ function generateMockInterpretation(text) {
 
   const pickSymbols = [];
   for (const t of themes) {
-    if (symbolMap[t]) pickSymbols.push({ symbol: t, meaning: symbolMap[t], significance: 'high' });
-    else pickSymbols.push({ symbol: t, meaning: `Related to ${t}`, significance: 'medium' });
+    const meaning = symbolMap[t] || `Related to ${t}`;
+    const significance = themes.indexOf(t) === 0 ? 'high' : themes.indexOf(t) <= 2 ? 'medium' : 'low';
+    pickSymbols.push({ symbol: t, meaning, significance });
   }
 
   if (pickSymbols.length === 0) {
@@ -85,15 +88,33 @@ function generateMockInterpretation(text) {
 
   const emotionalTone = raw.includes('sad') || raw.includes('cry') ? 'sad' : raw.includes('happy') || raw.includes('joy') ? 'joyful' : 'reflective';
 
-  const personalInsight = themes.length ? `Your dream repeatedly mentions ${themes.join(', ')} — those may point to what your mind is focusing on.` : `This dream points to emotions and themes worth reflecting on.`;
-  const guidance = themes.length ? `Consider how ${themes[0]} shows up in your waking life and what change you'd like to see.` : `Spend time journaling how the dream made you feel and any parallels to your daily life.`;
+  const normalizedThemes = themes.map(t => t.replace(/[-_]/g, ' ').trim());
+
+  let personalInsight = '';
+  let guidance = '';
+  if (normalizedThemes.length) {
+    if (type === 'basic') {
+      personalInsight = `Your dream mentions ${normalizedThemes.join(', ')} — this may show what occupies your thoughts.`;
+      guidance = `Notice how ${normalizedThemes[0]} appears in your day-to-day life and reflect on small steps you could take.`;
+    } else if (type === 'deep') {
+      personalInsight = `The repeated motifs of ${normalizedThemes.join(', ')} suggest deeper patterns and possible emotional drivers.`;
+      guidance = `Journal about when you feel connected to ${normalizedThemes[0]} and consider specific changes to align your actions with those feelings.`;
+    } else {
+      personalInsight = `A close look at ${normalizedThemes.join(', ')} points to both conscious goals and unconscious motivations — exploring these can be transformative.`;
+      guidance = `Try a focused reflection: map recent events tied to ${normalizedThemes[0]}, set one measurable goal, and revisit in two weeks to observe change.`;
+    }
+  } else {
+    personalInsight = `This dream points to emotions and themes worth reflecting on.`;
+    guidance = `Spend time journaling how the dream made you feel and any parallels to your daily life.`;
+  }
 
   return {
-    mainThemes: themes.length ? themes : ['introspection','emotion'],
+    mainThemes: normalizedThemes.length ? normalizedThemes : ['introspection','emotion'],
     emotionalTone,
     symbols: pickSymbols,
     personalInsight,
-    guidance
+    guidance,
+    type
   };
 }
 
@@ -239,15 +260,20 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
   try {
     const { dream_text } = req.body;
     if (!dream_text) return res.status(400).json({ error: 'Dream text required' });
-    // Dynamic mock interpretation based on dream text
-    const interpretation = generateMockInterpretation(dream_text);
-    
+    const metadata = req.body.metadata || {};
+    const interpretationType = metadata.interpretation_type || metadata.interpretationType || 'basic';
+    const interpretation = generateMockInterpretation(dream_text, { type: interpretationType });
+
+    // Debug log
+    console.log('DEV Interpret:', { input: dream_text.slice(0,200), type: interpretationType, interpretation });
+
     res.json({
       id: `dream-${Date.now()}`,
       dream_text,
       interpretation,
       created_at: new Date().toISOString(),
-      mode: 'mock'
+      mode: 'mock',
+      type: interpretationType
     });
   } catch (err) {
     console.error('Interpretation error:', err);
