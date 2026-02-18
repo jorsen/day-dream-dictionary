@@ -275,6 +275,39 @@ app.post('/api/v1/auth/login', checkDB, async (req, res) => {
   }
 });
 
+// Auth: Demo login — creates demo user if not exists, then logs in
+app.post('/api/v1/auth/demo', checkDB, async (req, res) => {
+  const DEMO_EMAIL = 'sample1@gmail.com';
+  const DEMO_PASSWORD = 'sample';
+  const DEMO_NAME = 'Demo User';
+
+  try {
+    const users = db.collection('users');
+    let user = await users.findOne({ email: DEMO_EMAIL });
+
+    if (!user) {
+      const userId = `demo_user_${Date.now()}`;
+      await users.insertOne({
+        _id: userId,
+        email: DEMO_EMAIL,
+        password: hashPassword(DEMO_PASSWORD),
+        displayName: DEMO_NAME,
+        created_at: new Date()
+      });
+      user = await users.findOne({ email: DEMO_EMAIL });
+    }
+
+    const token = generateToken(user._id);
+    res.json({
+      accessToken: token,
+      user: { id: user._id, email: user.email, display_name: user.displayName }
+    });
+  } catch (err) {
+    console.error('Demo login error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Auth: Get current user
 app.get('/api/v1/auth/me', authMiddleware, async (req, res) => {
   try {
