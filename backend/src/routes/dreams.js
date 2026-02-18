@@ -74,7 +74,12 @@ async function claimQuota(db, userId) {
       throw err;
     }
 
-    return { plan: sub.plan, type: 'deep' };
+    return {
+      plan: sub.plan,
+      type: 'deep',
+      used: updated.monthlyDeepUsed,
+      limit: updated.monthlyDeepLimit,
+    };
   }
 
   // ── 2. Free user — atomic claim with calendar-month reset ──
@@ -146,7 +151,12 @@ async function claimQuota(db, userId) {
     throw err;
   }
 
-  return { plan: 'free', type: 'free' };
+  return {
+    plan: 'free',
+    type: 'free',
+    used: updated.freeUsedThisMonth,
+    limit: FREE_MONTHLY_QUOTA,
+  };
 }
 
 /**
@@ -232,7 +242,16 @@ router.post('/interpret', authenticate, async (req, res) => {
     return res.status(201).json({ interpretation, dreamId: null, warning: 'Dream not saved' });
   }
 
-  return res.status(201).json({ dreamId: insertedId, interpretation });
+  return res.status(201).json({
+    dreamId: insertedId,
+    interpretation,
+    quotaUsage: {
+      plan: quotaInfo.plan,
+      used: quotaInfo.used,
+      limit: quotaInfo.limit,
+      remaining: Math.max(0, quotaInfo.limit - quotaInfo.used),
+    },
+  });
 });
 
 // ── GET /api/dreams ───────────────────────────────────────────────────────────

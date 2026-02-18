@@ -459,7 +459,7 @@
                         'Authorization': `Bearer ${authToken}`
                     },
                     body: JSON.stringify({
-                        dream_text: dreamText,
+                        dreamText,
                         metadata: {
                             interpretation_type: interpretationType,
                             tags,
@@ -503,12 +503,27 @@
                 showMessage('error', dream.warning);
             }
             
-            // Display remaining credits if available
-            if (dream.creditsRemaining) {
-                const creditsMsg = `📊 Credits Remaining: ${dream.creditsRemaining.display}`;
-                const existingMsg = document.getElementById('message').textContent;
-                if (!existingMsg.includes('Credits Remaining')) {
-                    showMessage('info', creditsMsg);
+            // Update quota banner from the response's quotaUsage field
+            if (dream.quotaUsage) {
+                const q = dream.quotaUsage;
+                const remaining = q.remaining ?? Math.max(0, q.limit - q.used);
+                const label = q.plan === 'free'
+                    ? `💤 Free quota: ${q.used} / ${q.limit} used — ${remaining} interpretation${remaining === 1 ? '' : 's'} remaining this month`
+                    : `💎 ${q.plan.charAt(0).toUpperCase() + q.plan.slice(1)} plan: ${q.used} / ${q.limit} used — ${remaining} remaining`;
+
+                let banner = document.getElementById('quotaBanner');
+                if (!banner) {
+                    banner = document.createElement('div');
+                    banner.id = 'quotaBanner';
+                    banner.style.cssText = 'margin-top:16px;padding:10px 16px;border-radius:8px;font-size:0.9em;text-align:center;';
+                    document.getElementById('interpretationResult').prepend(banner);
+                }
+                banner.style.background = remaining === 0 ? '#fff3cd' : '#e8f5e9';
+                banner.style.color      = remaining === 0 ? '#856404' : '#2e7d32';
+                banner.textContent = label;
+
+                if (remaining === 0) {
+                    showMessage('info', '⚠️ You\'ve used all free interpretations this month. Upgrade to continue.');
                 }
             }
 
