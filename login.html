@@ -188,16 +188,6 @@
             <a href="#" id="toggleLink" onclick="toggleMode(event)">Sign up</a>
         </div>
 
-        <div class="test-account">
-            <strong>Quick Test:</strong>
-            <button onclick="fillTestCredentials()" style="margin: 10px 0; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                🚀 Login as Demo User
-            </button>
-            <br><br>
-            Or manually enter:<br>
-            Email: <code>sample1@gmail.com</code><br>
-            Password: <code>sample</code>
-        </div>
     </div>
 
     <script src="config.js"></script>
@@ -353,35 +343,6 @@
             }
         });
 
-        // Demo login — hits /auth/demo which creates the account if needed
-        async function fillTestCredentials() {
-            const btn = document.querySelector('[onclick="fillTestCredentials()"]');
-            if (btn) { btn.disabled = true; btn.textContent = '⏳ Logging in...'; }
-            showMessage('🚀 Logging in as demo user...', 'info');
-
-            try {
-                const response = await fetch(`${API_URL}/auth/demo`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    signal: AbortSignal.timeout(10000)
-                });
-                const data = await response.json();
-
-                if (response.ok) {
-                    localStorage.setItem('accessToken', data.accessToken);
-                    localStorage.setItem('currentUser', JSON.stringify(data.user));
-                    showMessage('✅ Demo login successful! Redirecting...', 'success');
-                    setTimeout(() => { window.location.href = 'profile-dashboard.html'; }, 1000);
-                } else {
-                    showMessage(data.error || 'Demo login failed. Try again.', 'error');
-                    if (btn) { btn.disabled = false; btn.textContent = '🚀 Login as Demo User'; }
-                }
-            } catch (err) {
-                showMessage('Connection error. Is the server running?', 'error');
-                if (btn) { btn.disabled = false; btn.textContent = '🚀 Login as Demo User'; }
-            }
-        }
-
         // Check if already logged in
         window.onload = () => {
             const token = localStorage.getItem('accessToken');
@@ -390,13 +351,6 @@
                 setTimeout(() => {
                     window.location.href = 'profile-dashboard.html';
                 }, 1500);
-            } else {
-                // Check if test mode was requested from homepage
-                const useTestCredentials = localStorage.getItem('useTestCredentials');
-                if (useTestCredentials === 'true') {
-                    localStorage.removeItem('useTestCredentials');
-                    fillTestCredentials();
-                }
             }
         };
     </script>
