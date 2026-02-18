@@ -298,7 +298,7 @@
                         console.log(`✅ Success with ${currentUrl}`);
                         break;
                     } else {
-                        lastError = data.message || `Server error (${response.status}): ${response.statusText}`;
+                        lastError = data.error || data.message || `Server error (${response.status}): ${response.statusText}`;
                         console.log(`❌ Failed with ${currentUrl}: ${lastError}`);
                     }
                 } catch (error) {

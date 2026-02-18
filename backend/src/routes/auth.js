@@ -68,6 +68,7 @@ router.post('/signup', authLimiter, async (req, res) => {
     const token = signToken(result.insertedId);
 
     return res.status(201).json({
+      accessToken: token,
       token,
       user: {
         id: result.insertedId,
@@ -110,6 +111,7 @@ router.post('/login', authLimiter, async (req, res) => {
     const token = signToken(user._id);
 
     return res.json({
+      accessToken: token,
       token,
       user: {
         id: user._id,
