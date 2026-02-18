@@ -689,10 +689,9 @@
                 const remaining = Math.max(0, limit - used);
 
                 planBadge.className   = 'badge badge-basic';
-                planBadge.textContent = 'Basic Plan - $4.99–$7.99 / mo';
-                userCredits.innerHTML = '♾️ Unlimited';
+                planBadge.textContent = 'Basic Plan - $4.99 / mo';
 
-                creditsRow.style.display      = 'block';
+                creditsRow.style.display      = 'none';
                 monthlyLimitRow.style.display = 'block';
                 monthlyUsageRow.style.display = 'block';
 
@@ -710,10 +709,9 @@
                 const remaining = Math.max(0, limit - used);
 
                 planBadge.className   = 'badge badge-pro';
-                planBadge.textContent = 'Pro Plan - $12.99–$19.99 / mo';
-                userCredits.innerHTML = '♾️ Unlimited';
+                planBadge.textContent = 'Pro Plan - $12.99 / mo';
 
-                creditsRow.style.display      = 'block';
+                creditsRow.style.display      = 'none';
                 monthlyLimitRow.style.display = 'block';
                 monthlyUsageRow.style.display = 'block';
 
