@@ -179,7 +179,8 @@
         async function checkBackendStatus() {
             const statusEl = document.getElementById('status');
             try {
-                const response = await fetch(API_CONFIG.API_BASE_URL + '/health');
+                const baseUrl = API_CONFIG.API_BASE_URL.replace(/\/api\/v1$/, '');
+                const response = await fetch(baseUrl + '/health');
                 if (response.ok) {
                     const data = await response.json();
                     statusEl.className = 'status success';
