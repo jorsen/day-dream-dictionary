@@ -155,6 +155,34 @@
             border-radius: 4px;
             font-family: monospace;
         }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        .password-wrapper input {
+            padding-right: 44px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            width: auto;
+            font-size: 18px;
+            color: #888;
+            line-height: 1;
+        }
+
+        .toggle-password:hover {
+            color: #667eea;
+            transform: translateY(-50%);
+        }
     </style>
 </head>
 <body>
@@ -172,7 +200,10 @@
             
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" required placeholder="Enter your password">
+                <div class="password-wrapper">
+                    <input type="password" id="password" required placeholder="Enter your password">
+                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" id="eyeBtn" aria-label="Show password">👁️</button>
+                </div>
             </div>
             
             <div class="form-group" id="nameGroup" style="display: none;">
@@ -194,6 +225,20 @@
     <script>
         const API_URL = API_CONFIG.API_BASE_URL;
         let isSignup = false;
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('password');
+            const btn   = document.getElementById('eyeBtn');
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🙈';
+                btn.setAttribute('aria-label', 'Hide password');
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁️';
+                btn.setAttribute('aria-label', 'Show password');
+            }
+        }
 
         function showMessage(text, type) {
             const messageEl = document.getElementById('message');
