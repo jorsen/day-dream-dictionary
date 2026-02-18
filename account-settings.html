@@ -402,9 +402,7 @@
 
                 const planLabels = { basic: 'Basic Plan — $4.99/mo', pro: 'Pro Plan — $12.99/mo' };
                 const planLabel  = planLabels[sub.plan] ?? sub.plan;
-                const periodEnd  = sub.currentPeriodEnd
-                    ? new Date(sub.currentPeriodEnd).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
-                    : '—';
+                const periodEnd  = formatDate(sub.currentPeriodEnd);
 
                 const isCanceling = sub.cancelAtPeriodEnd;
                 const statusBadge = isCanceling
@@ -450,6 +448,21 @@
                 el.textContent = 'Unable to load subscription details.';
                 console.error('[account-settings] subscription details error:', err);
             }
+        }
+
+        function formatDate(val) {
+            if (!val) return '—';
+            let ms;
+            if (typeof val === 'number') {
+                // Heuristic: timestamps < 1e12 are seconds, not milliseconds
+                ms = val < 1_000_000_000_000 ? val * 1000 : val;
+            } else {
+                ms = new Date(val).getTime();
+            }
+            if (isNaN(ms) || ms < 0) return '—';
+            const d = new Date(ms);
+            if (d.getFullYear() < 2000) return '—'; // sanity guard
+            return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
         }
 
         function capitalize(str) {

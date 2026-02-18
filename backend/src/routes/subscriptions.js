@@ -241,11 +241,29 @@ router.get('/details', authenticate, async (req, res) => {
       }
     }
 
+    // Normalise currentPeriodEnd: MongoDB may have stored it as a Date object,
+    // a millisecond timestamp, or (from legacy code) a Unix second timestamp.
+    // Always return a proper ISO string so the frontend can safely call new Date().
+    const rawEnd = sub.currentPeriodEnd;
+    let periodEndISO = null;
+    if (rawEnd) {
+      let ms;
+      if (rawEnd instanceof Date) {
+        ms = rawEnd.getTime();
+      } else if (typeof rawEnd === 'number') {
+        // Heuristic: real dates are > year 2020 (1577836800 seconds / 1577836800000 ms)
+        ms = rawEnd < 1_000_000_000_000 ? rawEnd * 1000 : rawEnd;
+      } else {
+        ms = new Date(rawEnd).getTime();
+      }
+      periodEndISO = isNaN(ms) ? null : new Date(ms).toISOString();
+    }
+
     return res.json({
       subscription: {
         plan:             sub.plan,
         status:           sub.status,
-        currentPeriodEnd: sub.currentPeriodEnd,
+        currentPeriodEnd: periodEndISO,
         cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? false,
         monthlyDeepLimit: sub.monthlyDeepLimit,
         monthlyDeepUsed:  sub.monthlyDeepUsed ?? 0,
