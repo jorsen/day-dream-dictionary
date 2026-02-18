@@ -137,6 +137,14 @@ app.get(`${v1}/profile`, authenticate, async (req, res) => {
   }
 });
 
+// ── GET /api/v1/config/stripe-key ─────────────────────────────────────────────
+// Returns the Stripe publishable key so the frontend can init Stripe.js safely.
+app.get(`${v1}/config/stripe-key`, (_req, res) => {
+  const key = process.env.STRIPE_PUBLISHABLE_KEY;
+  if (!key) return res.status(503).json({ error: 'Stripe not configured' });
+  res.json({ publishableKey: key });
+});
+
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) =>
   res.json({ status: 'ok', timestamp: new Date().toISOString() }),
