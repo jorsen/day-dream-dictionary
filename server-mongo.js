@@ -361,25 +361,35 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
     const { dream_text } = req.body;
     if (!dream_text) return res.status(400).json({ error: 'Dream text required' });
 
-      const metadata = req.body.metadata || {};
-      const interpretationType = metadata.interpretation_type || metadata.interpretationType || 'basic';
-      const interpretation = generateMockInterpretation(dream_text, { type: interpretationType });
+    const metadata = req.body.metadata || {};
+    const interpretationType = metadata.interpretation_type || metadata.interpretationType || 'basic';
 
-    // Get current monthly usage
+    // Get current monthly usage and subscription BEFORE generating anything
     const monthlyUsage = await getMonthlyUsage(req.user_id);
-    
-    // Get user subscription to check limits
     const profile = await db.collection('profiles').findOne({ user_id: req.user_id }) || {};
     const userSub = profile.subscription || {
       plan: 'basic',
       monthlyLimits: { basic: 20, deep: 5 }
     };
-    
-    // Check if user has exceeded their monthly limit
+
     const typeKey = interpretationType === 'deep' ? 'deep' : 'basic';
     const currentUsage = monthlyUsage[typeKey] || 0;
     const limit = userSub.monthlyLimits?.[typeKey] || (typeKey === 'deep' ? 5 : 20);
-    const hasExceededLimit = currentUsage >= limit;
+
+    // Block request if limit is reached
+    if (currentUsage >= limit) {
+      return res.status(429).json({
+        error: `Monthly ${typeKey} interpretation limit reached (${limit}/${limit})`,
+        limitExceeded: true,
+        creditsRemaining: {
+          basic: Math.max(0, (userSub.monthlyLimits?.basic || 20) - monthlyUsage.basic),
+          deep: Math.max(0, (userSub.monthlyLimits?.deep || 5) - monthlyUsage.deep)
+        },
+        monthlyUsage: { basic: monthlyUsage.basic, deep: monthlyUsage.deep }
+      });
+    }
+
+    const interpretation = generateMockInterpretation(dream_text, { type: interpretationType });
 
     const dream = {
       _id: new ObjectId(),
@@ -399,13 +409,11 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
     
     console.log('Interpret request:', { input: dream_text.slice(0,200), type: interpretationType, usage: newUsage });
     
-    res.json({ 
-      id: dream._id.toString(), 
+    res.json({
+      id: dream._id.toString(),
       dream_text,
       interpretation,
       created_at: dream.created_at.toISOString(),
-      limitExceeded: hasExceededLimit,
-      warning: hasExceededLimit ? `⚠️ You've reached your ${typeKey} interpretation limit for this month (${limit}/${limit})` : null,
       creditsRemaining: {
         basic: basicRemaining,
         deep: deepRemaining,
