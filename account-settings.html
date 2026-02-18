@@ -170,24 +170,7 @@
             border: 1px solid #ffc107;
         }
 
-        .verify-link-box {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 12px 14px;
-            font-size: 13px;
-            word-break: break-all;
-            color: #495057;
-            margin-top: 12px;
-            display: none;
-        }
-
-        .verify-link-box a {
-            color: #667eea;
-            font-weight: 600;
-        }
-
-        .btn-outline {
+.btn-outline {
             width: 100%;
             padding: 11px;
             background: white;
@@ -237,15 +220,9 @@
                 <h2>✉️ Email Verification</h2>
                 <div id="verifyStatus" class="verify-status unverified">⏳ Checking status...</div>
                 <div id="verifyActions" style="display:none;">
-                    <p style="color:#666;font-size:14px;margin-bottom:14px;">Your email address has not been verified. Click below to generate a verification link.</p>
-                    <button class="btn-outline" id="sendVerifyBtn" onclick="sendVerification()">Send Verification Link</button>
+                    <p style="color:#666;font-size:14px;margin-bottom:14px;">Your email address has not been verified. Click below to send a verification link to your inbox.</p>
+                    <button class="btn-outline" id="sendVerifyBtn" onclick="sendVerification()">Send Verification Email</button>
                     <div class="msg" id="verifyMsg"></div>
-                    <div class="verify-link-box" id="verifyLinkBox">
-                        <strong>Your verification link:</strong><br>
-                        <a id="verifyLinkAnchor" href="#" target="_blank"></a>
-                        <br><br>
-                        <small style="color:#888;">This link expires in 24 hours. In production this would be sent to your inbox.</small>
-                    </div>
                 </div>
             </div>
 
@@ -327,11 +304,9 @@
         async function sendVerification() {
             const btn = document.getElementById('sendVerifyBtn');
             const msg = document.getElementById('verifyMsg');
-            const linkBox = document.getElementById('verifyLinkBox');
-            const linkAnchor = document.getElementById('verifyLinkAnchor');
 
             btn.disabled = true;
-            btn.textContent = 'Generating link...';
+            btn.textContent = 'Sending...';
             try {
                 const res = await fetch(`${API_URL}/auth/send-verification`, {
                     method: 'POST',
@@ -339,18 +314,15 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    linkAnchor.href = data.verifyUrl;
-                    linkAnchor.textContent = data.verifyUrl;
-                    linkBox.style.display = 'block';
-                    showMsg(msg, 'Link generated! Click it below to verify your email.', 'success');
+                    showMsg(msg, 'Verification email sent! Check your inbox (and spam folder).', 'success');
                 } else {
-                    showMsg(msg, data.error || 'Failed to generate link.', 'error');
+                    showMsg(msg, data.error || 'Failed to send verification email.', 'error');
                 }
             } catch {
                 showMsg(msg, 'Network error. Please try again.', 'error');
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Send Verification Link';
+                btn.textContent = 'Send Verification Email';
             }
         }
 
