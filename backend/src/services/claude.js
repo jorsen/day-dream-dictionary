@@ -5,15 +5,15 @@
  * available in Node 18+. Validates the structured JSON response with Zod and
  * retries once on parse/validation failure.
  *
- * Model   : claude-3-5-sonnet-20241022
+ * Model   : claude-haiku-4-5-20251001
  * Temp    : 0.35   (deterministic enough, creative enough)
- * Tokens  : 1 024 max output (the JSON schema fits comfortably)
+ * Tokens  : 1 200 max output (the JSON schema fits comfortably)
  */
 
 import { interpretationSchema } from '../validation/schemas.js';
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-3-5-sonnet-20241022';
+const MODEL = 'claude-haiku-4-5-20251001';
 const TEMPERATURE = 0.35;
 const MAX_TOKENS = 1200;
 
