@@ -342,14 +342,28 @@ app.post('/api/v1/dreams', checkDB, authMiddleware, async (req, res) => {
   }
 });
 
-// Dreams: Get all for user
+// Dreams: Get all for user (paginated)
 app.get('/api/v1/dreams', checkDB, authMiddleware, async (req, res) => {
   try {
-    const dreams = await db.collection('dreams')
-      .find({ user_id: req.user_id })
-      .sort({ created_at: -1 })
-      .toArray();
-    res.json({ dreams: dreams.map(d => ({ id: d._id.toString(), ...d })) });
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const collection = db.collection('dreams');
+    const [dreams, total] = await Promise.all([
+      collection.find({ user_id: req.user_id }).sort({ created_at: -1 }).skip(skip).limit(limit).toArray(),
+      collection.countDocuments({ user_id: req.user_id })
+    ]);
+
+    res.json({
+      dreams: dreams.map(d => ({ id: d._id.toString(), ...d })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

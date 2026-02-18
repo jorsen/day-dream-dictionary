@@ -941,10 +941,14 @@
             }
         }
 
+        // Pagination state
+        let dreamsPage = 1;
+        const DREAMS_PER_PAGE = 10;
+
         // Load recent dreams
-        async function loadRecentDreams() {
+        async function loadRecentDreams(page = 1) {
             try {
-                const response = await fetch(`${API_URL}/dreams?page=1&limit=5&sortBy=created_at&order=desc`, {
+                const response = await fetch(`${API_URL}/dreams?page=${page}&limit=${DREAMS_PER_PAGE}`, {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
@@ -953,7 +957,8 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    displayRecentDreams(data.dreams || []);
+                    dreamsPage = page;
+                    displayRecentDreams(data.dreams || [], data.pagination);
                 } else {
                     displayRecentDreams([]);
                 }
@@ -964,7 +969,7 @@
         }
 
         // Display recent dreams in the UI
-        function displayRecentDreams(dreams) {
+        function displayRecentDreams(dreams, pagination) {
             const dreamsList = document.getElementById('dreamsList');
 
             if (!dreams || dreams.length === 0) {
@@ -985,6 +990,26 @@
                     </div>
                 `;
             });
+
+            // Pagination controls
+            if (pagination && pagination.totalPages > 1) {
+                const { page, totalPages, total } = pagination;
+                const start = (page - 1) * DREAMS_PER_PAGE + 1;
+                const end = Math.min(page * DREAMS_PER_PAGE, total);
+                html += `
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #eee;">
+                        <button onclick="loadRecentDreams(${page - 1})" ${page <= 1 ? 'disabled' : ''}
+                            style="padding:6px 14px;border:1px solid #667eea;border-radius:6px;background:${page <= 1 ? '#f0f0f0' : '#667eea'};color:${page <= 1 ? '#aaa' : '#fff'};cursor:${page <= 1 ? 'default' : 'pointer'};font-size:13px;">
+                            ← Prev
+                        </button>
+                        <span style="font-size:13px;color:#666;">${start}–${end} of ${total}</span>
+                        <button onclick="loadRecentDreams(${page + 1})" ${page >= totalPages ? 'disabled' : ''}
+                            style="padding:6px 14px;border:1px solid #667eea;border-radius:6px;background:${page >= totalPages ? '#f0f0f0' : '#667eea'};color:${page >= totalPages ? '#aaa' : '#fff'};cursor:${page >= totalPages ? 'default' : 'pointer'};font-size:13px;">
+                            Next →
+                        </button>
+                    </div>
+                `;
+            }
 
             dreamsList.innerHTML = html;
         }
