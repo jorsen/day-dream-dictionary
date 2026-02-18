@@ -147,44 +147,6 @@
             text-decoration: underline;
         }
 
-        .verify-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 14px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 500;
-            margin-bottom: 16px;
-        }
-
-        .verify-status.verified {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .verify-status.unverified {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffc107;
-        }
-
-.btn-outline {
-            width: 100%;
-            padding: 11px;
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-        }
-
-        .btn-outline:hover { background: #667eea; color: white; }
-        .btn-outline:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -213,17 +175,6 @@
                 </div>
                 <button class="btn" id="saveDetailsBtn" onclick="saveAccountDetails()">Save Details</button>
                 <div class="msg" id="detailsMsg"></div>
-            </div>
-
-            <!-- Email Verification -->
-            <div class="card">
-                <h2>✉️ Email Verification</h2>
-                <div id="verifyStatus" class="verify-status unverified">⏳ Checking status...</div>
-                <div id="verifyActions" style="display:none;">
-                    <p style="color:#666;font-size:14px;margin-bottom:14px;">Your email address has not been verified. Click below to send a verification link to your inbox.</p>
-                    <button class="btn-outline" id="sendVerifyBtn" onclick="sendVerification()">Send Verification Email</button>
-                    <div class="msg" id="verifyMsg"></div>
-                </div>
             </div>
 
             <!-- Change Password -->
@@ -261,69 +212,6 @@
             // Pre-fill fields
             document.getElementById('settingsDisplayName').value = currentUser.displayName || '';
             document.getElementById('settingsEmail').value = currentUser.email || '';
-            // Load fresh verification status from server
-            loadVerificationStatus();
-        }
-
-        async function loadVerificationStatus() {
-            const statusEl = document.getElementById('verifyStatus');
-            const actionsEl = document.getElementById('verifyActions');
-            try {
-                const res = await fetch(`${API_URL}/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    // Sync to localStorage
-                    currentUser = { ...currentUser, emailVerified: data.emailVerified };
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    renderVerifyStatus(data.emailVerified);
-                } else {
-                    // Fall back to cached value
-                    renderVerifyStatus(currentUser.emailVerified || false);
-                }
-            } catch {
-                renderVerifyStatus(currentUser.emailVerified || false);
-            }
-        }
-
-        function renderVerifyStatus(verified) {
-            const statusEl = document.getElementById('verifyStatus');
-            const actionsEl = document.getElementById('verifyActions');
-            if (verified) {
-                statusEl.className = 'verify-status verified';
-                statusEl.textContent = '✅ Your email is verified';
-                actionsEl.style.display = 'none';
-            } else {
-                statusEl.className = 'verify-status unverified';
-                statusEl.textContent = '⚠️ Email not verified';
-                actionsEl.style.display = 'block';
-            }
-        }
-
-        async function sendVerification() {
-            const btn = document.getElementById('sendVerifyBtn');
-            const msg = document.getElementById('verifyMsg');
-
-            btn.disabled = true;
-            btn.textContent = 'Sending...';
-            try {
-                const res = await fetch(`${API_URL}/auth/send-verification`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showMsg(msg, 'Verification email sent! Check your inbox (and spam folder).', 'success');
-                } else {
-                    showMsg(msg, data.error || 'Failed to send verification email.', 'error');
-                }
-            } catch {
-                showMsg(msg, 'Network error. Please try again.', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Send Verification Email';
-            }
         }
 
         async function saveAccountDetails() {

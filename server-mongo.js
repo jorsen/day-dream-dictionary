@@ -4,23 +4,6 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { MongoClient, ObjectId } = require('mongodb');
-const nodemailer = require('nodemailer');
-
-// Build SMTP transporter only when env vars are present
-let emailTransporter = null;
-if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-  emailTransporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: parseInt(process.env.EMAIL_PORT || '587') === 465,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-    }
-  });
-} else {
-  console.warn('⚠️  Email env vars (EMAIL_HOST, EMAIL_USER, EMAIL_PASS) not set — email verification will not work.');
-}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -256,7 +239,6 @@ app.post('/api/v1/auth/signup', checkDB, async (req, res) => {
       email,
       password: hashPassword(password),
       displayName: displayName || email.split('@')[0],
-      emailVerified: false,
       created_at: new Date()
     });
 
@@ -331,7 +313,7 @@ app.get('/api/v1/auth/me', authMiddleware, async (req, res) => {
   try {
     const user = await db.collection('users').findOne({ _id: req.user_id });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ id: user._id, email: user.email, displayName: user.displayName, emailVerified: user.emailVerified || false });
+    res.json({ id: user._id, email: user.email, displayName: user.displayName });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -680,92 +662,6 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
     } catch (err) {
       console.error('Change password error:', err);
       res.status(500).json({ error: 'Failed to change password', message: err.message });
-    }
-  });
-
-  // Send email verification token
-  app.post('/api/v1/auth/send-verification', checkDB, authMiddleware, async (req, res) => {
-    try {
-      // Require email service to be configured
-      if (!emailTransporter) {
-        return res.status(503).json({ error: 'Email service is not configured. Contact support.' });
-      }
-
-      const user = await db.collection('users').findOne({ _id: req.user_id });
-      if (!user) return res.status(404).json({ error: 'User not found' });
-      if (user.emailVerified) return res.status(400).json({ error: 'Email is already verified' });
-
-      // Rate limit: only allow one request per 60 seconds
-      const recentToken = await db.collection('verification_tokens').findOne({
-        user_id: req.user_id,
-        type: 'email',
-        created_at: { $gte: new Date(Date.now() - 60 * 1000) }
-      });
-      if (recentToken) {
-        return res.status(429).json({ error: 'Please wait 60 seconds before requesting another verification email.' });
-      }
-
-      const crypto = require('crypto');
-      const token = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-      const createdAt = new Date();
-
-      await db.collection('verification_tokens').deleteMany({ user_id: req.user_id, type: 'email' });
-      await db.collection('verification_tokens').insertOne({
-        token,
-        user_id: req.user_id,
-        type: 'email',
-        expires_at: expiresAt,
-        created_at: createdAt
-      });
-
-      const baseUrl = process.env.APP_BASE_URL || req.headers.origin || `${req.protocol}://${req.get('host')}`;
-      const verifyUrl = `${baseUrl}/verify-email.html?token=${token}`;
-
-      // Send verification email — link is ONLY delivered to the user's inbox
-      const fromAddress = process.env.EMAIL_FROM || `Day Dream Dictionary <${process.env.EMAIL_USER}>`;
-      await emailTransporter.sendMail({
-        from: fromAddress,
-        to: user.email,
-        subject: 'Verify your email — Day Dream Dictionary',
-        html: `
-          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#f9f9f9;border-radius:12px;">
-            <h2 style="color:#764ba2;margin-bottom:8px;">Verify your email</h2>
-            <p style="color:#444;margin-bottom:24px;">Click the button below to confirm your email address for Day Dream Dictionary. This link expires in 24 hours.</p>
-            <a href="${verifyUrl}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">Verify Email</a>
-            <p style="margin-top:24px;color:#888;font-size:13px;">If you didn't request this, you can safely ignore this email.</p>
-          </div>
-        `,
-        text: `Verify your email address by visiting: ${verifyUrl}\n\nThis link expires in 24 hours.`
-      });
-
-      // Never return the verifyUrl — only the rightful inbox owner can access it
-      res.json({ message: 'Verification email sent. Please check your inbox (and spam folder).' });
-    } catch (err) {
-      console.error('Send verification error:', err);
-      res.status(500).json({ error: 'Failed to send verification email. Please try again later.' });
-    }
-  });
-
-  // Verify email via token
-  app.get('/api/v1/auth/verify-email', checkDB, async (req, res) => {
-    try {
-      const { token } = req.query;
-      if (!token) return res.status(400).json({ error: 'Token is required' });
-
-      const record = await db.collection('verification_tokens').findOne({ token, type: 'email' });
-      if (!record) return res.status(400).json({ error: 'Invalid or expired verification token' });
-      if (new Date() > new Date(record.expires_at)) {
-        await db.collection('verification_tokens').deleteOne({ token });
-        return res.status(400).json({ error: 'Verification token has expired. Please request a new one.' });
-      }
-
-      await db.collection('users').updateOne({ _id: record.user_id }, { $set: { emailVerified: true } });
-      await db.collection('verification_tokens').deleteOne({ token });
-      res.json({ message: 'Email verified successfully' });
-    } catch (err) {
-      console.error('Verify email error:', err);
-      res.status(500).json({ error: 'Failed to verify email', message: err.message });
     }
   });
 
