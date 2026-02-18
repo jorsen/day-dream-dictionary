@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { connectDB, getDB } from './db.js';
 import { authenticate } from './middleware/auth.js';
 import authRouter from './routes/auth.js';
@@ -7,6 +9,11 @@ import dreamsRouter from './routes/dreams.js';
 import subscriptionsRouter from './routes/subscriptions.js';
 import accountRouter from './routes/account.js';
 import webhookRouter from './routes/webhook.js';
+
+// ── Static file root (two levels up from backend/src/) ────────────────────────
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = dirname(__filename);
+const STATIC_DIR = join(__dirname, '..', '..');
 
 // ── Validate required env vars ────────────────────────────────────────────────
 const REQUIRED_ENV = [
@@ -135,8 +142,17 @@ app.get('/health', (_req, res) =>
   res.json({ status: 'ok', timestamp: new Date().toISOString() }),
 );
 
+// ── Static files (HTML pages, CSS, JS, images) ────────────────────────────────
+app.use(express.static(STATIC_DIR));
+
 // ── 404 ───────────────────────────────────────────────────────────────────────
-app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
+// API paths return JSON; everything else falls back to index.html
+app.use((req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  res.sendFile(join(STATIC_DIR, 'index.html'));
+});
 
 // ── Global error handler ──────────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
