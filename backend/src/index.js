@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
-import { connectDB } from './db.js';
+import { connectDB, getDB } from './db.js';
+import { authenticate } from './middleware/auth.js';
 import authRouter from './routes/auth.js';
 import dreamsRouter from './routes/dreams.js';
 import subscriptionsRouter from './routes/subscriptions.js';
@@ -45,7 +46,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Stripe webhook needs raw body — register BEFORE express.json() ────────────
+// ── Stripe webhook — raw body, registered BEFORE express.json() ───────────────
+// Note: also register the legacy path so existing Stripe configs keep working
+app.use(
+  '/api/v1/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  webhookRouter,
+);
 app.use(
   '/api/stripe/webhook',
   express.raw({ type: 'application/json' }),
@@ -65,11 +72,63 @@ app.use((_req, res, next) => {
   next();
 });
 
-// ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/auth', authRouter);
-app.use('/api/dreams', dreamsRouter);
-app.use('/api/subscriptions', subscriptionsRouter);
-app.use('/api/account', accountRouter);
+// ── API v1 routes — matches frontend config.js API_BASE_URL (/api/v1) ─────────
+const v1 = '/api/v1';
+
+app.use(`${v1}/auth`,          authRouter);
+app.use(`${v1}/dreams`,        dreamsRouter);
+app.use(`${v1}/subscriptions`, subscriptionsRouter);
+app.use(`${v1}/account`,       accountRouter);
+
+// ── GET /api/v1/profile ───────────────────────────────────────────────────────
+// Consumed by dream-interpretation.html and other pages to get user + plan data.
+// Returns the shape those pages already expect.
+app.get(`${v1}/profile`, authenticate, async (req, res) => {
+  try {
+    const db = getDB();
+
+    const [sub, user] = await Promise.all([
+      db.collection('subscriptions').findOne(
+        { userId: req.user._id },
+        { projection: { stripeCustomerId: 0, stripeSubId: 0 } },
+      ),
+      db.collection('users').findOne(
+        { _id: req.user._id },
+        { projection: { freeUsedThisMonth: 1, freeMonthStart: 1, displayName: 1 } },
+      ),
+    ]);
+
+    const isActiveSub = sub && sub.status === 'active' && sub.currentPeriodEnd > new Date();
+    const plan = isActiveSub ? sub.plan : 'free';
+
+    const planLabels = { free: 'Free Plan', basic: 'Basic Plan', pro: 'Pro Plan' };
+
+    return res.json({
+      profile: {
+        display_name:  req.user.displayName,
+        locale:        'en',
+        preferences:   {},
+        credits:       plan === 'free' ? null : 'unlimited',
+        dream_count:   0, // populated from dreams collection if needed later
+        subscription: {
+          plan,
+          planName:         planLabels[plan] ?? 'Free Plan',
+          planType:         plan,
+          status:           sub?.status ?? 'none',
+          currentPeriodEnd: sub?.currentPeriodEnd ?? null,
+          monthlyDeepLimit: sub?.monthlyDeepLimit ?? null,
+          monthlyDeepUsed:  sub?.monthlyDeepUsed  ?? 0,
+          // Free-tier quota fields
+          monthlyFreeLimit: 3,
+          freeUsedThisMonth: user?.freeUsedThisMonth ?? 0,
+        },
+      },
+    });
+  } catch (err) {
+    console.error('[profile]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) =>

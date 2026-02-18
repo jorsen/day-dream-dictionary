@@ -1,9 +1,9 @@
 /**
  * Authentication routes
  *
- * POST /api/auth/signup  — register new user
- * POST /api/auth/login   — authenticate and receive JWT
- * GET  /api/auth/me      — return current user (requires auth)
+ * POST /api/v1/auth/signup  — register new user
+ * POST /api/v1/auth/login   — authenticate and receive JWT
+ * GET  /api/v1/auth/me      — return current user (requires auth)
  */
 
 import { Router } from 'express';
