@@ -254,6 +254,71 @@ router.post('/interpret', authenticate, async (req, res) => {
   });
 });
 
+// ── GET /api/dreams/stats ─────────────────────────────────────────────────────
+// Must be declared BEFORE /:id so "stats" is not captured as an ObjectId param.
+router.get('/stats', authenticate, async (req, res) => {
+  const db = getDB();
+
+  try {
+    const monthStart = currentMonthStart();
+
+    const [totalDreams, thisMonth, sub, user] = await Promise.all([
+      db.collection('dreams').countDocuments({ userId: req.user._id }),
+      db.collection('dreams').countDocuments({
+        userId: req.user._id,
+        createdAt: { $gte: monthStart },
+      }),
+      db.collection('subscriptions').findOne({
+        userId: req.user._id,
+        status: 'active',
+        currentPeriodEnd: { $gt: new Date() },
+      }),
+      db.collection('users').findOne(
+        { _id: req.user._id },
+        { projection: { freeUsedThisMonth: 1 } },
+      ),
+    ]);
+
+    let creditsUsed, creditsRemaining, monthlyUsage, monthlyRemaining;
+
+    if (sub) {
+      const used      = sub.monthlyDeepUsed  ?? 0;
+      const limit     = sub.monthlyDeepLimit ?? (sub.plan === 'pro' ? 100 : 20);
+      const remaining = Math.max(0, limit - used);
+      creditsUsed      = used;
+      creditsRemaining = `${remaining} deep`;
+      monthlyUsage     = { deep: used };
+      monthlyRemaining = { deep: remaining };
+    } else {
+      const used      = user?.freeUsedThisMonth ?? 0;
+      const remaining = Math.max(0, FREE_MONTHLY_QUOTA - used);
+      creditsUsed      = used;
+      creditsRemaining = `${remaining} free`;
+      monthlyUsage     = { deep: used };
+      monthlyRemaining = { deep: remaining };
+    }
+
+    return res.json({
+      stats: {
+        totalDreams,
+        total_dreams:         totalDreams,
+        totalInterpretations: totalDreams,
+        total_interpretations: totalDreams,
+        thisMonth,
+        this_month:    thisMonth,
+        creditsUsed,
+        credits_used:  creditsUsed,
+        creditsRemaining,
+        monthlyUsage,
+        monthlyRemaining,
+      },
+    });
+  } catch (err) {
+    console.error('[dreams/stats]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── GET /api/dreams ───────────────────────────────────────────────────────────
 router.get('/', authenticate, async (req, res) => {
   const db = getDB();
