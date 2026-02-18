@@ -239,6 +239,7 @@ app.post('/api/v1/auth/signup', checkDB, async (req, res) => {
       email,
       password: hashPassword(password),
       displayName: displayName || email.split('@')[0],
+      emailVerified: false,
       created_at: new Date()
     });
 
@@ -313,7 +314,7 @@ app.get('/api/v1/auth/me', authMiddleware, async (req, res) => {
   try {
     const user = await db.collection('users').findOne({ _id: req.user_id });
     if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json({ id: user._id, email: user.email, display_name: user.displayName });
+    res.json({ id: user._id, email: user.email, displayName: user.displayName, emailVerified: user.emailVerified || false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -662,6 +663,51 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
     } catch (err) {
       console.error('Change password error:', err);
       res.status(500).json({ error: 'Failed to change password', message: err.message });
+    }
+  });
+
+  // Send email verification token
+  app.post('/api/v1/auth/send-verification', checkDB, authMiddleware, async (req, res) => {
+    try {
+      const user = await db.collection('users').findOne({ _id: req.user_id });
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      if (user.emailVerified) return res.status(400).json({ error: 'Email is already verified' });
+
+      const crypto = require('crypto');
+      const token = crypto.randomBytes(24).toString('hex');
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+      await db.collection('verification_tokens').deleteMany({ user_id: req.user_id, type: 'email' });
+      await db.collection('verification_tokens').insertOne({ token, user_id: req.user_id, type: 'email', expires_at: expiresAt });
+
+      const baseUrl = req.headers.origin || `${req.protocol}://${req.get('host')}`;
+      const verifyUrl = `${baseUrl}/verify-email.html?token=${token}`;
+      res.json({ message: 'Verification token created', verifyUrl });
+    } catch (err) {
+      console.error('Send verification error:', err);
+      res.status(500).json({ error: 'Failed to create verification token', message: err.message });
+    }
+  });
+
+  // Verify email via token
+  app.get('/api/v1/auth/verify-email', checkDB, async (req, res) => {
+    try {
+      const { token } = req.query;
+      if (!token) return res.status(400).json({ error: 'Token is required' });
+
+      const record = await db.collection('verification_tokens').findOne({ token, type: 'email' });
+      if (!record) return res.status(400).json({ error: 'Invalid or expired verification token' });
+      if (new Date() > new Date(record.expires_at)) {
+        await db.collection('verification_tokens').deleteOne({ token });
+        return res.status(400).json({ error: 'Verification token has expired. Please request a new one.' });
+      }
+
+      await db.collection('users').updateOne({ _id: record.user_id }, { $set: { emailVerified: true } });
+      await db.collection('verification_tokens').deleteOne({ token });
+      res.json({ message: 'Email verified successfully' });
+    } catch (err) {
+      console.error('Verify email error:', err);
+      res.status(500).json({ error: 'Failed to verify email', message: err.message });
     }
   });
 
