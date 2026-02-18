@@ -583,7 +583,7 @@
                     showDashboard();
                 } else {
                     alertBox.className = 'alert alert-error';
-                    alertBox.textContent = data.message || 'Authentication failed';
+                    alertBox.textContent = data.error || data.message || 'Authentication failed';
                 }
             } catch (error) {
                 alertBox.className = 'alert alert-error';
