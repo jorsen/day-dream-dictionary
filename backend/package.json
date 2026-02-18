@@ -1,0 +1,22 @@
+{
+  "name": "day-dream-dictionary-backend",
+  "version": "1.0.0",
+  "description": "Day Dream Dictionary – production backend API",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.8.0",
+    "stripe": "^16.2.0",
+    "zod": "^3.23.8"
+  }
+}
