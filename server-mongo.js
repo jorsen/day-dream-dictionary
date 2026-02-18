@@ -627,6 +627,44 @@ app.post('/api/v1/dreams/interpret', checkDB, authMiddleware, async (req, res) =
     }
   });
 
+  // Update user details (displayName, email)
+  app.patch('/api/v1/user', checkDB, authMiddleware, async (req, res) => {
+    try {
+      const { displayName, email } = req.body;
+      if (!displayName && !email) return res.status(400).json({ error: 'No fields to update' });
+      const update = {};
+      if (displayName) update.displayName = displayName.trim();
+      if (email) {
+        const existing = await db.collection('users').findOne({ email: email.toLowerCase().trim(), _id: { $ne: req.user_id } });
+        if (existing) return res.status(409).json({ error: 'Email already in use' });
+        update.email = email.toLowerCase().trim();
+      }
+      await db.collection('users').updateOne({ _id: req.user_id }, { $set: update });
+      const user = await db.collection('users').findOne({ _id: req.user_id });
+      res.json({ message: 'Account updated', user: { id: user._id, email: user.email, displayName: user.displayName } });
+    } catch (err) {
+      console.error('User update error:', err);
+      res.status(500).json({ error: 'Failed to update account', message: err.message });
+    }
+  });
+
+  // Change password
+  app.post('/api/v1/auth/change-password', checkDB, authMiddleware, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) return res.status(400).json({ error: 'currentPassword and newPassword are required' });
+      if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+      const user = await db.collection('users').findOne({ _id: req.user_id });
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      if (user.password !== hashPassword(currentPassword)) return res.status(401).json({ error: 'Current password is incorrect' });
+      await db.collection('users').updateOne({ _id: req.user_id }, { $set: { password: hashPassword(newPassword) } });
+      res.json({ message: 'Password updated' });
+    } catch (err) {
+      console.error('Change password error:', err);
+      res.status(500).json({ error: 'Failed to change password', message: err.message });
+    }
+  });
+
   // Get credits
   app.get('/api/v1/profile/credits', authMiddleware, checkDB, async (req, res) => {
     try {

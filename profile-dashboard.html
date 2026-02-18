@@ -408,6 +408,45 @@
                     </div>
                 </div>
 
+                <!-- Account Settings Card -->
+                <div class="card">
+                    <h3><span class="card-icon">⚙️</span> Account Settings</h3>
+
+                    <div style="margin-bottom:24px;">
+                        <h4 style="color:#555;margin:0 0 16px;font-size:15px;font-weight:600;">Profile Details</h4>
+                        <div class="form-group">
+                            <label for="settingsDisplayName">Display Name</label>
+                            <input type="text" id="settingsDisplayName" placeholder="Your display name">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="settingsEmail">Email</label>
+                            <input type="email" id="settingsEmail" placeholder="Your email address">
+                        </div>
+                        <button class="btn" style="margin-top:16px;" onclick="saveAccountDetails()">Save Details</button>
+                        <div id="detailsMsg" style="margin-top:12px;display:none;padding:10px;border-radius:8px;"></div>
+                    </div>
+
+                    <hr style="border:none;border-top:1px solid #eee;margin:0 0 24px;">
+
+                    <div>
+                        <h4 style="color:#555;margin:0 0 16px;font-size:15px;font-weight:600;">Change Password</h4>
+                        <div class="form-group">
+                            <label for="currentPassword">Current Password</label>
+                            <input type="password" id="currentPassword" placeholder="Enter current password">
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" placeholder="Min 6 characters">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="confirmPassword">Confirm New Password</label>
+                            <input type="password" id="confirmPassword" placeholder="Repeat new password">
+                        </div>
+                        <button class="btn" style="margin-top:16px;" onclick="changePassword()">Change Password</button>
+                        <div id="passwordMsg" style="margin-top:12px;display:none;padding:10px;border-radius:8px;"></div>
+                    </div>
+                </div>
+
                 <!-- Subscription Card -->
                 <div class="card">
                     <h3><span class="card-icon">💎</span> Subscription Status</h3>
@@ -607,6 +646,10 @@
             document.getElementById('userRole').textContent = currentUser.role || 'user';
             document.getElementById('emailVerified').textContent = currentUser.emailVerified ? '✅ Verified' : '❌ Not verified';
             document.getElementById('userLocale').textContent = currentUser.locale || 'en';
+
+            // Pre-fill account settings inputs
+            document.getElementById('settingsDisplayName').value = currentUser.displayName || '';
+            document.getElementById('settingsEmail').value = currentUser.email || '';
 
             // Update credits display
             if (currentUser.credits !== undefined) {
@@ -1037,6 +1080,92 @@
 
             // You can uncomment and modify this when you have payment integration ready:
             // window.location.href = 'payment.html?plan=pro';
+        }
+
+        // Account Settings: Save profile details
+        async function saveAccountDetails() {
+            const displayName = document.getElementById('settingsDisplayName').value.trim();
+            const email = document.getElementById('settingsEmail').value.trim();
+            const msg = document.getElementById('detailsMsg');
+
+            if (!displayName && !email) {
+                showSettingsMsg(msg, 'Please enter a display name or email to update.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/user`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ displayName, email })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    currentUser = { ...currentUser, ...data.user };
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    document.getElementById('userName').textContent = currentUser.displayName;
+                    document.getElementById('userEmail').textContent = currentUser.email;
+                    document.getElementById('profileEmail').textContent = currentUser.email;
+                    document.getElementById('profileName').textContent = currentUser.displayName;
+                    document.getElementById('userAvatar').textContent = (currentUser.displayName || currentUser.email)[0].toUpperCase();
+                    showSettingsMsg(msg, 'Details updated successfully!', 'success');
+                } else {
+                    showSettingsMsg(msg, data.error || 'Failed to update details.', 'error');
+                }
+            } catch (err) {
+                showSettingsMsg(msg, 'Network error. Please try again.', 'error');
+            }
+        }
+
+        // Account Settings: Change password
+        async function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const msg = document.getElementById('passwordMsg');
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showSettingsMsg(msg, 'All password fields are required.', 'error');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                showSettingsMsg(msg, 'New password and confirm password do not match.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/change-password`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('currentPassword').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
+                    showSettingsMsg(msg, 'Password changed successfully!', 'success');
+                } else {
+                    showSettingsMsg(msg, data.error || 'Failed to change password.', 'error');
+                }
+            } catch (err) {
+                showSettingsMsg(msg, 'Network error. Please try again.', 'error');
+            }
+        }
+
+        function showSettingsMsg(el, text, type) {
+            el.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+            el.style.color = type === 'success' ? '#155724' : '#721c24';
+            el.style.border = `1px solid ${type === 'success' ? '#c3e6cb' : '#f5c6cb'}`;
+            el.textContent = text;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 4000);
         }
 
         // Logout
