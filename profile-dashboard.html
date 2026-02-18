@@ -624,7 +624,7 @@
         // Load user profile data
         async function loadUserProfile() {
             try {
-                const response = await fetch(`${API_URL}/profile`, {
+                const response = await fetch(`${API_URL}/subscriptions/status`, {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
@@ -632,149 +632,95 @@
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-                    // Update profile information if needed
-                    if (data.profile) {
-                        const profile = data.profile;
-
-                        // Update subscription display
-                        if (profile.subscription) {
-                            updateSubscriptionDisplay(profile.subscription);
-                        }
-
-                        if (profile.credits !== undefined) {
-                            document.getElementById('userCredits').textContent = profile.credits;
-                        }
-                    }
+                    const sub = await response.json();
+                    updateSubscriptionDisplay(sub);
                 } else {
-                    console.error('Profile API failed, but keeping user logged in');
-                    // DON'T LOGOUT - Just set default Basic Plan values
-                    currentUser.credits = 'unlimited';
-                    currentUser.subscription = {
-                        plan: 'basic',
-                        planName: 'Basic Plan',
-                        planType: 'basic',
-                        price: 4.99,
-                        features: ['20_basic_interpretations', '5_deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads']
-                    };
-
-                    // Update display with Basic Plan values
-                    updateSubscriptionDisplay(currentUser.subscription);
-                    document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
+                    // API unavailable — show free plan (never assume paid plan)
+                    console.warn('Subscription status unavailable, defaulting to free plan');
+                    updateSubscriptionDisplay(null);
                 }
             } catch (error) {
-                console.error('Profile load error, but keeping user logged in:', error);
-                // DON'T LOGOUT - Just set default Basic Plan values
-                currentUser.credits = 'unlimited';
-                currentUser.subscription = {
-                    plan: 'basic',
-                    planName: 'Basic Plan',
-                    planType: 'basic',
-                    price: 4.99,
-                    features: ['20_basic_interpretations', '5_deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads']
-                };
-
-                // Update display with Basic Plan values
-                updateSubscriptionDisplay(currentUser.subscription);
-                document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
+                console.error('Profile load error:', error);
+                updateSubscriptionDisplay(null);
             }
         }
 
         // Update subscription display based on plan
-        function updateSubscriptionDisplay(subscription) {
-            const planBadge = document.getElementById('planBadge');
-            const creditsRow = document.getElementById('creditsRow');
+        // sub = response from GET /api/subscriptions/status (or null on error)
+        function updateSubscriptionDisplay(sub) {
+            const planBadge       = document.getElementById('planBadge');
+            const creditsRow      = document.getElementById('creditsRow');
             const monthlyLimitRow = document.getElementById('monthlyLimitRow');
             const monthlyUsageRow = document.getElementById('monthlyUsageRow');
-            const userCredits = document.getElementById('userCredits');
+            const userCredits     = document.getElementById('userCredits');
 
-            if (!subscription) {
-                // Default to free plan if no subscription
-                planBadge.className = 'badge badge-free';
+            // Remove any previously injected feature blocks
+            ['proFeatures', 'basicFeatures'].forEach(id => {
+                document.getElementById(id)?.remove();
+            });
+
+            const plan = sub?.plan || 'free';
+
+            // ── Free plan (no subscription or plan === 'free') ─────────────────
+            if (plan === 'free' || !sub || sub.status === 'none') {
+                const limit     = sub?.monthlyFreeLimit || 3;
+                const used      = sub?.freeUsedThisMonth || 0;
+                const remaining = Math.max(0, limit - used);
+
+                planBadge.className   = 'badge badge-free';
                 planBadge.textContent = 'Free Plan';
-                userCredits.textContent = '5';
-                creditsRow.style.display = 'block';
+                userCredits.textContent = `${remaining} remaining`;
+
+                creditsRow.style.display      = 'block';
                 monthlyLimitRow.style.display = 'block';
                 monthlyUsageRow.style.display = 'block';
-                document.getElementById('monthlyLimit').textContent = '5 basic / 3 deep';
-                document.getElementById('monthlyUsage').textContent = '0 / 5';
+
+                document.getElementById('monthlyLimit').textContent =
+                    `${limit} deep interpretations / month`;
+                document.getElementById('monthlyUsage').textContent =
+                    `${used} / ${limit} used (${remaining} remaining)`;
                 return;
             }
 
-            // Use enhanced subscription data if available
-            const planType = subscription.planType || subscription.plan || 'basic';
-            const planName = subscription.planName ||
-                           (planType === 'basic' ? 'Basic Plan' :
-                            planType === 'pro' ? 'Pro Plan' : 'Free Mode');
-            const price = subscription.price;
+            // ── Basic plan ────────────────────────────────────────────────────
+            if (plan === 'basic') {
+                const limit     = sub.monthlyDeepLimit || 20;
+                const used      = sub.monthlyDeepUsed  || 0;
+                const remaining = Math.max(0, limit - used);
 
-            // Update plan badge with proper name and price
-            planBadge.className = `badge badge-${planType}`;
-            planBadge.innerHTML = `${planName}${price ? ` - $${price}` : ''}`;
+                planBadge.className   = 'badge badge-basic';
+                planBadge.textContent = 'Basic Plan - $4.99–$7.99 / mo';
+                userCredits.innerHTML = '♾️ Unlimited';
 
-            // Show credits as unlimited for Basic/Free mode
-            userCredits.innerHTML = '♾️ Unlimited';
-
-            // Display features based on plan type
-            if (planType === 'pro') {
-                // Pro plan: Hide monthly limits, show feature list
-                creditsRow.style.display = 'block';
-                monthlyLimitRow.style.display = 'none';
-                monthlyUsageRow.style.display = 'none';
-
-                // Add feature list display (unlimited interpretations, analytics, voice journaling, reminders, symbol encyclopedia, no ads)
-                if (!document.getElementById('proFeatures')) {
-                    const card = document.querySelector('.card');
-                    const proFeaturesDiv = document.createElement('div');
-                    proFeaturesDiv.id = 'proFeatures';
-                    proFeaturesDiv.innerHTML = `
-                        <div class="info-row">
-                            <span class="info-label">Features:</span>
-                            <span class="info-value">Unlimited interpretations, Analytics, Voice journaling, Reminders, Symbol encyclopedia, No ads</span>
-                        </div>
-                    `;
-                    card.insertBefore(proFeaturesDiv, card.lastElementChild);
-                }
-
-            } else {
-                // Basic/Free plans: Show credits and limits based on features
-                creditsRow.style.display = 'block';
+                creditsRow.style.display      = 'block';
                 monthlyLimitRow.style.display = 'block';
                 monthlyUsageRow.style.display = 'block';
 
-                // Remove pro features if they exist
-                const proFeatures = document.getElementById('proFeatures');
-                if (proFeatures) {
-                    proFeatures.remove();
-                }
+                document.getElementById('monthlyLimit').textContent =
+                    `${limit} deep interpretations / month`;
+                document.getElementById('monthlyUsage').textContent =
+                    `${used} / ${limit} used (${remaining} remaining)`;
+                return;
+            }
 
-                // Update monthly limits display from subscription data
-                const basicLimit = subscription.monthlyLimits?.basic || 20;
-                const deepLimit = subscription.monthlyLimits?.deep || 5;
-                document.getElementById('monthlyLimit').textContent = `${basicLimit} basic / ${deepLimit} deep`;
+            // ── Pro plan ──────────────────────────────────────────────────────
+            if (plan === 'pro') {
+                const limit     = sub.monthlyDeepLimit || 100;
+                const used      = sub.monthlyDeepUsed  || 0;
+                const remaining = Math.max(0, limit - used);
 
-                // Update monthly usage display with real-time data
-                const basicUsed = subscription.monthlyUsage?.basic || 0;
-                const deepUsed = subscription.monthlyUsage?.deep || 0;
-                const basicRemaining = subscription.monthlyRemaining?.basic || (basicLimit - basicUsed);
-                const deepRemaining = subscription.monthlyRemaining?.deep || (deepLimit - deepUsed);
-                
-                document.getElementById('monthlyUsage').textContent = 
-                  `${basicUsed}/${basicLimit} basic | ${deepUsed}/${deepLimit} deep (↓ ${basicRemaining} basic, ${deepRemaining} deep)`;
+                planBadge.className   = 'badge badge-pro';
+                planBadge.textContent = 'Pro Plan - $12.99–$19.99 / mo';
+                userCredits.innerHTML = '♾️ Unlimited';
 
-                // Add feature list for Basic plan
-                if (planType === 'basic' && !document.getElementById('basicFeatures')) {
-                    const card = document.querySelector('.card');
-                    const basicFeaturesDiv = document.createElement('div');
-                    basicFeaturesDiv.id = 'basicFeatures';
-                    basicFeaturesDiv.innerHTML = `
-                        <div class="info-row">
-                            <span class="info-label">Features:</span>
-                            <span class="info-value">Unlimited history, PDF export, No ads</span>
-                        </div>
-                    `;
-                    card.insertBefore(basicFeaturesDiv, card.lastElementChild);
-                }
+                creditsRow.style.display      = 'block';
+                monthlyLimitRow.style.display = 'block';
+                monthlyUsageRow.style.display = 'block';
+
+                document.getElementById('monthlyLimit').textContent =
+                    `${limit} deep interpretations / month`;
+                document.getElementById('monthlyUsage').textContent =
+                    `${used} / ${limit} used (${remaining} remaining)`;
             }
         }
 
@@ -803,7 +749,7 @@
         // Load user subscription and credits
         async function loadUserSubscription() {
             try {
-                const response = await fetchWithFallback('/profile', {
+                const response = await fetchWithFallback('/subscriptions/status', {
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/json'
@@ -811,59 +757,21 @@
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
+                    const sub = await response.json();
+                    updateSubscriptionDisplay(sub);
 
-                    if (data.profile) {
-                        const profile = data.profile;
-
-                        // Update subscription display
-                        if (profile.subscription) {
-                            updateSubscriptionDisplay(profile.subscription);
-                        }
-
-                        // Update credits display
-                        if (profile.credits === 'unlimited' || profile.subscription?.plan === 'pro') {
-                            document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
-                        } else {
-                            document.getElementById('userCredits').textContent = profile.credits || 0;
-                        }
-
-                        // Show success message for Pro plan users
-                        if (profile.subscription && profile.subscription.plan === 'pro') {
-                            showProUpgradeSuccess();
-                        }
+                    // Show upgrade success banner for users who just upgraded to Pro
+                    if (sub.plan === 'pro' && sub.status === 'active') {
+                        showProUpgradeSuccess();
                     }
                 } else {
-                    console.error('Subscription API failed, but keeping user logged in');
-                    // DON'T LOGOUT - Just set default Basic Plan values
-                    currentUser.credits = 'unlimited';
-                    currentUser.subscription = {
-                        plan: 'basic',
-                        planName: 'Basic Plan',
-                        planType: 'basic',
-                        price: 4.99,
-                        features: ['20_basic_interpretations', '5_deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads']
-                    };
-
-                    // Update display with Basic Plan values
-                    updateSubscriptionDisplay(currentUser.subscription);
-                    document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
+                    // API unavailable — show free plan (never assume paid plan)
+                    console.warn('Subscription status unavailable, defaulting to free plan');
+                    updateSubscriptionDisplay(null);
                 }
             } catch (error) {
-                console.error('Subscription load error, but keeping user logged in:', error);
-                // DON'T LOGOUT - Just set default Basic Plan values
-                currentUser.credits = 'unlimited';
-                currentUser.subscription = {
-                    plan: 'basic',
-                    planName: 'Basic Plan',
-                    planType: 'basic',
-                    price: 4.99,
-                    features: ['20_basic_interpretations', '5_deep_interpretations', 'unlimited_history', 'pdf_export', 'no_ads']
-                };
-
-                // Update display with Basic Plan values
-                updateSubscriptionDisplay(currentUser.subscription);
-                document.getElementById('userCredits').innerHTML = '♾️ Unlimited';
+                console.error('Subscription load error:', error);
+                updateSubscriptionDisplay(null);
             }
         }
 
