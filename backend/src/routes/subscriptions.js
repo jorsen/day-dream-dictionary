@@ -209,6 +209,55 @@ router.get('/status', authenticate, async (req, res) => {
   }
 });
 
+// ── GET /api/subscriptions/details ────────────────────────────────────────────
+// Returns subscription info + payment method card details from Stripe.
+router.get('/details', authenticate, async (req, res) => {
+  const db = getDB();
+
+  try {
+    const sub = await db.collection('subscriptions').findOne({ userId: req.user._id });
+
+    if (!sub) {
+      return res.json({ subscription: null, paymentMethod: null });
+    }
+
+    let paymentMethod = null;
+    if (sub.stripeSubId) {
+      try {
+        const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubId, {
+          expand: ['default_payment_method'],
+        });
+        const pm = stripeSub.default_payment_method;
+        if (pm?.card) {
+          paymentMethod = {
+            brand:    pm.card.brand,
+            last4:    pm.card.last4,
+            expMonth: pm.card.exp_month,
+            expYear:  pm.card.exp_year,
+          };
+        }
+      } catch (stripeErr) {
+        console.warn('[subscriptions/details] Stripe fetch failed:', stripeErr.message);
+      }
+    }
+
+    return res.json({
+      subscription: {
+        plan:             sub.plan,
+        status:           sub.status,
+        currentPeriodEnd: sub.currentPeriodEnd,
+        cancelAtPeriodEnd: sub.cancelAtPeriodEnd ?? false,
+        monthlyDeepLimit: sub.monthlyDeepLimit,
+        monthlyDeepUsed:  sub.monthlyDeepUsed ?? 0,
+      },
+      paymentMethod,
+    });
+  } catch (err) {
+    console.error('[subscriptions/details]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 const FREE_MONTHLY_QUOTA = 3;
 
 export default router;

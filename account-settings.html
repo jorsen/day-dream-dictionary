@@ -172,6 +172,41 @@
 
         .toggle-password:hover { color: #667eea; transform: translateY(-50%); }
 
+        .sub-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .sub-row:last-of-type { border-bottom: none; }
+
+        .sub-label { color: #888; font-weight: 500; }
+        .sub-value { color: #333; font-weight: 600; }
+
+        .badge-active   { background: #d4edda; color: #155724; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .badge-canceled { background: #f8d7da; color: #721c24; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .badge-free     { background: #e2e8f0; color: #4a5568; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+
+        .btn-danger {
+            width: 100%;
+            padding: 11px;
+            background: white;
+            color: #dc3545;
+            border: 2px solid #dc3545;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .btn-danger:hover:not(:disabled) { background: #dc3545; color: white; }
+        .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
     </style>
 </head>
 <body>
@@ -200,6 +235,13 @@
                 </div>
                 <button class="btn" id="saveDetailsBtn" onclick="saveAccountDetails()">Save Details</button>
                 <div class="msg" id="detailsMsg"></div>
+            </div>
+
+            <!-- Subscription & Billing -->
+            <div class="card" id="subscriptionCard">
+                <h2>💳 Subscription & Billing</h2>
+                <div id="subDetails" style="color:#666;font-size:14px;">Loading...</div>
+                <div class="msg" id="cancelMsg"></div>
             </div>
 
             <!-- Change Password -->
@@ -328,6 +370,125 @@
                 btn.disabled = false;
                 btn.textContent = 'Change Password';
             }
+        }
+
+        // ── Subscription details ──────────────────────────────────────────────
+        async function loadSubscriptionDetails() {
+            const el = document.getElementById('subDetails');
+            try {
+                const res  = await fetch(`${API_URL}/subscriptions/details`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+
+                if (!data.subscription || data.subscription.status === 'none') {
+                    el.innerHTML = `
+                        <div class="sub-row">
+                            <span class="sub-label">Plan</span>
+                            <span class="sub-value"><span class="badge-free">Free Plan</span></span>
+                        </div>
+                        <div class="sub-row">
+                            <span class="sub-label">Monthly quota</span>
+                            <span class="sub-value">3 interpretations / month</span>
+                        </div>
+                        <p style="margin-top:14px;font-size:13px;color:#888;">
+                            <a href="payment.html" style="color:#667eea;font-weight:600;">Upgrade to Basic or Pro →</a>
+                        </p>`;
+                    return;
+                }
+
+                const sub = data.subscription;
+                const pm  = data.paymentMethod;
+
+                const planLabels = { basic: 'Basic Plan — $4.99/mo', pro: 'Pro Plan — $12.99/mo' };
+                const planLabel  = planLabels[sub.plan] ?? sub.plan;
+                const periodEnd  = sub.currentPeriodEnd
+                    ? new Date(sub.currentPeriodEnd).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
+                    : '—';
+
+                const isCanceling = sub.cancelAtPeriodEnd;
+                const statusBadge = isCanceling
+                    ? `<span class="badge-canceled">Cancels ${periodEnd}</span>`
+                    : sub.status === 'active'
+                        ? `<span class="badge-active">Active</span>`
+                        : `<span class="badge-canceled">${sub.status}</span>`;
+
+                const pmRow = pm
+                    ? `<div class="sub-row">
+                            <span class="sub-label">Payment method</span>
+                            <span class="sub-value">${capitalize(pm.brand)} •••• ${pm.last4} &nbsp; ${pm.expMonth}/${String(pm.expYear).slice(-2)}</span>
+                       </div>`
+                    : '';
+
+                el.innerHTML = `
+                    <div class="sub-row">
+                        <span class="sub-label">Plan</span>
+                        <span class="sub-value">${planLabel}</span>
+                    </div>
+                    <div class="sub-row">
+                        <span class="sub-label">Status</span>
+                        <span class="sub-value">${statusBadge}</span>
+                    </div>
+                    <div class="sub-row">
+                        <span class="sub-label">${isCanceling ? 'Access until' : 'Next billing date'}</span>
+                        <span class="sub-value">${periodEnd}</span>
+                    </div>
+                    <div class="sub-row">
+                        <span class="sub-label">Usage this period</span>
+                        <span class="sub-value">${sub.monthlyDeepUsed} / ${sub.monthlyDeepLimit} interpretations</span>
+                    </div>
+                    ${pmRow}
+                    ${!isCanceling && sub.status === 'active' ? `
+                    <button class="btn-danger" id="cancelSubBtn" onclick="cancelSubscription()">
+                        Cancel Subscription
+                    </button>
+                    <p style="font-size:12px;color:#888;margin-top:8px;text-align:center;">
+                        You'll keep access until ${periodEnd}.
+                    </p>` : ''}
+                `;
+            } catch (err) {
+                el.textContent = 'Unable to load subscription details.';
+                console.error('[account-settings] subscription details error:', err);
+            }
+        }
+
+        function capitalize(str) {
+            return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+        }
+
+        async function cancelSubscription() {
+            const btn = document.getElementById('cancelSubBtn');
+            const msg = document.getElementById('cancelMsg');
+            if (!confirm('Are you sure you want to cancel your subscription? You will keep access until the end of your billing period.')) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Canceling...';
+
+            try {
+                const res  = await fetch(`${API_URL}/subscriptions/cancel`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    showMsg(msg, 'Subscription canceled. You\'ll keep access until the end of your billing period.', 'success');
+                    await loadSubscriptionDetails(); // refresh the section
+                } else {
+                    showMsg(msg, data.error || 'Failed to cancel. Please try again.', 'error');
+                    btn.disabled = false;
+                    btn.textContent = 'Cancel Subscription';
+                }
+            } catch (err) {
+                showMsg(msg, 'Network error. Please try again.', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Cancel Subscription';
+            }
+        }
+
+        // Load subscription on page init (only if logged in)
+        if (accessToken && currentUser) {
+            loadSubscriptionDetails();
         }
 
         function togglePw(inputId, btn) {
