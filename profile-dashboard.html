@@ -888,8 +888,8 @@
 
             let html = '';
             dreams.forEach(dream => {
-                const dreamDate = new Date(dream.created_at).toLocaleDateString();
-                const dreamText = dream.dream_text || '';
+                const dreamDate = new Date(dream.createdAt).toLocaleDateString();
+                const dreamText = dream.dreamText || '';
                 const truncatedText = dreamText.length > 100 ? dreamText.substring(0, 100) + '...' : dreamText;
 
                 html += `
