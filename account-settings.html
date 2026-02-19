@@ -6,280 +6,323 @@
     <title>Account Settings - Day Dream Dictionary</title>
     <script src="config.js"></script>
     <style>
+        :root {
+            --brand: #6c63ff;
+            --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --text-1: #0f172a;
+            --text-2: #475569;
+            --text-3: #94a3b8;
+            --border: #e2e8f0;
+            --surface: #ffffff;
+            --surface-2: #f8fafc;
+            --radius: 14px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.05);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--brand-gradient);
             min-height: 100vh;
-            padding: 20px;
+            padding: 20px 16px 48px;
+            line-height: 1.5;
         }
 
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-        }
+        /* ── Page shell ─────────────────────────────────────── */
+        .page { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 
-        .settings-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            align-items: start;
-        }
-
-        .settings-grid .full-width {
-            grid-column: span 2;
-        }
-
-        @media (max-width: 680px) {
-            .settings-grid { grid-template-columns: 1fr; }
-            .settings-grid .full-width { grid-column: span 1; }
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 28px;
-        }
+        .page-header { display: flex; align-items: center; gap: 14px; }
 
         .back-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            padding: 8px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: background 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+            color: white; padding: 8px 16px; border-radius: 10px;
+            cursor: pointer; font-size: 14px; font-weight: 600;
+            backdrop-filter: blur(4px); transition: background 0.2s, transform 0.15s;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.32); transform: translateX(-2px); }
+
+        .page-title { color: white; font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+
+        /* ── Layout ─────────────────────────────────────────── */
+        .settings-layout { display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start; }
+
+        /* ── Sidebar ────────────────────────────────────────── */
+        .sidebar {
+            background: white; border-radius: var(--radius);
+            box-shadow: var(--shadow); overflow: hidden;
+            position: sticky; top: 20px;
         }
 
-        .back-btn:hover { background: rgba(255,255,255,0.35); }
-
-        .header h1 {
-            color: white;
-            font-size: 22px;
-            font-weight: 700;
+        .sidebar-profile {
+            padding: 24px 20px; text-align: center;
+            background: linear-gradient(160deg, rgba(108,99,255,0.06), rgba(168,85,247,0.06));
+            border-bottom: 1px solid var(--border);
         }
 
-        .card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-            padding: 32px;
+        .avatar {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: var(--brand-gradient); color: white;
+            font-size: 22px; font-weight: 800; letter-spacing: -1px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 12px;
+            box-shadow: 0 4px 14px rgba(108,99,255,0.35);
         }
 
-        .card h2 {
-            font-size: 17px;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .sidebar-name { font-size: 15px; font-weight: 700; color: var(--text-1); margin-bottom: 3px; }
+        .sidebar-email { font-size: 12px; color: var(--text-3); word-break: break-all; }
+
+        .plan-pill {
+            display: inline-block; margin-top: 10px;
+            padding: 4px 14px; border-radius: 20px;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .plan-pill.premium { background: var(--brand-gradient); color: white; }
+        .plan-pill.free    { background: #f1f5f9; color: #64748b; }
+
+        .sidebar-nav { padding: 6px 0; }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 11px 20px; font-size: 14px; font-weight: 500;
+            color: var(--text-2); cursor: pointer;
+            border: none; border-left: 3px solid transparent;
+            background: none; width: 100%; text-align: left;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .nav-item:hover { background: var(--surface-2); color: var(--text-1); }
+        .nav-item.active { background: rgba(108,99,255,0.07); color: var(--brand); border-left-color: var(--brand); font-weight: 600; }
+
+        .nav-icon {
+            width: 30px; height: 30px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .nav-icon.blue   { background: #eff6ff; }
+        .nav-icon.red    { background: #fef2f2; }
+        .nav-icon.purple { background: #f5f3ff; }
+        .nav-icon.green  { background: #f0fdf4; }
+        .nav-icon.orange { background: #fffbeb; }
+        .nav-icon.indigo { background: #eef2ff; }
+
+        /* ── Content ────────────────────────────────────────── */
+        .content-area { min-width: 0; }
+
+        .section-panel { display: none; animation: fadeUp 0.2s ease; flex-direction: column; gap: 0; }
+        .section-panel.active { display: flex; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .form-group { margin-bottom: 18px; }
+        /* ── Cards ──────────────────────────────────────────── */
+        .card { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 
-        .form-group label {
-            display: block;
-            margin-bottom: 7px;
-            color: #555;
-            font-weight: 500;
-            font-size: 14px;
+        .card-header {
+            display: flex; align-items: center; gap: 14px;
+            padding: 20px 24px; border-bottom: 1px solid var(--border);
         }
 
-        .form-group input {
-            width: 100%;
-            padding: 11px 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 15px;
-            font-family: inherit;
-            transition: border-color 0.2s;
+        .card-icon {
+            width: 40px; height: 40px; border-radius: 11px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 19px; flex-shrink: 0;
         }
+        .card-icon.blue   { background: #eff6ff; }
+        .card-icon.purple { background: #f5f3ff; }
+        .card-icon.green  { background: #f0fdf4; }
+        .card-icon.orange { background: #fffbeb; }
+        .card-icon.red    { background: #fef2f2; }
+        .card-icon.indigo { background: #eef2ff; }
 
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
+        .card-header-text h2 { font-size: 16px; font-weight: 700; color: var(--text-1); letter-spacing: -0.2px; }
+        .card-header-text p  { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+        .card-body { padding: 24px; }
+
+        /* ── Forms ──────────────────────────────────────────── */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-grid .full { grid-column: span 2; }
+
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        .field label { font-size: 13px; font-weight: 600; color: var(--text-2); }
+
+        .field input, .field select {
+            padding: 10px 14px; border: 1.5px solid var(--border);
+            border-radius: 10px; font-size: 14px; font-family: inherit;
+            background: var(--surface-2); color: var(--text-1);
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; outline: none;
         }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, opacity 0.2s;
-            margin-top: 4px;
+        .field input:focus, .field select:focus {
+            border-color: var(--brand); background: white;
+            box-shadow: 0 0 0 3px rgba(108,99,255,0.12);
         }
+        .field input::placeholder { color: var(--text-3); }
+        .field select { cursor: pointer; }
 
-        .btn:hover { transform: translateY(-1px); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .field-hint { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 
-        .msg {
-            margin-top: 12px;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 14px;
-            display: none;
+        .pw-wrap { position: relative; }
+        .pw-wrap input { padding-right: 42px; }
+        .pw-toggle {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer;
+            font-size: 16px; color: var(--text-3); padding: 0; line-height: 1;
+            transition: color 0.15s;
         }
+        .pw-toggle:hover { color: var(--brand); }
 
-        .msg.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+        .toggle-row {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 14px 16px; background: var(--surface-2);
+            border-radius: 10px; cursor: pointer;
+            border: 1.5px solid var(--border); transition: border-color 0.2s;
         }
+        .toggle-row:hover { border-color: var(--brand); }
+        .toggle-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--brand); margin-top: 1px; flex-shrink: 0; cursor: pointer; }
+        .toggle-label { font-size: 14px; font-weight: 500; color: var(--text-1); }
+        .toggle-sub   { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 
-        .msg.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
+        /* ── Buttons ────────────────────────────────────────── */
+        .btn-primary {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 11px 24px; background: var(--brand-gradient);
+            color: white; border: none; border-radius: 10px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(108,99,255,0.3);
         }
-
-        .divider {
-            border: none;
-            border-top: 1px solid #eee;
-            margin: 24px 0;
-        }
-
-        .not-logged-in {
-            text-align: center;
-            color: white;
-            padding: 60px 20px;
-        }
-
-        .not-logged-in p { margin-bottom: 16px; font-size: 16px; }
-
-        .not-logged-in a {
-            color: white;
-            font-weight: 600;
-            text-decoration: underline;
-        }
-
-        .password-wrapper {
-            position: relative;
-        }
-
-        .password-wrapper input {
-            padding-right: 44px;
-        }
-
-        .toggle-password {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            width: auto;
-            font-size: 18px;
-            color: #888;
-            line-height: 1;
-        }
-
-        .toggle-password:hover { color: #667eea; transform: translateY(-50%); }
-
-        .sub-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
-        }
-
-        .sub-row:last-of-type { border-bottom: none; }
-
-        .sub-label { color: #888; font-weight: 500; }
-        .sub-value { color: #333; font-weight: 600; }
-
-        .badge-active   { background: #d4edda; color: #155724; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-        .badge-canceled { background: #f8d7da; color: #721c24; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-        .badge-free     { background: #e2e8f0; color: #4a5568; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(108,99,255,0.4); }
+        .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; box-shadow: none; }
 
         .btn-danger {
-            width: 100%;
-            padding: 11px;
-            background: white;
-            color: #dc3545;
-            border: 2px solid #dc3545;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 16px;
-            transition: background 0.2s, color 0.2s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 20px; background: white; color: #ef4444;
+            border: 1.5px solid #fecaca; border-radius: 10px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
         }
-
-        .btn-danger:hover:not(:disabled) { background: #dc3545; color: white; }
+        .btn-danger:hover:not(:disabled) { background: #fef2f2; border-color: #ef4444; }
         .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .addon-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            color: #166534;
-            border-radius: 20px;
-            padding: 5px 12px;
-            font-size: 13px;
-            font-weight: 600;
-            margin: 4px 4px 4px 0;
+        .form-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 20px; gap: 12px; }
+
+        /* ── Alerts ─────────────────────────────────────────── */
+        .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; display: none; margin-top: 12px; }
+        .alert.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+        .alert.error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+        .divider { border: none; border-top: 1px solid var(--border); margin: 20px -24px 20px; }
+
+        /* ── Subscription ───────────────────────────────────── */
+        .sub-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 1px; background: var(--border);
+            border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .sub-cell { background: var(--surface-2); padding: 14px 18px; }
+        .sub-cell-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 5px; }
+        .sub-cell-value { font-size: 15px; font-weight: 700; color: var(--text-1); }
+
+        .usage-bar-label { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-2); margin-bottom: 8px; font-weight: 500; }
+        .usage-bar-track { height: 8px; background: var(--border); border-radius: 100px; overflow: hidden; }
+        .usage-bar-fill { height: 100%; background: var(--brand-gradient); border-radius: 100px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); min-width: 4px; }
+        .usage-bar-fill.warn { background: linear-gradient(90deg, #f59e0b, #ef4444); }
+
+        /* ── Badges ─────────────────────────────────────────── */
+        .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+        .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+        .badge.active   { background: #dcfce7; color: #166534; }
+        .badge.active::before { background: #22c55e; }
+        .badge.canceled { background: #fee2e2; color: #991b1b; }
+        .badge.canceled::before { background: #ef4444; }
+        .badge.free     { background: #f1f5f9; color: #475569; }
+        .badge.free::before { background: #94a3b8; }
+
+        /* ── Add-ons ────────────────────────────────────────── */
+        .addons-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+
+        .addon-card {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 16px; border: 1.5px solid #d1fae5;
+            background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+            border-radius: 12px;
         }
 
-        .addon-chip-date { font-weight: 400; color: #4ade80; font-size: 12px; }
-
-        .history-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 14px;
+        .addon-check {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: #22c55e; color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(34,197,94,0.35);
         }
-        .history-row:last-of-type { border-bottom: none; }
 
-        .history-icon {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            flex-shrink: 0;
+        .addon-name { font-size: 13px; font-weight: 700; color: #166534; }
+        .addon-date { font-size: 11px; color: #6ee7b7; margin-top: 1px; }
+
+        /* ── History ────────────────────────────────────────── */
+        .h-list { display: flex; flex-direction: column; }
+
+        .h-row {
+            display: grid; grid-template-columns: 38px 1fr auto;
+            gap: 14px; align-items: center;
+            padding: 14px 0; border-bottom: 1px solid var(--border);
         }
-        .history-icon.purchase  { background: #d4edda; }
-        .history-icon.addon     { background: #e0f0ff; }
-        .history-icon.spend     { background: #f8f0ff; }
+        .h-row:last-child { border-bottom: none; }
 
-        .history-desc { flex: 1; color: #333; font-weight: 500; }
-        .history-sub  { font-size: 12px; color: #aaa; font-weight: 400; }
+        .h-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .h-icon.purchase { background: #eff6ff; }
+        .h-icon.addon    { background: #f0fdf4; }
+        .h-icon.spend    { background: #faf5ff; }
 
-        .history-delta {
-            font-weight: 700;
-            white-space: nowrap;
+        .h-desc { font-size: 14px; font-weight: 600; color: var(--text-1); }
+        .h-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+        .h-delta { font-size: 13px; font-weight: 700; white-space: nowrap; text-align: right; }
+        .h-delta.pos { color: #16a34a; }
+        .h-delta.neg { color: #7c3aed; }
+        .h-delta.neu { color: #6c63ff; }
+
+        /* ── Empty state ────────────────────────────────────── */
+        .empty-state { text-align: center; padding: 36px 20px; color: var(--text-3); }
+        .empty-state .es-icon { font-size: 38px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+        .empty-state a { color: var(--brand); font-weight: 600; text-decoration: none; }
+        .empty-state a:hover { text-decoration: underline; }
+
+        /* ── Not logged in ──────────────────────────────────── */
+        .not-logged-in { text-align: center; color: white; padding: 80px 20px; }
+        .not-logged-in p { margin-bottom: 16px; font-size: 16px; }
+        .not-logged-in a { color: white; font-weight: 600; text-decoration: underline; }
+
+        /* ── Responsive ─────────────────────────────────────── */
+        @media (max-width: 780px) {
+            .settings-layout { grid-template-columns: 1fr; }
+            .sidebar { position: static; }
+            .sidebar-profile { display: flex; align-items: center; gap: 14px; text-align: left; padding: 16px 20px; }
+            .avatar { width: 50px; height: 50px; font-size: 18px; margin: 0; flex-shrink: 0; }
+            .plan-pill { display: block; margin-top: 4px; }
+            .sidebar-nav { display: flex; overflow-x: auto; padding: 4px 12px 8px; gap: 4px; border-top: 1px solid var(--border); scrollbar-width: none; }
+            .sidebar-nav::-webkit-scrollbar { display: none; }
+            .nav-item { flex-shrink: 0; padding: 8px 14px; border-left: none; border-bottom: 2px solid transparent; border-radius: 8px; white-space: nowrap; }
+            .nav-item.active { border-left-color: transparent; border-bottom-color: var(--brand); }
+            .nav-icon { display: none; }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-grid .full { grid-column: span 1; }
+            .sub-grid { grid-template-columns: 1fr; }
+            .addons-grid { grid-template-columns: 1fr; }
         }
-        .history-delta.positive { color: #155724; }
-        .history-delta.negative { color: #764ba2; }
-        .history-delta.neutral  { color: #667eea; }
-
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+    <div class="page">
+
+        <div class="page-header">
             <button class="back-btn" onclick="window.location.href='profile-dashboard.html'">← Back</button>
-            <h1>⚙️ Account Settings</h1>
+            <h1 class="page-title">Account Settings</h1>
         </div>
 
         <div id="notLoggedIn" class="not-logged-in" style="display:none;">
@@ -288,95 +331,202 @@
         </div>
 
         <div id="settingsContent">
-        <div class="settings-grid">
+            <div class="settings-layout">
 
-            <!-- Profile Details -->
-            <div class="card">
-                <h2>👤 Profile Details</h2>
-                <div class="form-group">
-                    <label for="settingsDisplayName">Display Name</label>
-                    <input type="text" id="settingsDisplayName" placeholder="Your display name">
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label for="settingsEmail">Email Address</label>
-                    <input type="email" id="settingsEmail" placeholder="Your email address">
-                </div>
-                <button class="btn" id="saveDetailsBtn" onclick="saveAccountDetails()">Save Details</button>
-                <div class="msg" id="detailsMsg"></div>
-            </div>
-
-            <!-- Subscription & Billing -->
-            <div class="card" id="subscriptionCard">
-                <h2>💳 Subscription & Billing</h2>
-                <div id="subDetails" style="color:#666;font-size:14px;">Loading...</div>
-                <div class="msg" id="cancelMsg"></div>
-            </div>
-
-            <!-- Add-Ons -->
-            <div class="card full-width" id="addonsCard">
-                <h2>🧩 Your Add-Ons</h2>
-                <div id="addonsList" style="color:#666;font-size:14px;">Loading...</div>
-            </div>
-
-            <!-- Purchase History -->
-            <div class="card full-width" id="historyCard">
-                <h2>🧾 Purchase History</h2>
-                <div id="historyList" style="color:#666;font-size:14px;">Loading...</div>
-            </div>
-
-            <!-- Language & Preferences -->
-            <div class="card">
-                <h2>🌐 Language & Preferences</h2>
-                <div class="form-group">
-                    <label for="langSelect">Interpretation Language</label>
-                    <select id="langSelect" style="width:100%;padding:11px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:15px;font-family:inherit;background:white;cursor:pointer;transition:border-color 0.2s;" onchange="">
-                        <option value="en">🇺🇸 English</option>
-                        <option value="es">🇪🇸 Español</option>
-                    </select>
-                    <p style="margin-top:6px;font-size:12px;color:#aaa;">Interpretations will be returned in the selected language.</p>
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-                        <input type="checkbox" id="emailResultsToggle" style="width:18px;height:18px;accent-color:#667eea;">
-                        <span>Email me my dream interpretations</span>
-                    </label>
-                    <p style="margin-top:4px;font-size:12px;color:#aaa;margin-left:28px;">Requires email configured via Resend. Opt-in only.</p>
-                </div>
-                <button class="btn" id="savePrefsBtn" onclick="savePreferences()">Save Preferences</button>
-                <div class="msg" id="prefsMsg"></div>
-            </div>
-
-            <!-- Change Password -->
-            <div class="card full-width">
-                <h2>🔒 Change Password</h2>
-                <div class="form-group">
-                    <label for="currentPassword">Current Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="currentPassword" placeholder="Enter your current password">
-                        <button type="button" class="toggle-password" onclick="togglePw('currentPassword', this)" aria-label="Show password">👁️</button>
+                <!-- ── Sidebar ───────────────────────────────────── -->
+                <aside class="sidebar">
+                    <div class="sidebar-profile">
+                        <div class="avatar" id="avatarEl">?</div>
+                        <div>
+                            <div class="sidebar-name" id="sidebarName">Loading…</div>
+                            <div class="sidebar-email" id="sidebarEmail"></div>
+                            <span class="plan-pill free" id="sidebarPlan">Free</span>
+                        </div>
                     </div>
-                </div>
-                <hr class="divider">
-                <div class="form-group">
-                    <label for="newPassword">New Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="newPassword" placeholder="Min 8 characters">
-                        <button type="button" class="toggle-password" onclick="togglePw('newPassword', this)" aria-label="Show password">👁️</button>
-                    </div>
-                </div>
-                <div class="form-group" style="margin-bottom:0;">
-                    <label for="confirmPassword">Confirm New Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" id="confirmPassword" placeholder="Repeat new password">
-                        <button type="button" class="toggle-password" onclick="togglePw('confirmPassword', this)" aria-label="Show password">👁️</button>
-                    </div>
-                </div>
-                <button class="btn" id="changePasswordBtn" onclick="changePassword()">Change Password</button>
-                <div class="msg" id="passwordMsg"></div>
-            </div>
 
-        </div><!-- end settings-grid -->
-        </div><!-- end settingsContent -->
+                    <nav class="sidebar-nav">
+                        <button class="nav-item active" data-section="profile" onclick="showSection('profile')">
+                            <span class="nav-icon blue">👤</span> Profile
+                        </button>
+                        <button class="nav-item" data-section="security" onclick="showSection('security')">
+                            <span class="nav-icon red">🔒</span> Security
+                        </button>
+                        <button class="nav-item" data-section="billing" onclick="showSection('billing')">
+                            <span class="nav-icon purple">💳</span> Billing
+                        </button>
+                        <button class="nav-item" data-section="addons" onclick="showSection('addons')">
+                            <span class="nav-icon green">🧩</span> Add-Ons
+                        </button>
+                        <button class="nav-item" data-section="preferences" onclick="showSection('preferences')">
+                            <span class="nav-icon orange">🌐</span> Preferences
+                        </button>
+                        <button class="nav-item" data-section="history" onclick="showSection('history')">
+                            <span class="nav-icon indigo">🧾</span> History
+                        </button>
+                    </nav>
+                </aside>
+
+                <!-- ── Content ───────────────────────────────────── -->
+                <main class="content-area">
+
+                    <!-- Profile -->
+                    <section class="section-panel active" data-section="profile">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon blue">👤</div>
+                                <div class="card-header-text">
+                                    <h2>Profile Details</h2>
+                                    <p>Update your display name and email address</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="settingsDisplayName">Display Name</label>
+                                        <input type="text" id="settingsDisplayName" placeholder="Your display name">
+                                    </div>
+                                    <div class="field">
+                                        <label for="settingsEmail">Email Address</label>
+                                        <input type="email" id="settingsEmail" placeholder="your@email.com">
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn-primary" id="saveDetailsBtn" onclick="saveAccountDetails()">Save Changes</button>
+                                </div>
+                                <div class="alert" id="detailsMsg"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Security -->
+                    <section class="section-panel" data-section="security">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon red">🔒</div>
+                                <div class="card-header-text">
+                                    <h2>Change Password</h2>
+                                    <p>Keep your account secure with a strong password</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="field">
+                                    <label for="currentPassword">Current Password</label>
+                                    <div class="pw-wrap">
+                                        <input type="password" id="currentPassword" placeholder="Enter your current password">
+                                        <button type="button" class="pw-toggle" onclick="togglePw('currentPassword', this)" aria-label="Show password">👁️</button>
+                                    </div>
+                                </div>
+                                <hr class="divider">
+                                <div class="form-grid">
+                                    <div class="field">
+                                        <label for="newPassword">New Password</label>
+                                        <div class="pw-wrap">
+                                            <input type="password" id="newPassword" placeholder="Min 8 characters">
+                                            <button type="button" class="pw-toggle" onclick="togglePw('newPassword', this)" aria-label="Show password">👁️</button>
+                                        </div>
+                                    </div>
+                                    <div class="field">
+                                        <label for="confirmPassword">Confirm Password</label>
+                                        <div class="pw-wrap">
+                                            <input type="password" id="confirmPassword" placeholder="Repeat new password">
+                                            <button type="button" class="pw-toggle" onclick="togglePw('confirmPassword', this)" aria-label="Show password">👁️</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn-primary" id="changePasswordBtn" onclick="changePassword()">Update Password</button>
+                                </div>
+                                <div class="alert" id="passwordMsg"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Billing -->
+                    <section class="section-panel" data-section="billing">
+                        <div class="card" id="subscriptionCard">
+                            <div class="card-header">
+                                <div class="card-icon purple">💳</div>
+                                <div class="card-header-text">
+                                    <h2>Subscription & Billing</h2>
+                                    <p>Manage your plan and payment information</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="subDetails" style="color:var(--text-3);font-size:14px;">Loading…</div>
+                                <div class="alert" id="cancelMsg"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Add-Ons -->
+                    <section class="section-panel" data-section="addons">
+                        <div class="card" id="addonsCard">
+                            <div class="card-header">
+                                <div class="card-icon green">🧩</div>
+                                <div class="card-header-text">
+                                    <h2>Your Add-Ons</h2>
+                                    <p>Active add-ons that enhance your dream experience</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="addonsList" style="color:var(--text-3);font-size:14px;">Loading…</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Preferences -->
+                    <section class="section-panel" data-section="preferences">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon orange">🌐</div>
+                                <div class="card-header-text">
+                                    <h2>Language & Preferences</h2>
+                                    <p>Personalize your interpretation experience</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="field" style="margin-bottom:16px;">
+                                    <label for="langSelect">Interpretation Language</label>
+                                    <select id="langSelect">
+                                        <option value="en">🇺🇸 English</option>
+                                        <option value="es">🇪🇸 Español</option>
+                                    </select>
+                                    <span class="field-hint">Interpretations will be returned in the selected language.</span>
+                                </div>
+                                <label class="toggle-row" for="emailResultsToggle">
+                                    <input type="checkbox" id="emailResultsToggle">
+                                    <div>
+                                        <div class="toggle-label">Email me my dream interpretations</div>
+                                        <div class="toggle-sub">Opt-in only. Requires email configured via Resend.</div>
+                                    </div>
+                                </label>
+                                <div class="form-actions">
+                                    <button class="btn-primary" id="savePrefsBtn" onclick="savePreferences()">Save Preferences</button>
+                                </div>
+                                <div class="alert" id="prefsMsg"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- History -->
+                    <section class="section-panel" data-section="history">
+                        <div class="card" id="historyCard">
+                            <div class="card-header">
+                                <div class="card-icon indigo">🧾</div>
+                                <div class="card-header-text">
+                                    <h2>Purchase History</h2>
+                                    <p>Your past transactions and credit activity</p>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="historyList" style="color:var(--text-3);font-size:14px;">Loading…</div>
+                            </div>
+                        </div>
+                    </section>
+
+                </main>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -384,16 +534,45 @@
         const accessToken = localStorage.getItem('accessToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
 
-        // Guard: redirect if not logged in
+        // ── Auth guard ──────────────────────────────────────────────────────────
         if (!accessToken || !currentUser) {
             document.getElementById('settingsContent').style.display = 'none';
             document.getElementById('notLoggedIn').style.display = 'block';
         } else {
-            // Pre-fill fields
+            initSidebar();
             document.getElementById('settingsDisplayName').value = currentUser.displayName || '';
             document.getElementById('settingsEmail').value = currentUser.email || '';
         }
 
+        // ── Sidebar ─────────────────────────────────────────────────────────────
+        function initSidebar() {
+            const name  = currentUser?.displayName || currentUser?.email || '?';
+            const email = currentUser?.email || '';
+            const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
+            document.getElementById('avatarEl').textContent    = initials;
+            document.getElementById('sidebarName').textContent = name;
+            document.getElementById('sidebarEmail').textContent = email;
+        }
+
+        function updatePlanPill(plan) {
+            const pill = document.getElementById('sidebarPlan');
+            if (!pill) return;
+            if (plan === 'basic') { pill.textContent = 'Basic'; pill.className = 'plan-pill premium'; }
+            else if (plan === 'pro') { pill.textContent = 'Pro'; pill.className = 'plan-pill premium'; }
+            else { pill.textContent = 'Free'; pill.className = 'plan-pill free'; }
+        }
+
+        // ── Tab navigation ──────────────────────────────────────────────────────
+        function showSection(name) {
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.section === name);
+            });
+            document.querySelectorAll('.section-panel').forEach(el => {
+                el.classList.toggle('active', el.dataset.section === name);
+            });
+        }
+
+        // ── Profile ─────────────────────────────────────────────────────────────
         async function saveAccountDetails() {
             const displayName = document.getElementById('settingsDisplayName').value.trim();
             const email = document.getElementById('settingsEmail').value.trim();
@@ -401,62 +580,49 @@
             const btn = document.getElementById('saveDetailsBtn');
 
             if (!displayName && !email) {
-                showMsg(msg, 'Please enter a display name or email to update.', 'error');
-                return;
+                showMsg(msg, 'Please enter a display name or email to update.', 'error'); return;
             }
 
-            btn.disabled = true;
-            btn.textContent = 'Saving...';
+            btn.disabled = true; btn.textContent = 'Saving…';
             try {
                 const response = await fetch(`${API_URL}/account/profile`, {
                     method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ displayName, email })
                 });
                 const data = await response.json();
                 if (response.ok) {
                     currentUser = { ...currentUser, ...data.user };
                     localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    initSidebar();
                     showMsg(msg, 'Details updated successfully!', 'success');
                 } else {
                     showMsg(msg, data.error || 'Failed to update details.', 'error');
                 }
-            } catch (err) {
-                showMsg(msg, 'Network error. Please try again.', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Save Details';
-            }
+            } catch { showMsg(msg, 'Network error. Please try again.', 'error'); }
+            finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
         }
 
+        // ── Password ────────────────────────────────────────────────────────────
         async function changePassword() {
             const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
+            const newPassword     = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const msg = document.getElementById('passwordMsg');
             const btn = document.getElementById('changePasswordBtn');
 
             if (!currentPassword || !newPassword || !confirmPassword) {
-                showMsg(msg, 'All password fields are required.', 'error');
-                return;
+                showMsg(msg, 'All password fields are required.', 'error'); return;
             }
             if (newPassword !== confirmPassword) {
-                showMsg(msg, 'New password and confirm password do not match.', 'error');
-                return;
+                showMsg(msg, 'New password and confirm password do not match.', 'error'); return;
             }
 
-            btn.disabled = true;
-            btn.textContent = 'Updating...';
+            btn.disabled = true; btn.textContent = 'Updating…';
             try {
                 const response = await fetch(`${API_URL}/auth/change-password`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ currentPassword, newPassword })
                 });
                 const data = await response.json();
@@ -465,18 +631,12 @@
                     document.getElementById('newPassword').value = '';
                     document.getElementById('confirmPassword').value = '';
                     showMsg(msg, 'Password changed successfully!', 'success');
-                } else {
-                    showMsg(msg, data.error || 'Failed to change password.', 'error');
-                }
-            } catch (err) {
-                showMsg(msg, 'Network error. Please try again.', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Change Password';
-            }
+                } else { showMsg(msg, data.error || 'Failed to change password.', 'error'); }
+            } catch { showMsg(msg, 'Network error. Please try again.', 'error'); }
+            finally { btn.disabled = false; btn.textContent = 'Update Password'; }
         }
 
-        // ── Subscription details ──────────────────────────────────────────────
+        // ── Subscription ────────────────────────────────────────────────────────
         async function loadSubscriptionDetails() {
             const el = document.getElementById('subDetails');
             try {
@@ -486,17 +646,21 @@
                 const data = await res.json();
 
                 if (!data.subscription || data.subscription.status === 'none') {
+                    updatePlanPill('free');
                     el.innerHTML = `
-                        <div class="sub-row">
-                            <span class="sub-label">Plan</span>
-                            <span class="sub-value"><span class="badge-free">Free Plan</span></span>
+                        <div class="sub-grid">
+                            <div class="sub-cell">
+                                <div class="sub-cell-label">Plan</div>
+                                <div class="sub-cell-value">Free Plan</div>
+                            </div>
+                            <div class="sub-cell">
+                                <div class="sub-cell-label">Monthly Quota</div>
+                                <div class="sub-cell-value">3 interpretations</div>
+                            </div>
                         </div>
-                        <div class="sub-row">
-                            <span class="sub-label">Monthly quota</span>
-                            <span class="sub-value">3 interpretations / month</span>
-                        </div>
-                        <p style="margin-top:14px;font-size:13px;color:#888;">
-                            <a href="payment.html" style="color:#667eea;font-weight:600;">Upgrade to Basic or Pro →</a>
+                        <p style="font-size:13px;color:var(--text-3);">
+                            Ready to unlock unlimited interpretations?
+                            <a href="payment.html" style="color:var(--brand);font-weight:600;">Upgrade now →</a>
                         </p>`;
                     return;
                 }
@@ -504,49 +668,57 @@
                 const sub = data.subscription;
                 const pm  = data.paymentMethod;
 
-                const planLabels = { basic: 'Basic Plan — $4.99/mo', pro: 'Pro Plan — $12.99/mo' };
-                const planLabel  = planLabels[sub.plan] ?? sub.plan;
-                const periodEnd  = formatDate(sub.currentPeriodEnd);
+                updatePlanPill(sub.plan);
 
+                const planLabels  = { basic: 'Basic — $4.99/mo', pro: 'Pro — $12.99/mo' };
+                const planLabel   = planLabels[sub.plan] ?? sub.plan;
+                const periodEnd   = formatDate(sub.currentPeriodEnd);
                 const isCanceling = sub.cancelAtPeriodEnd;
-                const statusBadge = isCanceling
-                    ? `<span class="badge-canceled">Cancels ${periodEnd}</span>`
-                    : sub.status === 'active'
-                        ? `<span class="badge-active">Active</span>`
-                        : `<span class="badge-canceled">${sub.status}</span>`;
 
-                const pmRow = pm
-                    ? `<div class="sub-row">
-                            <span class="sub-label">Payment method</span>
-                            <span class="sub-value">${capitalize(pm.brand)} •••• ${pm.last4} &nbsp; ${pm.expMonth}/${String(pm.expYear).slice(-2)}</span>
-                       </div>`
-                    : '';
+                const statusBadge = isCanceling
+                    ? `<span class="badge canceled">Canceling</span>`
+                    : sub.status === 'active'
+                        ? `<span class="badge active">Active</span>`
+                        : `<span class="badge canceled">${sub.status}</span>`;
+
+                const pct    = sub.monthlyDeepLimit > 0 ? Math.round((sub.monthlyDeepUsed / sub.monthlyDeepLimit) * 100) : 0;
+                const pmCell = pm ? `
+                    <div class="sub-cell">
+                        <div class="sub-cell-label">Payment Method</div>
+                        <div class="sub-cell-value">${capitalize(pm.brand)} •••• ${pm.last4}</div>
+                    </div>` : '';
 
                 el.innerHTML = `
-                    <div class="sub-row">
-                        <span class="sub-label">Plan</span>
-                        <span class="sub-value">${planLabel}</span>
+                    <div class="sub-grid">
+                        <div class="sub-cell">
+                            <div class="sub-cell-label">Plan</div>
+                            <div class="sub-cell-value">${planLabel}</div>
+                        </div>
+                        <div class="sub-cell">
+                            <div class="sub-cell-label">Status</div>
+                            <div class="sub-cell-value">${statusBadge}</div>
+                        </div>
+                        <div class="sub-cell">
+                            <div class="sub-cell-label">${isCanceling ? 'Access Until' : 'Next Billing'}</div>
+                            <div class="sub-cell-value">${periodEnd}</div>
+                        </div>
+                        ${pmCell}
                     </div>
-                    <div class="sub-row">
-                        <span class="sub-label">Status</span>
-                        <span class="sub-value">${statusBadge}</span>
+                    <div>
+                        <div class="usage-bar-label">
+                            <span>Monthly Usage</span>
+                            <span style="font-weight:700;color:var(--text-1)">${sub.monthlyDeepUsed} / ${sub.monthlyDeepLimit} interpretations</span>
+                        </div>
+                        <div class="usage-bar-track">
+                            <div class="usage-bar-fill ${pct >= 80 ? 'warn' : ''}" style="width:${Math.min(pct, 100)}%"></div>
+                        </div>
+                        <div style="font-size:11px;color:var(--text-3);margin-top:5px;">${pct}% of monthly quota used</div>
                     </div>
-                    <div class="sub-row">
-                        <span class="sub-label">${isCanceling ? 'Access until' : 'Next billing date'}</span>
-                        <span class="sub-value">${periodEnd}</span>
-                    </div>
-                    <div class="sub-row">
-                        <span class="sub-label">Usage this period</span>
-                        <span class="sub-value">${sub.monthlyDeepUsed} / ${sub.monthlyDeepLimit} interpretations</span>
-                    </div>
-                    ${pmRow}
                     ${!isCanceling && sub.status === 'active' ? `
-                    <button class="btn-danger" id="cancelSubBtn" onclick="cancelSubscription()">
-                        Cancel Subscription
-                    </button>
-                    <p style="font-size:12px;color:#888;margin-top:8px;text-align:center;">
-                        You'll keep access until ${periodEnd}.
-                    </p>` : ''}
+                    <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                        <p style="font-size:13px;color:var(--text-3);">Access continues until <strong style="color:var(--text-1)">${periodEnd}</strong> after canceling.</p>
+                        <button class="btn-danger" id="cancelSubBtn" onclick="cancelSubscription()">Cancel Subscription</button>
+                    </div>` : ''}
                 `;
             } catch (err) {
                 el.textContent = 'Unable to load subscription details.';
@@ -558,106 +730,78 @@
             if (!val) return '—';
             let ms;
             if (typeof val === 'number') {
-                // Heuristic: timestamps < 1e12 are seconds, not milliseconds
                 ms = val < 1_000_000_000_000 ? val * 1000 : val;
             } else {
                 ms = new Date(val).getTime();
             }
             if (isNaN(ms) || ms < 0) return '—';
             const d = new Date(ms);
-            if (d.getFullYear() < 2000) return '—'; // sanity guard
+            if (d.getFullYear() < 2000) return '—';
             return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
         }
 
-        function capitalize(str) {
-            return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
-        }
+        function capitalize(str) { return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''; }
 
         async function cancelSubscription() {
             const btn = document.getElementById('cancelSubBtn');
             const msg = document.getElementById('cancelMsg');
             if (!confirm('Are you sure you want to cancel your subscription? You will keep access until the end of your billing period.')) return;
 
-            btn.disabled = true;
-            btn.textContent = 'Canceling...';
-
+            btn.disabled = true; btn.textContent = 'Canceling…';
             try {
                 const res  = await fetch(`${API_URL}/subscriptions/cancel`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
                 });
                 const data = await res.json();
-
                 if (res.ok) {
-                    showMsg(msg, 'Subscription canceled. You\'ll keep access until the end of your billing period.', 'success');
-                    await loadSubscriptionDetails(); // refresh the section
+                    showMsg(msg, "Subscription canceled. You'll keep access until the end of your billing period.", 'success');
+                    await loadSubscriptionDetails();
                 } else {
                     showMsg(msg, data.error || 'Failed to cancel. Please try again.', 'error');
-                    btn.disabled = false;
-                    btn.textContent = 'Cancel Subscription';
+                    btn.disabled = false; btn.textContent = 'Cancel Subscription';
                 }
-            } catch (err) {
+            } catch {
                 showMsg(msg, 'Network error. Please try again.', 'error');
-                btn.disabled = false;
-                btn.textContent = 'Cancel Subscription';
+                btn.disabled = false; btn.textContent = 'Cancel Subscription';
             }
         }
 
-        // ── Preferences ───────────────────────────────────────────────────────
+        // ── Preferences ─────────────────────────────────────────────────────────
         async function loadPreferences() {
             try {
-                const res  = await fetch(`${API_URL}/account/me`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
+                const res  = await fetch(`${API_URL}/account/me`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
                 const data = await res.json();
                 if (res.ok && data.user) {
-                    const lang = data.user.preferredLanguage || 'en';
-                    document.getElementById('langSelect').value = lang;
+                    document.getElementById('langSelect').value = data.user.preferredLanguage || 'en';
                     document.getElementById('emailResultsToggle').checked = !!data.user.emailResultsOptIn;
                 }
-            } catch (err) {
-                console.error('[account-settings] load preferences error:', err);
-            }
+            } catch (err) { console.error('[account-settings] load preferences error:', err); }
         }
 
         async function savePreferences() {
-            const lang            = document.getElementById('langSelect').value;
+            const lang             = document.getElementById('langSelect').value;
             const emailResultsOptIn = document.getElementById('emailResultsToggle').checked;
-            const msg             = document.getElementById('prefsMsg');
-            const btn             = document.getElementById('savePrefsBtn');
+            const msg = document.getElementById('prefsMsg');
+            const btn = document.getElementById('savePrefsBtn');
 
-            btn.disabled = true;
-            btn.textContent = 'Saving...';
-
+            btn.disabled = true; btn.textContent = 'Saving…';
             try {
                 const res  = await fetch(`${API_URL}/account/preferences`, {
                     method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ language: lang, emailResultsOptIn })
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    // Update stored user locale
-                    if (currentUser) {
-                        currentUser.preferredLanguage = lang;
-                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-                    }
+                    if (currentUser) { currentUser.preferredLanguage = lang; localStorage.setItem('currentUser', JSON.stringify(currentUser)); }
                     showMsg(msg, 'Preferences saved!', 'success');
-                } else {
-                    showMsg(msg, data.error || 'Failed to save preferences.', 'error');
-                }
-            } catch {
-                showMsg(msg, 'Network error. Please try again.', 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Save Preferences';
-            }
+                } else { showMsg(msg, data.error || 'Failed to save preferences.', 'error'); }
+            } catch { showMsg(msg, 'Network error. Please try again.', 'error'); }
+            finally { btn.disabled = false; btn.textContent = 'Save Preferences'; }
         }
 
-        // ── Add-Ons ───────────────────────────────────────────────────────────
+        // ── Add-Ons ─────────────────────────────────────────────────────────────
         const ADDON_LABELS = {
             life_season:   'Life Season',
             recurring:     'Recurring Dreams',
@@ -665,100 +809,104 @@
             therapist_pdf: 'Therapist Export',
             ad_removal:    'Ad Removal',
         };
+        const ADDON_ICONS = {
+            life_season:   '🌸',
+            recurring:     '🔁',
+            couples:       '💑',
+            therapist_pdf: '📄',
+            ad_removal:    '✨',
+        };
 
         async function loadAddons() {
             const el = document.getElementById('addonsList');
             try {
-                const res  = await fetch(`${API_URL}/addons`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
+                const res  = await fetch(`${API_URL}/addons`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
                 const data = await res.json();
 
                 if (!res.ok || !data.addons?.length) {
-                    el.innerHTML = `<p style="color:#aaa;font-size:13px;">No add-ons purchased yet. <a href="payment.html#addons" style="color:#667eea;font-weight:600;">Browse add-ons →</a></p>`;
+                    el.innerHTML = `
+                        <div class="empty-state">
+                            <div class="es-icon">🧩</div>
+                            <p>No add-ons purchased yet.<br>
+                            <a href="payment.html#addons">Browse add-ons →</a></p>
+                        </div>`;
                     return;
                 }
 
-                el.innerHTML = data.addons.map(({ key, purchasedAt }) => {
+                el.innerHTML = `<div class="addons-grid">${data.addons.map(({ key, purchasedAt }) => {
                     const label = ADDON_LABELS[key] ?? key;
-                    const date  = purchasedAt ? new Date(purchasedAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : '';
-                    return `<span class="addon-chip">✓ ${label}${date ? ` <span class="addon-chip-date">· ${date}</span>` : ''}</span>`;
-                }).join('');
-            } catch {
-                el.textContent = 'Unable to load add-ons.';
-            }
+                    const icon  = ADDON_ICONS[key]  ?? '✓';
+                    const date  = purchasedAt
+                        ? new Date(purchasedAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })
+                        : '';
+                    return `<div class="addon-card">
+                        <div class="addon-check">${icon}</div>
+                        <div>
+                            <div class="addon-name">${label}</div>
+                            ${date ? `<div class="addon-date">Since ${date}</div>` : ''}
+                        </div>
+                    </div>`;
+                }).join('')}</div>`;
+            } catch { el.textContent = 'Unable to load add-ons.'; }
         }
 
-        // ── Purchase History ──────────────────────────────────────────────────
-        const ADDON_LABELS_H = {
-            life_season:   'Life Season',
-            recurring:     'Recurring Dreams',
-            couples:       'Couples',
-            therapist_pdf: 'Therapist Export',
-            ad_removal:    'Ad Removal',
-        };
+        // ── Purchase History ────────────────────────────────────────────────────
         const PACK_LABELS = { '10': '10 Credits', '25': '25 Credits', '60': '60 Credits' };
 
         async function loadPurchaseHistory() {
             const el = document.getElementById('historyList');
             try {
-                const res  = await fetch(`${API_URL}/credits/history`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
+                const res  = await fetch(`${API_URL}/credits/history`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
                 const data = await res.json();
 
                 if (!res.ok || !data.transactions?.length) {
-                    el.innerHTML = `<p style="color:#aaa;font-size:13px;">No transactions yet. <a href="payment.html" style="color:#667eea;font-weight:600;">Browse plans & add-ons →</a></p>`;
+                    el.innerHTML = `
+                        <div class="empty-state">
+                            <div class="es-icon">🧾</div>
+                            <p>No transactions yet.<br>
+                            <a href="payment.html">Browse plans & add-ons →</a></p>
+                        </div>`;
                     return;
                 }
 
-                el.innerHTML = data.transactions.map((t) => {
-                    let icon, iconClass, desc, sub, deltaText, deltaClass;
+                const rows = data.transactions.map((t) => {
+                    let icon, iconClass, desc, meta, deltaText, deltaClass;
                     const date = t.createdAt
                         ? new Date(t.createdAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })
                         : '';
 
                     if (t.reason === 'purchase') {
-                        icon      = '✦';
-                        iconClass = 'purchase';
-                        const packLabel = PACK_LABELS[t.pack] ?? `${t.delta} Credits`;
-                        desc      = `${packLabel} Pack`;
-                        sub       = 'Credit purchase';
-                        deltaText = `+${t.delta} credits`;
-                        deltaClass = 'positive';
+                        icon = '💳'; iconClass = 'purchase';
+                        desc = `${PACK_LABELS[t.pack] ?? `${t.delta} Credits`} Pack`;
+                        meta = `Credit purchase · ${date}`;
+                        deltaText = `+${t.delta} credits`; deltaClass = 'pos';
                     } else if (t.reason === 'addon_purchase') {
-                        icon      = '🧩';
-                        iconClass = 'addon';
-                        desc      = ADDON_LABELS_H[t.addonKey] ?? t.addonKey;
-                        sub       = 'Add-on activated';
-                        deltaText = 'Lifetime';
-                        deltaClass = 'neutral';
+                        icon = '🧩'; iconClass = 'addon';
+                        desc = ADDON_LABELS[t.addonKey] ?? t.addonKey;
+                        meta = `Add-on activated · ${date}`;
+                        deltaText = 'Lifetime'; deltaClass = 'neu';
                     } else if (t.reason === 'interpretation') {
-                        icon      = '✦';
-                        iconClass = 'spend';
-                        desc      = 'Dream Interpretation';
-                        sub       = 'Credits used';
-                        deltaText = `${t.delta} credits`;
-                        deltaClass = 'negative';
-                    } else {
-                        return '';
-                    }
+                        icon = '✦'; iconClass = 'spend';
+                        desc = 'Dream Interpretation';
+                        meta = `Credits used · ${date}`;
+                        deltaText = `${t.delta} credits`; deltaClass = 'neg';
+                    } else { return ''; }
 
-                    return `<div class="history-row">
-                        <div class="history-icon ${iconClass}">${icon}</div>
-                        <div class="history-desc">
-                            ${desc}
-                            <div class="history-sub">${sub} · ${date}</div>
+                    return `<div class="h-row">
+                        <div class="h-icon ${iconClass}">${icon}</div>
+                        <div>
+                            <div class="h-desc">${desc}</div>
+                            <div class="h-meta">${meta}</div>
                         </div>
-                        <div class="history-delta ${deltaClass}">${deltaText}</div>
+                        <div class="h-delta ${deltaClass}">${deltaText}</div>
                     </div>`;
                 }).join('');
-            } catch {
-                el.textContent = 'Unable to load purchase history.';
-            }
+
+                el.innerHTML = `<div class="h-list">${rows}</div>`;
+            } catch { el.textContent = 'Unable to load purchase history.'; }
         }
 
-        // Load subscription on page init (only if logged in)
+        // ── Init ────────────────────────────────────────────────────────────────
         if (accessToken && currentUser) {
             loadSubscriptionDetails();
             loadPreferences();
@@ -766,24 +914,23 @@
             loadPurchaseHistory();
         }
 
+        // ── Utilities ───────────────────────────────────────────────────────────
         function togglePw(inputId, btn) {
             const input = document.getElementById(inputId);
             if (input.type === 'password') {
-                input.type = 'text';
-                btn.textContent = '🙈';
+                input.type = 'text'; btn.textContent = '🙈';
                 btn.setAttribute('aria-label', 'Hide password');
             } else {
-                input.type = 'password';
-                btn.textContent = '👁️';
+                input.type = 'password'; btn.textContent = '👁️';
                 btn.setAttribute('aria-label', 'Show password');
             }
         }
 
         function showMsg(el, text, type) {
-            el.className = `msg ${type}`;
+            el.className = `alert ${type}`;
             el.textContent = text;
             el.style.display = 'block';
-            setTimeout(() => { el.style.display = 'none'; }, 4000);
+            setTimeout(() => { el.style.display = 'none'; }, 4500);
         }
     </script>
 </body>
