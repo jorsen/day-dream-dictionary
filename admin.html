@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Day Dream Dictionary</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; background: #1a1a2e; border-right: 1px solid #2a2a4a; padding: 24px 0; flex-shrink: 0; }
+    .main { flex: 1; padding: 32px; overflow-x: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar-logo { padding: 0 20px 24px; border-bottom: 1px solid #2a2a4a; margin-bottom: 16px; }
+    .sidebar-logo h2 { font-size: 16px; color: #a78bfa; font-weight: 700; }
+    .sidebar-logo p { font-size: 11px; color: #666; margin-top: 2px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer;
+      color: #999; font-size: 14px; transition: all .2s; border-left: 3px solid transparent; }
+    .nav-item:hover { color: #e0e0e0; background: #16213e; }
+    .nav-item.active { color: #a78bfa; background: #16213e; border-left-color: #a78bfa; }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+    /* ── Header ── */
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .page-title { font-size: 24px; font-weight: 700; color: #fff; }
+    .admin-badge { background: #a78bfa22; color: #a78bfa; border: 1px solid #a78bfa44;
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .logout-btn { background: none; border: 1px solid #444; color: #999; padding: 6px 14px;
+      border-radius: 6px; cursor: pointer; font-size: 13px; transition: all .2s; }
+    .logout-btn:hover { border-color: #f87171; color: #f87171; }
+
+    /* ── Stats cards ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 20px; }
+    .stat-card .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: .5px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; color: #fff; margin-top: 6px; }
+    .stat-card .sub { font-size: 11px; color: #a78bfa; margin-top: 4px; }
+
+    /* ── Section ── */
+    .section { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .section-title { font-size: 16px; font-weight: 600; color: #e0e0e0; }
+
+    /* ── Search ── */
+    .search-bar { display: flex; gap: 8px; }
+    .search-bar input { background: #0f0f1a; border: 1px solid #2a2a4a; color: #e0e0e0;
+      padding: 8px 14px; border-radius: 8px; font-size: 14px; width: 260px; outline: none; }
+    .search-bar input:focus { border-color: #a78bfa; }
+    .search-bar button { background: #a78bfa; color: #fff; border: none; padding: 8px 16px;
+      border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 12px; color: #666; font-weight: 600; font-size: 11px;
+      text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid #2a2a4a; }
+    td { padding: 12px; border-bottom: 1px solid #1e1e35; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #16213e22; }
+
+    /* ── Badges ── */
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-free { background: #1e1e35; color: #888; }
+    .badge-basic { background: #1e3a5f; color: #60a5fa; }
+    .badge-pro { background: #2d1b4e; color: #a78bfa; }
+    .badge-superadmin { background: #3d1515; color: #f87171; }
+    .badge-admin { background: #2d2d1b; color: #fbbf24; }
+    .badge-active { background: #1a3a2a; color: #34d399; }
+    .badge-none { background: #1e1e35; color: #555; }
+
+    /* ── Action buttons ── */
+    .action-btn { background: none; border: 1px solid #2a2a4a; color: #999; padding: 4px 10px;
+      border-radius: 6px; cursor: pointer; font-size: 12px; transition: all .2s; }
+    .action-btn:hover { border-color: #a78bfa; color: #a78bfa; }
+    .action-btn.danger:hover { border-color: #f87171; color: #f87171; }
+
+    /* ── Pagination ── */
+    .pagination { display: flex; align-items: center; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+    .pagination button { background: #0f0f1a; border: 1px solid #2a2a4a; color: #999;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all .2s; }
+    .pagination button:hover:not(:disabled) { border-color: #a78bfa; color: #a78bfa; }
+    .pagination button:disabled { opacity: .4; cursor: default; }
+    .pagination .page-info { font-size: 13px; color: #666; }
+
+    /* ── Modal ── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
+      z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 16px;
+      padding: 28px; width: 520px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
+    .modal h3 { font-size: 18px; color: #fff; margin-bottom: 20px; }
+    .modal-row { display: flex; justify-content: space-between; padding: 10px 0;
+      border-bottom: 1px solid #2a2a4a; font-size: 13px; }
+    .modal-row:last-child { border-bottom: none; }
+    .modal-row .key { color: #666; }
+    .modal-row .val { color: #e0e0e0; font-weight: 500; text-align: right; max-width: 60%; word-break: break-all; }
+    .modal-close { background: none; border: 1px solid #2a2a4a; color: #999; padding: 8px 20px;
+      border-radius: 8px; cursor: pointer; margin-top: 20px; font-size: 14px; }
+    .modal-close:hover { border-color: #f87171; color: #f87171; }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; border: 1px solid #2a2a4a;
+      color: #e0e0e0; padding: 12px 20px; border-radius: 10px; font-size: 14px;
+      opacity: 0; transform: translateY(12px); transition: all .3s; z-index: 200; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: #34d39966; color: #34d399; }
+    .toast.error { border-color: #f8717166; color: #f87171; }
+
+    /* ── Login screen ── */
+    .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: #0f0f1a; }
+    .login-box { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 16px;
+      padding: 40px; width: 360px; }
+    .login-box h1 { font-size: 22px; color: #a78bfa; margin-bottom: 8px; }
+    .login-box p { font-size: 13px; color: #666; margin-bottom: 28px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; color: #888; margin-bottom: 6px; }
+    .form-group input { width: 100%; background: #0f0f1a; border: 1px solid #2a2a4a;
+      color: #e0e0e0; padding: 10px 14px; border-radius: 8px; font-size: 14px; outline: none; }
+    .form-group input:focus { border-color: #a78bfa; }
+    .btn-primary { width: 100%; background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 15px;
+      font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .btn-primary:disabled { opacity: .6; cursor: default; }
+    .error-msg { color: #f87171; font-size: 13px; margin-top: 12px; text-align: center; }
+
+    /* ── View toggle ── */
+    #adminApp { display: none; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ── Login Screen ─────────────────────────────────────────────────── -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h1>🌙 Admin Panel</h1>
+    <p>Day Dream Dictionary — Superadmin</p>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@example.com" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <p id="loginError" class="error-msg hidden"></p>
+  </div>
+</div>
+
+<!-- ── Admin App ─────────────────────────────────────────────────────── -->
+<div id="adminApp" class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h2>🌙 DDD Admin</h2>
+      <p>Superadmin Panel</p>
+    </div>
+    <div class="nav-item active" onclick="showSection('dashboard')">
+      <span class="icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showSection('users')">
+      <span class="icon">👥</span> Users
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header">
+      <h1 class="page-title" id="pageTitle">Dashboard</h1>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="admin-badge">Superadmin</span>
+        <button class="logout-btn" onclick="doLogout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div id="sectionDashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="label">Total Users</div>
+          <div class="value" id="statTotalUsers">—</div>
+          <div class="sub" id="statRecentUsers"></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Active Subs</div>
+          <div class="value" id="statActiveSubs">—</div>
+          <div class="sub">Paying customers</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Free Users</div>
+          <div class="value" id="statFreeUsers">—</div>
+          <div class="sub">No subscription</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Total Dreams</div>
+          <div class="value" id="statTotalDreams">—</div>
+          <div class="sub" id="statRecentDreams"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Section -->
+    <div id="sectionUsers" class="hidden">
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">All Users</span>
+          <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search by email..." onkeydown="if(event.key==='Enter')searchUsers()" />
+            <button onclick="searchUsers()">Search</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Plan</th>
+                <th>Credits</th>
+                <th>Dreams</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="8" style="text-align:center;color:#555;padding:40px;">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <button id="prevBtn" onclick="changePage(-1)" disabled>← Prev</button>
+          <span class="page-info" id="pageInfo">Page 1</span>
+          <button id="nextBtn" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ── User Detail Modal ──────────────────────────────────────────────── -->
+<div class="modal-overlay" id="userModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>User Detail</h3>
+    <div id="modalContent"></div>
+    <button class="modal-close" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const API_URL = '/api/v1';
+  let accessToken = null;
+  let currentPage = 1;
+  let currentSearch = '';
+  let totalPages = 1;
+
+  // ── Auth ──────────────────────────────────────────────────────────────
+  async function doLogin() {
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const btn      = document.getElementById('loginBtn');
+    const errEl    = document.getElementById('loginError');
+
+    if (!email || !password) {
+      showLoginError('Please enter email and password');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+    errEl.classList.add('hidden');
+
+    try {
+      const res  = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showLoginError(data.error || 'Login failed');
+        return;
+      }
+
+      if (data.user?.role !== 'superadmin') {
+        showLoginError('Access denied — superadmin only');
+        return;
+      }
+
+      accessToken = data.accessToken || data.token;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminApp').style.display    = 'flex';
+      loadStats();
+      loadUsers();
+    } catch {
+      showLoginError('Network error. Please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  }
+
+  function showLoginError(msg) {
+    const el = document.getElementById('loginError');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+
+  function doLogout() {
+    accessToken = null;
+    document.getElementById('adminApp').style.display    = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────
+  function showSection(name) {
+    document.querySelectorAll('.nav-item').forEach((el) => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById('sectionDashboard').classList.add('hidden');
+    document.getElementById('sectionUsers').classList.add('hidden');
+
+    const titles = { dashboard: 'Dashboard', users: 'Users' };
+    document.getElementById('pageTitle').textContent = titles[name] || name;
+
+    if (name === 'dashboard') document.getElementById('sectionDashboard').classList.remove('hidden');
+    if (name === 'users')     document.getElementById('sectionUsers').classList.remove('hidden');
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────
+  async function loadStats() {
+    try {
+      const res  = await authFetch(`${API_URL}/admin/stats`);
+      const data = await res.json();
+      if (!res.ok) return;
+      const s = data.stats;
+      document.getElementById('statTotalUsers').textContent  = s.totalUsers;
+      document.getElementById('statActiveSubs').textContent  = s.activeSubs;
+      document.getElementById('statFreeUsers').textContent   = s.freeUsers;
+      document.getElementById('statTotalDreams').textContent = s.totalDreams;
+      document.getElementById('statRecentUsers').textContent  = `+${s.recentUsers} this week`;
+      document.getElementById('statRecentDreams').textContent = `+${s.recentDreams} this week`;
+    } catch (e) { console.error(e); }
+  }
+
+  // ── Users ─────────────────────────────────────────────────────────────
+  async function loadUsers(page = 1, search = '') {
+    currentPage   = page;
+    currentSearch = search;
+    const tbody   = document.getElementById('usersTableBody');
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#555;padding:40px;">Loading...</td></tr>`;
+
+    try {
+      const url = `${API_URL}/admin/users?page=${page}&limit=20&search=${encodeURIComponent(search)}`;
+      const res  = await authFetch(url);
+      const data = await res.json();
+      if (!res.ok) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#f87171;">${data.error}</td></tr>`; return; }
+
+      const { users, pagination } = data;
+      totalPages = pagination.totalPages;
+
+      document.getElementById('pageInfo').textContent    = `Page ${pagination.page} of ${totalPages || 1}`;
+      document.getElementById('prevBtn').disabled = pagination.page <= 1;
+      document.getElementById('nextBtn').disabled = pagination.page >= totalPages;
+
+      if (!users.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#555;padding:40px;">No users found</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = users.map((u) => `
+        <tr>
+          <td style="color:#e0e0e0;">${esc(u.email)}</td>
+          <td style="color:#999;">${esc(u.displayName || '—')}</td>
+          <td>${roleBadge(u.role)}</td>
+          <td>${planBadge(u.plan)}</td>
+          <td style="color:#a78bfa;">${u.creditBalance}</td>
+          <td style="color:#999;">${u.dreamCount}</td>
+          <td style="color:#555;font-size:12px;">${fmtDate(u.createdAt)}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="action-btn" onclick='viewUser("${u.id}")'>View</button>
+            ${u.role !== 'superadmin' ? `<button class="action-btn danger" onclick='deleteUser("${u.id}","${esc(u.email)}")'>Delete</button>` : ''}
+          </td>
+        </tr>`).join('');
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#f87171;">Network error</td></tr>`;
+    }
+  }
+
+  function searchUsers() {
+    loadUsers(1, document.getElementById('searchInput').value.trim());
+  }
+
+  function changePage(dir) {
+    const next = currentPage + dir;
+    if (next < 1 || next > totalPages) return;
+    loadUsers(next, currentSearch);
+  }
+
+  // ── View user detail ──────────────────────────────────────────────────
+  async function viewUser(id) {
+    const modal   = document.getElementById('userModal');
+    const content = document.getElementById('modalContent');
+    content.innerHTML = '<p style="color:#666;text-align:center;padding:20px;">Loading...</p>';
+    modal.classList.add('open');
+
+    try {
+      const res  = await authFetch(`${API_URL}/admin/users/${id}`);
+      const data = await res.json();
+      if (!res.ok) { content.innerHTML = `<p style="color:#f87171;">${data.error}</p>`; return; }
+
+      const u = data.user;
+      const s = data.subscription;
+      content.innerHTML = `
+        <div class="modal-row"><span class="key">Email</span><span class="val">${esc(u.email)}</span></div>
+        <div class="modal-row"><span class="key">Name</span><span class="val">${esc(u.displayName)}</span></div>
+        <div class="modal-row"><span class="key">Role</span><span class="val">${roleBadge(u.role)}</span></div>
+        <div class="modal-row"><span class="key">Credits</span><span class="val">${u.creditBalance ?? 0}</span></div>
+        <div class="modal-row"><span class="key">Language</span><span class="val">${u.preferredLanguage ?? 'en'}</span></div>
+        <div class="modal-row"><span class="key">Email Opt-In</span><span class="val">${u.emailResultsOptIn ? 'Yes' : 'No'}</span></div>
+        <div class="modal-row"><span class="key">Plan</span><span class="val">${s ? planBadge(s.plan) : planBadge('free')}</span></div>
+        <div class="modal-row"><span class="key">Sub Status</span><span class="val">${s?.status ?? 'none'}</span></div>
+        <div class="modal-row"><span class="key">Joined</span><span class="val">${fmtDate(u.createdAt)}</span></div>
+        <div class="modal-row"><span class="key">Dreams</span><span class="val">${data.recentDreams?.length ? data.recentDreams.length + ' recent shown' : '0'}</span></div>
+        <div class="modal-row"><span class="key">Add-Ons</span><span class="val">${data.addons?.map(a=>a.addonKey).join(', ') || 'None'}</span></div>
+        ${u.role !== 'superadmin' ? `
+        <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="action-btn" onclick='changeRole("${u._id}","admin")'>Make Admin</button>
+          <button class="action-btn" onclick='changeRole("${u._id}","user")'>Reset to User</button>
+          <button class="action-btn danger" onclick='deleteUser("${u._id}","${esc(u.email)}");closeModal()'>Delete Account</button>
+        </div>` : ''}
+      `;
+    } catch {
+      content.innerHTML = '<p style="color:#f87171;">Failed to load user</p>';
+    }
+  }
+
+  async function changeRole(id, role) {
+    const res = await authFetch(`${API_URL}/admin/users/${id}/role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    });
+    const data = await res.json();
+    if (res.ok) { showToast('Role updated', 'success'); loadUsers(currentPage, currentSearch); closeModal(); }
+    else showToast(data.error || 'Failed', 'error');
+  }
+
+  async function deleteUser(id, email) {
+    if (!confirm(`Delete account for ${email}?\n\nThis permanently removes all their data and cancels any subscription.`)) return;
+    const res  = await authFetch(`${API_URL}/admin/users/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) { showToast('User deleted', 'success'); loadUsers(currentPage, currentSearch); }
+    else showToast(data.error || 'Failed to delete', 'error');
+  }
+
+  function closeModal() {
+    document.getElementById('userModal').classList.remove('open');
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function authFetch(url, opts = {}) {
+    return fetch(url, {
+      ...opts,
+      headers: { 'Authorization': `Bearer ${accessToken}`, ...(opts.headers || {}) },
+    });
+  }
+
+  function esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+  }
+
+  function roleBadge(role) {
+    const map = { superadmin: 'badge-superadmin', admin: 'badge-admin', user: 'badge-free' };
+    return `<span class="badge ${map[role] || 'badge-free'}">${role}</span>`;
+  }
+
+  function planBadge(plan) {
+    const map = { pro: 'badge-pro', basic: 'badge-basic', free: 'badge-free' };
+    return `<span class="badge ${map[plan] || 'badge-free'}">${plan}</span>`;
+  }
+
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+</script>
+</body>
+</html>

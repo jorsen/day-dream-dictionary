@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import bcrypt from 'bcrypt';
 import { connectDB, getDB } from './db.js';
 import { authenticate } from './middleware/auth.js';
 import authRouter from './routes/auth.js';
@@ -12,6 +13,7 @@ import webhookRouter      from './routes/webhook.js';
 import creditsRouter      from './routes/credits.js';
 import addonsRouter       from './routes/addons.js';
 import reportsRouter      from './routes/reports.js';
+import adminRouter        from './routes/admin.js';
 
 // ── Static file root (two levels up from backend/src/) ────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -92,6 +94,7 @@ app.use(`${v1}/account`,       accountRouter);
 app.use(`${v1}/credits`,       creditsRouter);
 app.use(`${v1}/addons`,        addonsRouter);
 app.use(`${v1}/reports`,       reportsRouter);
+app.use(`${v1}/admin`,         adminRouter);
 
 // ── GET /api/v1/profile ───────────────────────────────────────────────────────
 // Consumed by dream-interpretation.html and other pages to get user + plan data.
@@ -176,10 +179,42 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// ── Superadmin bootstrap ──────────────────────────────────────────────────────
+async function ensureSuperAdmin() {
+  const email    = process.env.SUPERADMIN_EMAIL;
+  const password = process.env.SUPERADMIN_PASSWORD;
+  if (!email || !password) return;
+
+  const db = getDB();
+  const existing = await db.collection('users').findOne({ email });
+
+  if (existing) {
+    // Promote to superadmin if not already
+    if (existing.role !== 'superadmin') {
+      await db.collection('users').updateOne({ email }, { $set: { role: 'superadmin' } });
+      console.log(`[admin] Promoted ${email} to superadmin`);
+    }
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  await db.collection('users').insertOne({
+    email,
+    passwordHash,
+    displayName: 'Admin',
+    role: 'superadmin',
+    freeUsedThisMonth: 0,
+    freeMonthStart: new Date(),
+    createdAt: new Date(),
+  });
+  console.log(`[admin] Superadmin account created: ${email}`);
+}
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 async function start() {
   try {
     await connectDB();
+    await ensureSuperAdmin();
     app.listen(PORT, () => {
       console.log(`[server] Listening on port ${PORT} (${process.env.NODE_ENV})`);
     });
