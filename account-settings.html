@@ -328,13 +328,13 @@
     <div class="page">
 
         <div class="page-header">
-            <button class="back-btn" onclick="window.location.href='profile-dashboard.html'">← Back</button>
-            <h1 class="page-title">Account Settings</h1>
+            <button class="back-btn" onclick="window.location.href='profile-dashboard.html'" data-i18n="settings.back">← Back</button>
+            <h1 class="page-title" data-i18n="settings.pageTitle">Account Settings</h1>
         </div>
 
         <div id="notLoggedIn" class="not-logged-in" style="display:none;">
-            <p>You need to be logged in to access account settings.</p>
-            <a href="profile-dashboard.html">Go to Login</a>
+            <p data-i18n="settings.notLoggedIn">You need to be logged in to access account settings.</p>
+            <a href="profile-dashboard.html" data-i18n="settings.goLogin">Go to Login</a>
         </div>
 
         <div id="settingsContent">
@@ -353,22 +353,22 @@
 
                     <nav class="sidebar-nav">
                         <button class="nav-item active" data-section="profile" onclick="showSection('profile')">
-                            <span class="nav-icon blue">👤</span> Profile
+                            <span class="nav-icon blue">👤</span> <span data-i18n="settings.nav.profile">Profile</span>
                         </button>
                         <button class="nav-item" data-section="security" onclick="showSection('security')">
-                            <span class="nav-icon red">🔒</span> Security
+                            <span class="nav-icon red">🔒</span> <span data-i18n="settings.nav.security">Security</span>
                         </button>
                         <button class="nav-item" data-section="billing" onclick="showSection('billing')">
-                            <span class="nav-icon purple">💳</span> Billing
+                            <span class="nav-icon purple">💳</span> <span data-i18n="settings.nav.billing">Billing</span>
                         </button>
                         <button class="nav-item" data-section="addons" onclick="showSection('addons')">
-                            <span class="nav-icon green">🧩</span> Add-Ons
+                            <span class="nav-icon green">🧩</span> <span data-i18n="settings.nav.addons">Add-Ons</span>
                         </button>
                         <button class="nav-item" data-section="preferences" onclick="showSection('preferences')">
-                            <span class="nav-icon orange">🌐</span> Preferences
+                            <span class="nav-icon orange">🌐</span> <span data-i18n="settings.nav.preferences">Preferences</span>
                         </button>
                         <button class="nav-item" data-section="history" onclick="showSection('history')">
-                            <span class="nav-icon indigo">🧾</span> History
+                            <span class="nav-icon indigo">🧾</span> <span data-i18n="settings.nav.history">History</span>
                         </button>
                     </nav>
                 </aside>
@@ -382,23 +382,23 @@
                             <div class="card-header">
                                 <div class="card-icon blue">👤</div>
                                 <div class="card-header-text">
-                                    <h2>Profile Details</h2>
-                                    <p>Update your display name and email address</p>
+                                    <h2 data-i18n="settings.profile.heading">Profile Details</h2>
+                                    <p data-i18n="settings.profile.desc">Update your display name and email address</p>
                                 </div>
                             </div>
                             <div class="card-body">
                                 <div class="form-grid">
                                     <div class="field">
-                                        <label for="settingsDisplayName">Display Name</label>
-                                        <input type="text" id="settingsDisplayName" placeholder="Your display name">
+                                        <label for="settingsDisplayName" data-i18n="settings.profile.displayName">Display Name</label>
+                                        <input type="text" id="settingsDisplayName" placeholder="Your display name" data-i18n-placeholder="settings.profile.displayNamePlaceholder">
                                     </div>
                                     <div class="field">
-                                        <label for="settingsEmail">Email Address</label>
-                                        <input type="email" id="settingsEmail" placeholder="your@email.com">
+                                        <label for="settingsEmail" data-i18n="settings.profile.email">Email Address</label>
+                                        <input type="email" id="settingsEmail" placeholder="your@email.com" data-i18n-placeholder="settings.profile.emailPlaceholder">
                                     </div>
                                 </div>
                                 <div class="form-actions">
-                                    <button class="btn-primary" id="saveDetailsBtn" onclick="saveAccountDetails()">Save Changes</button>
+                                    <button class="btn-primary" id="saveDetailsBtn" onclick="saveAccountDetails()" data-i18n="settings.profile.saveBtn">Save Changes</button>
                                 </div>
                                 <div class="alert" id="detailsMsg"></div>
                             </div>
@@ -411,37 +411,37 @@
                             <div class="card-header">
                                 <div class="card-icon red">🔒</div>
                                 <div class="card-header-text">
-                                    <h2>Change Password</h2>
-                                    <p>Keep your account secure with a strong password</p>
+                                    <h2 data-i18n="settings.security.heading">Change Password</h2>
+                                    <p data-i18n="settings.security.desc">Keep your account secure with a strong password</p>
                                 </div>
                             </div>
                             <div class="card-body">
                                 <div class="field">
-                                    <label for="currentPassword">Current Password</label>
+                                    <label for="currentPassword" data-i18n="settings.security.currentPw">Current Password</label>
                                     <div class="pw-wrap">
-                                        <input type="password" id="currentPassword" placeholder="Enter your current password">
+                                        <input type="password" id="currentPassword" placeholder="Enter your current password" data-i18n-placeholder="settings.security.currentPwPlaceholder">
                                         <button type="button" class="pw-toggle" onclick="togglePw('currentPassword', this)" aria-label="Show password">👁️</button>
                                     </div>
                                 </div>
                                 <hr class="divider">
                                 <div class="form-grid">
                                     <div class="field">
-                                        <label for="newPassword">New Password</label>
+                                        <label for="newPassword" data-i18n="settings.security.newPw">New Password</label>
                                         <div class="pw-wrap">
-                                            <input type="password" id="newPassword" placeholder="Min 8 characters">
+                                            <input type="password" id="newPassword" placeholder="Min 8 characters" data-i18n-placeholder="settings.security.newPwPlaceholder">
                                             <button type="button" class="pw-toggle" onclick="togglePw('newPassword', this)" aria-label="Show password">👁️</button>
                                         </div>
                                     </div>
                                     <div class="field">
-                                        <label for="confirmPassword">Confirm Password</label>
+                                        <label for="confirmPassword" data-i18n="settings.security.confirmPw">Confirm Password</label>
                                         <div class="pw-wrap">
-                                            <input type="password" id="confirmPassword" placeholder="Repeat new password">
+                                            <input type="password" id="confirmPassword" placeholder="Repeat new password" data-i18n-placeholder="settings.security.confirmPwPlaceholder">
                                             <button type="button" class="pw-toggle" onclick="togglePw('confirmPassword', this)" aria-label="Show password">👁️</button>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="form-actions">
-                                    <button class="btn-primary" id="changePasswordBtn" onclick="changePassword()">Update Password</button>
+                                    <button class="btn-primary" id="changePasswordBtn" onclick="changePassword()" data-i18n="settings.security.updateBtn">Update Password</button>
                                 </div>
                                 <div class="alert" id="passwordMsg"></div>
                             </div>
@@ -454,8 +454,8 @@
                             <div class="card-header">
                                 <div class="card-icon purple">💳</div>
                                 <div class="card-header-text">
-                                    <h2>Subscription & Billing</h2>
-                                    <p>Manage your plan and payment information</p>
+                                    <h2 data-i18n="settings.billing.heading">Subscription & Billing</h2>
+                                    <p data-i18n="settings.billing.desc">Manage your plan and payment information</p>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -471,8 +471,8 @@
                             <div class="card-header">
                                 <div class="card-icon green">🧩</div>
                                 <div class="card-header-text">
-                                    <h2>Your Add-Ons</h2>
-                                    <p>Active add-ons that enhance your dream experience</p>
+                                    <h2 data-i18n="settings.addons.heading">Your Add-Ons</h2>
+                                    <p data-i18n="settings.addons.desc">Active add-ons that enhance your dream experience</p>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -487,8 +487,8 @@
                             <div class="card-header">
                                 <div class="card-icon orange">🌐</div>
                                 <div class="card-header-text">
-                                    <h2>Language & Preferences</h2>
-                                    <p>Personalize your interpretation experience</p>
+                                    <h2 data-i18n="settings.preferences.heading">Language & Preferences</h2>
+                                    <p data-i18n="settings.preferences.desc">Personalize your interpretation experience</p>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -499,12 +499,12 @@
                                 <label class="toggle-row" for="emailResultsToggle">
                                     <input type="checkbox" id="emailResultsToggle">
                                     <div>
-                                        <div class="toggle-label">Email me my dream interpretations</div>
-                                        <div class="toggle-sub">Opt-in only. Requires email configured via Resend.</div>
+                                        <div class="toggle-label" data-i18n="settings.preferences.emailOptIn">Email me my dream interpretations</div>
+                                        <div class="toggle-sub" data-i18n="settings.preferences.emailOptIn.sub">Opt-in only. Requires email configured via Resend.</div>
                                     </div>
                                 </label>
                                 <div class="form-actions">
-                                    <button class="btn-primary" id="savePrefsBtn" onclick="savePreferences()">Save Preferences</button>
+                                    <button class="btn-primary" id="savePrefsBtn" onclick="savePreferences()" data-i18n="settings.preferences.saveBtn">Save Preferences</button>
                                 </div>
                                 <div class="alert" id="prefsMsg"></div>
                             </div>
@@ -517,8 +517,8 @@
                             <div class="card-header">
                                 <div class="card-icon indigo">🧾</div>
                                 <div class="card-header-text">
-                                    <h2>Purchase History</h2>
-                                    <p>Your past transactions and credit activity</p>
+                                    <h2 data-i18n="settings.history.heading">Purchase History</h2>
+                                    <p data-i18n="settings.history.desc">Your past transactions and credit activity</p>
                                 </div>
                             </div>
                             <div class="card-body">
@@ -586,6 +586,7 @@
                 showMsg(msg, 'Please enter a display name or email to update.', 'error'); return;
             }
 
+            const _t = window.t || (k => k);
             btn.disabled = true; btn.textContent = 'Saving…';
             try {
                 const response = await fetch(`${API_URL}/account/profile`, {
@@ -603,7 +604,7 @@
                     showMsg(msg, data.error || 'Failed to update details.', 'error');
                 }
             } catch { showMsg(msg, 'Network error. Please try again.', 'error'); }
-            finally { btn.disabled = false; btn.textContent = 'Save Changes'; }
+            finally { btn.disabled = false; btn.textContent = _t('settings.profile.saveBtn', 'Save Changes'); }
         }
 
         // ── Password ────────────────────────────────────────────────────────────
@@ -621,6 +622,7 @@
                 showMsg(msg, 'New password and confirm password do not match.', 'error'); return;
             }
 
+            const _t = window.t || (k => k);
             btn.disabled = true; btn.textContent = 'Updating…';
             try {
                 const response = await fetch(`${API_URL}/auth/change-password`, {
@@ -636,7 +638,7 @@
                     showMsg(msg, 'Password changed successfully!', 'success');
                 } else { showMsg(msg, data.error || 'Failed to change password.', 'error'); }
             } catch { showMsg(msg, 'Network error. Please try again.', 'error'); }
-            finally { btn.disabled = false; btn.textContent = 'Update Password'; }
+            finally { btn.disabled = false; btn.textContent = _t('settings.security.updateBtn', 'Update Password'); }
         }
 
         // ── Subscription ────────────────────────────────────────────────────────
@@ -750,6 +752,7 @@
             const msg = document.getElementById('cancelMsg');
             if (!confirm('Are you sure you want to cancel your subscription? You will keep access until the end of your billing period.')) return;
 
+            const _t = window.t || (k => k);
             btn.disabled = true; btn.textContent = 'Canceling…';
             try {
                 const res  = await fetch(`${API_URL}/subscriptions/cancel`, {
@@ -762,11 +765,11 @@
                     await loadSubscriptionDetails();
                 } else {
                     showMsg(msg, data.error || 'Failed to cancel. Please try again.', 'error');
-                    btn.disabled = false; btn.textContent = 'Cancel Subscription';
+                    btn.disabled = false; btn.textContent = _t('settings.billing.cancelBtn', 'Cancel Subscription');
                 }
             } catch {
                 showMsg(msg, 'Network error. Please try again.', 'error');
-                btn.disabled = false; btn.textContent = 'Cancel Subscription';
+                btn.disabled = false; btn.textContent = _t('settings.billing.cancelBtn', 'Cancel Subscription');
             }
         }
 
@@ -786,6 +789,7 @@
             const msg = document.getElementById('prefsMsg');
             const btn = document.getElementById('savePrefsBtn');
 
+            const _t = window.t || (k => k);
             btn.disabled = true; btn.textContent = 'Saving…';
             try {
                 const res  = await fetch(`${API_URL}/account/preferences`, {
@@ -798,7 +802,7 @@
                     showMsg(msg, 'Preferences saved!', 'success');
                 } else { showMsg(msg, data.error || 'Failed to save preferences.', 'error'); }
             } catch { showMsg(msg, 'Network error. Please try again.', 'error'); }
-            finally { btn.disabled = false; btn.textContent = 'Save Preferences'; }
+            finally { btn.disabled = false; btn.textContent = _t('settings.preferences.saveBtn', 'Save Preferences'); }
         }
 
         // ── Add-Ons ─────────────────────────────────────────────────────────────

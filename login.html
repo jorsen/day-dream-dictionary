@@ -206,35 +206,41 @@
 <body>
     <div class="login-container">
         <div class="logo">🌙</div>
-        <h2 id="formTitle">Login to Your Account</h2>
-        
+        <h2 id="formTitle" data-i18n="auth.loginTitle">Login to Your Account</h2>
+
         <div id="message" class="message"></div>
 
         <form id="authForm">
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" required placeholder="Enter your email">
+                <label for="email" data-i18n="auth.emailLabel">Email</label>
+                <input type="email" id="email" required
+                    placeholder="Enter your email"
+                    data-i18n-placeholder="auth.emailPlaceholder">
             </div>
-            
+
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password" data-i18n="auth.passwordLabel">Password</label>
                 <div class="password-wrapper">
-                    <input type="password" id="password" required placeholder="Enter your password">
+                    <input type="password" id="password" required
+                        placeholder="Enter your password"
+                        data-i18n-placeholder="auth.passwordPlaceholder">
                     <button type="button" class="toggle-password" onclick="togglePasswordVisibility()" id="eyeBtn" aria-label="Show password">👁️</button>
                 </div>
             </div>
-            
+
             <div class="form-group" id="nameGroup" style="display: none;">
-                <label for="displayName">Display Name</label>
-                <input type="text" id="displayName" placeholder="Enter your name">
+                <label for="displayName" data-i18n="auth.displayNameLabel">Display Name</label>
+                <input type="text" id="displayName"
+                    placeholder="Enter your name"
+                    data-i18n-placeholder="auth.displayNamePlaceholder">
             </div>
-            
-            <button type="submit" id="submitBtn">Login</button>
+
+            <button type="submit" id="submitBtn" data-i18n="auth.loginBtn">Login</button>
         </form>
-        
+
         <div class="toggle-form">
-            <span id="toggleText">Don't have an account?</span>
-            <a href="#" id="toggleLink" onclick="toggleMode(event)">Sign up</a>
+            <span id="toggleText" data-i18n="auth.noAccount">Don't have an account?</span>
+            <a href="#" id="toggleLink" onclick="toggleMode(event)" data-i18n="auth.signupLink">Sign up</a>
         </div>
 
     </div>
@@ -267,27 +273,28 @@
         function toggleMode(e) {
             e.preventDefault();
             isSignup = !isSignup;
-            
+
             const formTitle = document.getElementById('formTitle');
             const submitBtn = document.getElementById('submitBtn');
             const toggleText = document.getElementById('toggleText');
             const toggleLink = document.getElementById('toggleLink');
             const nameGroup = document.getElementById('nameGroup');
-            
+            const _t = window.t || (k => k);
+
             if (isSignup) {
-                formTitle.textContent = 'Create Your Account';
-                submitBtn.textContent = 'Sign Up';
-                toggleText.textContent = 'Already have an account?';
-                toggleLink.textContent = 'Login';
+                formTitle.textContent = _t('auth.signupTitle', 'Create Your Account');
+                submitBtn.textContent = _t('auth.signupBtn', 'Sign Up');
+                toggleText.textContent = _t('auth.hasAccount', 'Already have an account?');
+                toggleLink.textContent = _t('auth.loginLink', 'Login');
                 nameGroup.style.display = 'block';
             } else {
-                formTitle.textContent = 'Login to Your Account';
-                submitBtn.textContent = 'Login';
-                toggleText.textContent = "Don't have an account?";
-                toggleLink.textContent = 'Sign up';
+                formTitle.textContent = _t('auth.loginTitle', 'Login to Your Account');
+                submitBtn.textContent = _t('auth.loginBtn', 'Login');
+                toggleText.textContent = _t('auth.noAccount', "Don't have an account?");
+                toggleLink.textContent = _t('auth.signupLink', 'Sign up');
                 nameGroup.style.display = 'none';
             }
-            
+
             // Clear any messages
             document.getElementById('message').className = 'message';
         }
@@ -301,8 +308,9 @@
             const submitBtn = document.getElementById('submitBtn');
             
             // Disable button during request
+            const _t = window.t || (k => k);
             submitBtn.disabled = true;
-            submitBtn.textContent = isSignup ? 'Creating Account...' : 'Logging in...';
+            submitBtn.textContent = isSignup ? _t('auth.creatingAccount', 'Creating Account...') : _t('auth.loggingIn', 'Logging in...');
             
             const endpoint = isSignup ? '/auth/signup' : '/auth/login';
             const body = isSignup

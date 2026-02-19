@@ -430,35 +430,35 @@
 <body>
     <!-- Login/Signup Form -->
     <div class="auth-container" id="authContainer">
-        <h2 id="authTitle">Login to Your Account</h2>
-        
+        <h2 id="authTitle" data-i18n="auth.loginTitle">Login to Your Account</h2>
+
         <div id="alertBox"></div>
 
         <form id="authForm">
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" required placeholder="Enter your email">
+                <label for="email" data-i18n="auth.emailLabel">Email</label>
+                <input type="email" id="email" required placeholder="Enter your email" data-i18n-placeholder="auth.emailPlaceholder">
             </div>
-            
+
             <div class="form-group">
-                <label for="password">Password</label>
+                <label for="password" data-i18n="auth.passwordLabel">Password</label>
                 <div class="password-wrapper">
-                    <input type="password" id="password" required placeholder="Enter your password">
+                    <input type="password" id="password" required placeholder="Enter your password" data-i18n-placeholder="auth.passwordPlaceholder">
                     <button type="button" class="toggle-password" onclick="togglePw('password', this)" aria-label="Show password">👁️</button>
                 </div>
             </div>
-            
+
             <div class="form-group hidden" id="displayNameGroup">
-                <label for="displayName">Display Name</label>
-                <input type="text" id="displayName" placeholder="Enter your name">
+                <label for="displayName" data-i18n="auth.displayNameLabel">Display Name</label>
+                <input type="text" id="displayName" placeholder="Enter your name" data-i18n-placeholder="auth.displayNamePlaceholder">
             </div>
-            
-            <button type="submit" class="btn" id="submitBtn">Login</button>
+
+            <button type="submit" class="btn" id="submitBtn" data-i18n="auth.loginBtn">Login</button>
         </form>
-        
+
         <div class="toggle-form">
-            <span id="toggleText">Don't have an account?</span>
-            <a href="#" id="toggleLink" onclick="toggleAuthMode(event)">Sign up</a>
+            <span id="toggleText" data-i18n="auth.noAccount">Don't have an account?</span>
+            <a href="#" id="toggleLink" onclick="toggleAuthMode(event)" data-i18n="auth.signupLink">Sign up</a>
         </div>
     </div>
 
@@ -466,7 +466,7 @@
     <div class="dashboard" id="dashboard">
         <div class="container">
             <div class="header">
-                <h1>🌙 Day Dream Dictionary</h1>
+                <h1>🌙 <span data-i18n="dash.title">Day Dream Dictionary</span></h1>
                 <div class="user-info">
                     <div class="avatar" id="userAvatar">U</div>
                     <div>
@@ -474,7 +474,7 @@
                         <div id="userEmail" style="color: #666; font-size: 14px;">email@example.com</div>
                     </div>
                     <button class="btn-logout" style="background:#667eea;margin-right:8px;" onclick="window.location.href='account-settings.html'">⚙️ Settings</button>
-                    <button class="btn-logout" onclick="logout()">Logout</button>
+                    <button class="btn-logout" onclick="logout()" data-i18n="dash.logout">Logout</button>
                 </div>
             </div>
 
@@ -485,96 +485,96 @@
             <div class="grid">
                 <!-- Profile Information Card -->
                 <div class="card">
-                    <h3><span class="card-icon">👤</span> Profile Information</h3>
+                    <h3><span class="card-icon">👤</span> <span data-i18n="dash.profile.heading">Profile Information</span></h3>
                     <div class="info-row">
-                        <span class="info-label">User ID</span>
+                        <span class="info-label" data-i18n="dash.profile.userId">User ID</span>
                         <span class="info-value" id="userId">-</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Email</span>
+                        <span class="info-label" data-i18n="dash.profile.email">Email</span>
                         <span class="info-value" id="profileEmail">-</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Display Name</span>
+                        <span class="info-label" data-i18n="dash.profile.displayName">Display Name</span>
                         <span class="info-value" id="profileName">-</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Role</span>
+                        <span class="info-label" data-i18n="dash.profile.role">Role</span>
                         <span class="info-value" id="userRole">-</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Email Verified</span>
+                        <span class="info-label" data-i18n="dash.profile.emailVerified">Email Verified</span>
                         <span class="info-value" id="emailVerified">-</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Language</span>
+                        <span class="info-label" data-i18n="dash.profile.language">Language</span>
                         <span class="info-value" id="userLocale">-</span>
                     </div>
                 </div>
 
                 <!-- Subscription Card -->
                 <div class="card">
-                    <h3><span class="card-icon">💎</span> Subscription Status</h3>
+                    <h3><span class="card-icon">💎</span> <span data-i18n="dash.sub.heading">Subscription Status</span></h3>
                     <div class="info-row">
-                        <span class="info-label">Plan</span>
+                        <span class="info-label" data-i18n="dash.sub.plan">Plan</span>
                         <span class="info-value">
                             <span class="badge badge-free" id="planBadge">Free</span>
                         </span>
                     </div>
                     <div class="info-row" id="creditsRow">
-                        <span class="info-label">Credits</span>
+                        <span class="info-label" data-i18n="dash.sub.credits">Credits</span>
                         <span class="info-value" id="userCredits">5</span>
                     </div>
                     <div class="info-row" id="monthlyLimitRow">
-                        <span class="info-label">Monthly Limit</span>
+                        <span class="info-label" data-i18n="dash.sub.monthlyLimit">Monthly Limit</span>
                         <span class="info-value" id="monthlyLimit">5 basic / 3 deep</span>
                     </div>
                     <div class="info-row" id="monthlyUsageRow">
-                        <span class="info-label">Usage This Month</span>
+                        <span class="info-label" data-i18n="dash.sub.monthlyUsage">Usage This Month</span>
                         <span class="info-value" id="monthlyUsage">0 / 5</span>
                     </div>
                     <div class="info-row" id="creditBalanceRow" style="display:none;">
-                        <span class="info-label">Credit Balance</span>
+                        <span class="info-label" data-i18n="dash.sub.creditBalance">Credit Balance</span>
                         <span class="info-value" id="creditBalance">0 credits</span>
                     </div>
                     <div style="display:flex;gap:8px;margin-top:20px;">
-                        <button class="btn" style="flex:1;" onclick="goToPayment()">💳 Upgrade / Credits</button>
-                        <button class="btn" style="flex:1;background:linear-gradient(135deg,#764ba2,#667eea);" onclick="window.location.href='payment.html#addons'">✨ Add-Ons</button>
+                        <button class="btn" style="flex:1;" onclick="goToPayment()" data-i18n="dash.sub.upgradeBtn">💳 Upgrade / Credits</button>
+                        <button class="btn" style="flex:1;background:linear-gradient(135deg,#764ba2,#667eea);" onclick="window.location.href='payment.html#addons'" data-i18n="dash.sub.addonsBtn">✨ Add-Ons</button>
                     </div>
                 </div>
 
                 <!-- Dream Statistics Card -->
                 <div class="card">
-                    <h3><span class="card-icon">📊</span> Dream Statistics</h3>
+                    <h3><span class="card-icon">📊</span> <span data-i18n="dash.stats.heading">Dream Statistics</span></h3>
                     <div class="stats-grid">
                         <div class="stat-box">
                             <div class="stat-value" id="totalDreams">0</div>
-                            <div class="stat-label">Total Dreams</div>
+                            <div class="stat-label" data-i18n="dash.stats.total">Total Dreams</div>
                         </div>
                         <div class="stat-box">
                             <div class="stat-value" id="interpretations">0</div>
-                            <div class="stat-label">Interpretations</div>
+                            <div class="stat-label" data-i18n="dash.stats.interpretations">Interpretations</div>
                         </div>
                         <div class="stat-box">
                             <div class="stat-value" id="thisMonth">0</div>
-                            <div class="stat-label">This Month</div>
+                            <div class="stat-label" data-i18n="dash.stats.thisMonth">This Month</div>
                         </div>
                         <div class="stat-box">
                             <div class="stat-value" id="creditsUsed">0</div>
-                            <div class="stat-label">Credits Used</div>
+                            <div class="stat-label" data-i18n="dash.stats.creditsUsed">Credits Used</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Quick Dream Entry Card -->
                 <div class="card">
-                    <h3><span class="card-icon">✨</span> Quick Dream Entry</h3>
+                    <h3><span class="card-icon">✨</span> <span data-i18n="dash.quick.heading">Quick Dream Entry</span></h3>
                     <div class="dream-form">
-                        <textarea id="dreamContent" placeholder="Describe your dream..."></textarea>
-                        <button onclick="goToDreamInterpretation()">Get Full Interpretation</button>
+                        <textarea id="dreamContent" placeholder="Describe your dream..." data-i18n-placeholder="dash.quick.placeholder"></textarea>
+                        <button onclick="goToDreamInterpretation()" data-i18n="dash.quick.btn">Get Full Interpretation</button>
                     </div>
                     <div style="margin-top: 15px; text-align: center;">
-                        <a href="dream-interpretation.html" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                        <a href="dream-interpretation.html" style="color: #667eea; text-decoration: none; font-weight: 600;" data-i18n="dash.quick.link">
                             Go to Dream Interpretation Page →
                         </a>
                     </div>
@@ -584,18 +584,18 @@
                 <!-- Recent Dreams Card -->
                 <div class="card" style="grid-column: span 2;">
                     <h3 style="justify-content:space-between;">
-                        <span><span class="card-icon">📚</span> Recent Dreams</span>
-                        <a href="dream-history.html" style="font-size:13px;font-weight:600;color:#667eea;text-decoration:none;">View Full History →</a>
+                        <span><span class="card-icon">📚</span> <span data-i18n="dash.recent.heading">Recent Dreams</span></span>
+                        <a href="dream-history.html" style="font-size:13px;font-weight:600;color:#667eea;text-decoration:none;" data-i18n="dash.recent.viewAll">View Full History →</a>
                     </h3>
                     <div class="dreams-list" id="dreamsList">
-                        <div class="loading">No dreams recorded yet. Start by entering your first dream above!</div>
+                        <div class="loading" data-i18n="dash.noRecentDreams">No dreams recorded yet. Start by entering your first dream above!</div>
                     </div>
                 </div>
 
                 <!-- Analytics Card (Pro-gated) -->
                 <div class="card analytics-card">
-                    <h3><span class="card-icon">🔮</span> Dream Analytics</h3>
-                    <div id="analyticsContent"><div class="loading">Loading analytics…</div></div>
+                    <h3><span class="card-icon">🔮</span> <span data-i18n="dash.analytics.heading">Dream Analytics</span></h3>
+                    <div id="analyticsContent"><div class="loading" data-i18n="dash.analytics.loading">Loading analytics…</div></div>
                 </div>
             </div>
         </div>
@@ -624,24 +624,25 @@
         function toggleAuthMode(e) {
             e.preventDefault();
             authMode = authMode === 'login' ? 'signup' : 'login';
-            
+
             const authTitle = document.getElementById('authTitle');
             const submitBtn = document.getElementById('submitBtn');
             const toggleText = document.getElementById('toggleText');
             const toggleLink = document.getElementById('toggleLink');
             const displayNameGroup = document.getElementById('displayNameGroup');
-            
+            const _t = window.t || (k => k);
+
             if (authMode === 'signup') {
-                authTitle.textContent = 'Create Your Account';
-                submitBtn.textContent = 'Sign Up';
-                toggleText.textContent = 'Already have an account?';
-                toggleLink.textContent = 'Login';
+                authTitle.textContent = _t('auth.signupTitle', 'Create Your Account');
+                submitBtn.textContent = _t('auth.signupBtn', 'Sign Up');
+                toggleText.textContent = _t('auth.hasAccount', 'Already have an account?');
+                toggleLink.textContent = _t('auth.loginLink', 'Login');
                 displayNameGroup.classList.remove('hidden');
             } else {
-                authTitle.textContent = 'Login to Your Account';
-                submitBtn.textContent = 'Login';
-                toggleText.textContent = "Don't have an account?";
-                toggleLink.textContent = 'Sign up';
+                authTitle.textContent = _t('auth.loginTitle', 'Login to Your Account');
+                submitBtn.textContent = _t('auth.loginBtn', 'Login');
+                toggleText.textContent = _t('auth.noAccount', "Don't have an account?");
+                toggleLink.textContent = _t('auth.signupLink', 'Sign up');
                 displayNameGroup.classList.add('hidden');
             }
         }
@@ -1026,7 +1027,8 @@
             const dreamsList = document.getElementById('dreamsList');
 
             if (!dreams || dreams.length === 0) {
-                dreamsList.innerHTML = '<div class="loading">No dreams recorded yet. Start by entering your first dream above!</div>';
+                const _t = window.t || (k => k);
+                dreamsList.innerHTML = `<div class="loading">${_t('dash.noRecentDreams', 'No dreams recorded yet. Start by entering your first dream above!')}</div>`;
                 return;
             }
 
@@ -1049,16 +1051,17 @@
                 const { page, totalPages, total } = pagination;
                 const start = (page - 1) * DREAMS_PER_PAGE + 1;
                 const end = Math.min(page * DREAMS_PER_PAGE, total);
+                const _t = window.t || (k => k);
                 html += `
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid #eee;">
                         <button onclick="loadRecentDreams(${page - 1})" ${page <= 1 ? 'disabled' : ''}
                             style="padding:6px 14px;border:1px solid #667eea;border-radius:6px;background:${page <= 1 ? '#f0f0f0' : '#667eea'};color:${page <= 1 ? '#aaa' : '#fff'};cursor:${page <= 1 ? 'default' : 'pointer'};font-size:13px;">
-                            ← Prev
+                            ${_t('history.prev', '← Prev')}
                         </button>
                         <span style="font-size:13px;color:#666;">${start}–${end} of ${total}</span>
                         <button onclick="loadRecentDreams(${page + 1})" ${page >= totalPages ? 'disabled' : ''}
                             style="padding:6px 14px;border:1px solid #667eea;border-radius:6px;background:${page >= totalPages ? '#f0f0f0' : '#667eea'};color:${page >= totalPages ? '#aaa' : '#fff'};cursor:${page >= totalPages ? 'default' : 'pointer'};font-size:13px;">
-                            Next →
+                            ${_t('history.next', 'Next →')}
                         </button>
                     </div>
                 `;
@@ -1078,12 +1081,13 @@
                 });
 
                 if (res.status === 403) {
+                    const _t = window.t || (k => k);
                     container.innerHTML = `
                         <div class="analytics-locked">
                             <div class="lock-icon">🔒</div>
-                            <h4>Pro Feature</h4>
-                            <p>Unlock streak tracking, top themes, emotional patterns, and monthly frequency with a Pro subscription.</p>
-                            <a href="payment.html" class="btn-upgrade">Upgrade to Pro</a>
+                            <h4>${_t('dash.analytics.locked.title', 'Pro Feature')}</h4>
+                            <p>${_t('dash.analytics.locked.desc', 'Unlock streak tracking, top themes, emotional patterns, and monthly frequency with a Pro subscription.')}</p>
+                            <a href="payment.html" class="btn-upgrade">${_t('dash.analytics.locked.btn', 'Upgrade to Pro')}</a>
                         </div>`;
                     return;
                 }
@@ -1094,11 +1098,13 @@
                 renderAnalytics(analytics, container);
 
             } catch {
-                container.innerHTML = '<div class="loading" style="color:#e53e3e;">Could not load analytics.</div>';
+                const _t = window.t || (k => k);
+                container.innerHTML = `<div class="loading" style="color:#e53e3e;">${_t('dash.analytics.error', 'Could not load analytics.')}</div>`;
             }
         }
 
         function renderAnalytics(data, container) {
+            const _t = window.t || (k => k);
             const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             const maxCount = Math.max(...(data.monthlyFrequency.map(m => m.count)), 1);
             const MAX_BAR_PX = 52;
@@ -1110,7 +1116,7 @@
                         <div class="month-col-bar" style="height:${Math.max(Math.round((m.count / maxCount) * MAX_BAR_PX), 4)}px;"></div>
                         <div class="month-col-label">${MONTHS[m.month - 1]}</div>
                     </div>`).join('')
-                : '<span style="color:#bbb;font-size:13px;">No dreams yet</span>';
+                : '<span style="color:#bbb;font-size:13px;">—</span>';
 
             const maxTheme = data.topThemes[0]?.count || 1;
             const themeBars = data.topThemes.length
@@ -1120,7 +1126,7 @@
                         <div class="theme-bar-track"><div class="theme-bar-fill" style="width:${Math.round((t.count / maxTheme) * 100)}%;"></div></div>
                         <span class="theme-bar-count">${t.count}</span>
                     </div>`).join('')
-                : '<span style="color:#bbb;font-size:13px;">No themes yet</span>';
+                : '<span style="color:#bbb;font-size:13px;">—</span>';
 
             const maxTone = data.emotionalTones[0]?.count || 1;
             const toneTags = data.emotionalTones.length
@@ -1128,27 +1134,27 @@
                     const opacity = (0.45 + (t.count / maxTone) * 0.55).toFixed(2);
                     return `<span class="tone-tag" style="opacity:${opacity};">${t.tone}</span>`;
                   }).join('')
-                : '<span style="color:#bbb;font-size:13px;">No tones yet</span>';
+                : '<span style="color:#bbb;font-size:13px;">—</span>';
 
             container.innerHTML = `
                 <div class="analytics-grid">
                     <div class="analytics-panel">
-                        <h4>Current Streak</h4>
+                        <h4>${_t('dash.analytics.streak', 'Current Streak')}</h4>
                         <div class="streak-display">
                             <div class="streak-number">${data.streak}</div>
                             <div class="streak-label">day${data.streak !== 1 ? 's' : ''} in a row</div>
                         </div>
                     </div>
                     <div class="analytics-panel">
-                        <h4>Monthly Frequency</h4>
+                        <h4>${_t('dash.analytics.monthlyFreq', 'Monthly Frequency')}</h4>
                         <div class="month-bar-wrap">${monthBars}</div>
                     </div>
                     <div class="analytics-panel">
-                        <h4>Top Themes</h4>
+                        <h4>${_t('dash.analytics.topThemes', 'Top Themes')}</h4>
                         ${themeBars}
                     </div>
                     <div class="analytics-panel">
-                        <h4>Emotional Tones</h4>
+                        <h4>${_t('dash.analytics.emotionalTones', 'Emotional Tones')}</h4>
                         <div>${toneTags}</div>
                     </div>
                 </div>`;

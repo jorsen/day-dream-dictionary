@@ -8,7 +8,8 @@
       "Bash(npm install:*)",
       "Bash(cmd /c \"npm install\")",
       "Bash(cmd.exe /c \"cd \"\"c:\\\\Users\\\\Jorsen Mejia\\\\Desktop\\\\sites\\\\day-dream-dictionary\\\\backend\"\" && npm install\")",
-      "Bash(cmd.exe /c \"cd /d \"\"c:\\\\Users\\\\Jorsen Mejia\\\\Desktop\\\\sites\\\\day-dream-dictionary\\\\backend\"\" && npm install 2>&1\")"
+      "Bash(cmd.exe /c \"cd /d \"\"c:\\\\Users\\\\Jorsen Mejia\\\\Desktop\\\\sites\\\\day-dream-dictionary\\\\backend\"\" && npm install 2>&1\")",
+      "Bash(ls:*)"
     ]
   }
 }

@@ -308,8 +308,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>🌙 Dream Interpretation</h1>
-        <p class="subtitle">Unlock the hidden meanings in your dreams</p>
+        <h1>🌙 <span data-i18n="dream.title">Dream Interpretation</span></h1>
+        <p class="subtitle" data-i18n="dream.subtitle">Unlock the hidden meanings in your dreams</p>
 
         <div class="credits-info">
             <div>🎉 <strong>COMPLETELY FREE</strong> - Unlimited Dream Interpretations!</div>
@@ -324,11 +324,12 @@
 
         <form id="dreamForm">
             <div class="form-group">
-                <label for="dreamText">Describe Your Dream</label>
-                <textarea 
-                    id="dreamText" 
-                    name="dreamText" 
+                <label for="dreamText" data-i18n="dream.textLabel">Describe Your Dream</label>
+                <textarea
+                    id="dreamText"
+                    name="dreamText"
                     placeholder="Tell us about your dream in detail... What did you see? How did you feel? Who was there?"
+                    data-i18n-placeholder="dream.textPlaceholder"
                     required
                     minlength="10"
                     maxlength="5000"
@@ -336,20 +337,21 @@
             </div>
 
             <div class="form-group">
-                <label for="interpretationType">Interpretation Type</label>
+                <label for="interpretationType" data-i18n="dream.typeLabel">Interpretation Type</label>
                 <select id="interpretationType" name="interpretationType">
-                    <option value="basic">Basic Analysis</option>
-                    <option value="deep">Deep Analysis</option>
+                    <option value="basic" data-i18n="dream.typeBasic">Basic Analysis</option>
+                    <option value="deep" data-i18n="dream.typeDeep">Deep Analysis</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="tags">Tags (optional, comma-separated)</label>
-                <input 
-                    type="text" 
-                    id="tags" 
-                    name="tags" 
+                <label for="tags" data-i18n="dream.tagsLabel">Tags (optional, comma-separated)</label>
+                <input
+                    type="text"
+                    id="tags"
+                    name="tags"
                     placeholder="e.g., recurring, nightmare, lucid"
+                    data-i18n-placeholder="dream.tagsPlaceholder"
                     style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px;"
                 >
             </div>
@@ -359,44 +361,44 @@
 
             <div class="loading" id="loading">
                 <div class="spinner"></div>
-                <p style="margin-top: 15px; color: #666;">Interpreting your dream...</p>
+                <p style="margin-top: 15px; color: #666;" data-i18n="dream.loading">Interpreting your dream...</p>
             </div>
 
             <div class="button-group">
-                <button type="submit" class="btn-primary" id="submitBtn">
+                <button type="submit" class="btn-primary" id="submitBtn" data-i18n="dream.submit">
                     Interpret Dream
                 </button>
-                <button type="button" class="btn-secondary" onclick="window.location.href='profile-dashboard.html'">
+                <button type="button" class="btn-secondary" data-i18n="dream.backBtn" onclick="window.location.href='profile-dashboard.html'">
                     Back to Dashboard
                 </button>
             </div>
         </form>
 
         <div class="interpretation-result" id="interpretationResult">
-            <h2>Your Dream Interpretation</h2>
-            
+            <h2 data-i18n="dream.result.heading">Your Dream Interpretation</h2>
+
             <div class="interpretation-section">
-                <h3>Main Themes</h3>
+                <h3 data-i18n="section.themes">Main Themes</h3>
                 <div id="mainThemes"></div>
             </div>
 
             <div class="interpretation-section">
-                <h3>Emotional Tone</h3>
+                <h3 data-i18n="section.tone">Emotional Tone</h3>
                 <p id="emotionalTone"></p>
             </div>
 
             <div class="interpretation-section">
-                <h3>Symbols & Meanings</h3>
+                <h3 data-i18n="section.symbols">Symbols &amp; Meanings</h3>
                 <div id="symbols"></div>
             </div>
 
             <div class="interpretation-section">
-                <h3>Personal Insight</h3>
+                <h3 data-i18n="section.insight">Personal Insight</h3>
                 <p id="personalInsight"></p>
             </div>
 
             <div class="interpretation-section">
-                <h3>Guidance</h3>
+                <h3 data-i18n="section.guidance">Guidance</h3>
                 <p id="guidance"></p>
             </div>
 
@@ -404,16 +406,16 @@
             <div id="addonResults"></div>
 
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
-                <button class="btn-primary" onclick="interpretAnother()">
+                <button class="btn-primary" onclick="interpretAnother()" data-i18n="dream.anotherBtn">
                     Interpret Another Dream
                 </button>
                 <button class="btn-primary" id="downloadPdfBtn" style="display:none;background:linear-gradient(135deg,#2d8a6e,#1a5c4a);" onclick="downloadPDF()">
-                    🩺 Download Therapist PDF
+                    🩺 <span data-i18n="dream.pdfBtn">Download Therapist PDF</span>
                 </button>
             </div>
         </div>
 
-        <a href="profile-dashboard.html" class="nav-link">← Back to Dashboard</a>
+        <a href="profile-dashboard.html" class="nav-link" data-i18n="dream.backBtn">← Back to Dashboard</a>
     </div>
 
     <script src="config.js"></script>

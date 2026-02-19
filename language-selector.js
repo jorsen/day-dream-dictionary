@@ -1,14 +1,19 @@
 /**
- * Global language selector — floating globe icon at bottom right.
+ * Global language selector + i18n translation engine.
  *
  * Usage: <script src="language-selector.js"></script>  (before </body>)
  *
- * Reads/writes:
- *   localStorage key: 'preferredLanguage'
- *   Backend: PATCH /account/preferences  (when logged in)
+ * What it does:
+ *   1. Floating globe button (bottom-right) for selecting UI language
+ *   2. Loads /i18n/{lang}.json and translates every [data-i18n] element
+ *   3. Saves preference to localStorage key 'preferredLanguage'
+ *   4. Syncs with backend PATCH /account/preferences when logged in
  *
  * Exposes:
- *   window.getPreferredLanguage() → current language code string
+ *   window.t(key, fallback)       → translate a key
+ *   window.getPreferredLanguage() → current language code
+ *   window._lsSelect(code)        → change language
+ *   window._lsToggle()            → toggle dropdown
  */
 (function () {
   'use strict';
@@ -30,7 +35,57 @@
     { code: 'th', flag: '🇹🇭', label: 'ภาษาไทย' },
   ];
 
-  /* ── Helpers ─────────────────────────────────────────── */
+  /* ── i18n Engine ─────────────────────────────────────────── */
+
+  const _cache  = {};
+  let _strings  = {};
+
+  async function _loadStrings(code) {
+    if (_cache[code]) { _strings = _cache[code]; return; }
+    try {
+      const res = await fetch(`/i18n/${code}.json`);
+      if (res.ok) {
+        _cache[code] = await res.json();
+        _strings = _cache[code];
+      } else if (code !== 'en') {
+        await _loadStrings('en');
+      }
+    } catch {
+      if (code !== 'en') await _loadStrings('en');
+    }
+  }
+
+  /** Translate a key. Falls back to `fallback`, then the key itself. */
+  function t(key, fallback) {
+    return _strings[key] || fallback || key;
+  }
+
+  function _applyTranslations() {
+    // Text content
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    // Placeholder
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+    });
+    // title attribute
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+      el.title = t(el.getAttribute('data-i18n-title'));
+    });
+    // aria-label
+    document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+      el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria')));
+    });
+    // RTL + html lang
+    const code = currentCode();
+    document.documentElement.lang = code;
+    document.documentElement.dir  = code === 'ar' ? 'rtl' : 'ltr';
+    // Fire a custom event so page scripts can re-render translated content
+    document.dispatchEvent(new CustomEvent('i18n:applied', { detail: { lang: code } }));
+  }
+
+  /* ── Helpers ─────────────────────────────────────────────── */
 
   function currentCode() {
     return localStorage.getItem(LS_KEY) || 'en';
@@ -48,12 +103,15 @@
     return localStorage.getItem('accessToken') || localStorage.getItem('authToken') || null;
   }
 
-  /* ── Save ────────────────────────────────────────────── */
+  /* ── Save language preference ─────────────────────────────── */
 
   function applyLang(code, skipBackend) {
     localStorage.setItem(LS_KEY, code);
     renderBtn(code);
     renderOptions(code);
+
+    // Load translations then apply to DOM
+    _loadStrings(code).then(_applyTranslations);
 
     if (!skipBackend) {
       const token   = getToken();
@@ -70,14 +128,13 @@
     closeDropdown();
   }
 
-  /* ── UI helpers ─────────────────────────────────────── */
+  /* ── UI helpers ─────────────────────────────────────────── */
 
   function renderBtn(code) {
     const lang = findLang(code);
     const btn  = document.getElementById('_ls_btn');
     if (btn) {
       btn.title = lang.label;
-      // Show the active flag as a small badge inside the button
       btn.querySelector('._ls_btn_flag').textContent = lang.flag;
     }
   }
@@ -105,7 +162,7 @@
     else openDropdown();
   }
 
-  /* ── Inject CSS ─────────────────────────────────────── */
+  /* ── Inject CSS ─────────────────────────────────────────── */
 
   function injectStyles() {
     const style = document.createElement('style');
@@ -215,7 +272,7 @@
     document.head.appendChild(style);
   }
 
-  /* ── Inject HTML ────────────────────────────────────── */
+  /* ── Inject HTML ────────────────────────────────────────── */
 
   function injectHTML() {
     const optionsHTML = LANGUAGES.map(l =>
@@ -236,7 +293,7 @@
     const dropdown = document.createElement('div');
     dropdown.id = '_ls_dropdown';
     dropdown.innerHTML =
-      `<div class="_ls_dropdown_header">Interpretation Language</div>` +
+      `<div class="_ls_dropdown_header">Display Language</div>` +
       optionsHTML;
 
     document.body.appendChild(btn);
@@ -250,7 +307,7 @@
     });
   }
 
-  /* ── Sync from backend ──────────────────────────────── */
+  /* ── Sync from backend ──────────────────────────────────── */
 
   function syncFromBackend() {
     const token   = getToken();
@@ -270,20 +327,24 @@
       .catch(() => {});
   }
 
-  /* ── Public API ─────────────────────────────────────── */
+  /* ── Public API ─────────────────────────────────────────── */
 
-  window._lsSelect  = (code) => applyLang(code);
-  window._lsToggle  = toggleDropdown;
+  window._lsSelect          = (code) => applyLang(code);
+  window._lsToggle          = toggleDropdown;
   window.getPreferredLanguage = currentCode;
+  window.t                  = t;   // expose translation function globally
 
-  /* ── Bootstrap ──────────────────────────────────────── */
+  /* ── Bootstrap ──────────────────────────────────────────── */
 
-  function init() {
+  async function init() {
     injectStyles();
     injectHTML();
     const code = currentCode();
     renderBtn(code);
     renderOptions(code);
+    // Load translations and apply immediately
+    await _loadStrings(code);
+    _applyTranslations();
     syncFromBackend();
   }
 

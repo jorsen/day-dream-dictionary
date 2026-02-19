@@ -1,0 +1,180 @@
+{
+  "nav.dashboard":       "لوحة التحكم",
+  "nav.history":         "سجل الأحلام",
+  "nav.settings":        "الإعدادات",
+  "nav.logout":          "تسجيل الخروج",
+
+  "home.subtitle":       "اكتشف المعاني الخفية في أحلامك باستخدام الذكاء الاصطناعي",
+  "home.cta":            "تسجيل الدخول / التسجيل",
+  "home.features.heading": "الميزات",
+  "home.feature1.title": "تحليل بالذكاء الاصطناعي",
+  "home.feature1.desc":  "تفسير متقدم للأحلام",
+  "home.feature2.title": "مجلة الأحلام",
+  "home.feature2.desc":  "تتبع أحلامك",
+  "home.feature3.title": "رؤى",
+  "home.feature3.desc":  "توجيه شخصي",
+
+  "auth.loginTitle":             "تسجيل الدخول إلى حسابك",
+  "auth.signupTitle":            "إنشاء حسابك",
+  "auth.emailLabel":             "البريد الإلكتروني",
+  "auth.emailPlaceholder":       "أدخل بريدك الإلكتروني",
+  "auth.passwordLabel":          "كلمة المرور",
+  "auth.passwordPlaceholder":    "أدخل كلمة المرور",
+  "auth.displayNameLabel":       "الاسم المعروض",
+  "auth.displayNamePlaceholder": "أدخل اسمك",
+  "auth.loginBtn":               "تسجيل الدخول",
+  "auth.signupBtn":              "إنشاء حساب",
+  "auth.loggingIn":              "جارٍ تسجيل الدخول...",
+  "auth.creatingAccount":        "جارٍ إنشاء الحساب...",
+  "auth.noAccount":              "ليس لديك حساب؟",
+  "auth.hasAccount":             "لديك حساب بالفعل؟",
+  "auth.signupLink":             "التسجيل",
+  "auth.loginLink":              "تسجيل الدخول",
+
+  "dream.title":           "تفسير الأحلام",
+  "dream.subtitle":        "اكتشف المعاني الخفية في أحلامك",
+  "dream.textLabel":       "صف حلمك",
+  "dream.textPlaceholder": "أخبرنا عن حلمك بالتفصيل... ماذا رأيت؟ كيف شعرت؟ من كان هناك؟",
+  "dream.typeLabel":       "نوع التفسير",
+  "dream.typeBasic":       "تحليل أساسي",
+  "dream.typeDeep":        "تحليل عميق",
+  "dream.tagsLabel":       "العلامات (اختياري، مفصولة بفاصلة)",
+  "dream.tagsPlaceholder": "مثال: متكرر، كابوس، واعٍ",
+  "dream.submit":          "تفسير الحلم",
+  "dream.interpreting":    "جارٍ التفسير...",
+  "dream.backBtn":         "العودة إلى لوحة التحكم",
+  "dream.loading":         "جارٍ تفسير حلمك...",
+  "dream.result.heading":  "تفسير حلمك",
+  "dream.anotherBtn":      "تفسير حلم آخر",
+  "dream.pdfBtn":          "تنزيل تقرير PDF المعالج",
+
+  "section.themes":       "المواضيع الرئيسية",
+  "section.tone":         "النبرة العاطفية",
+  "section.symbols":      "الرموز والمعاني",
+  "section.insight":      "البصيرة الشخصية",
+  "section.guidance":     "الإرشاد",
+  "section.lifeSeason":   "موسم الحياة",
+  "section.recurring":    "الأنماط المتكررة",
+  "section.relationship": "بصيرة العلاقة",
+  "section.therapeutic":  "نقاط التركيز العلاجية",
+
+  "history.title":          "سجل الأحلام",
+  "history.back":           "← رجوع",
+  "history.empty":          "لا توجد أحلام مسجلة بعد.",
+  "history.view":           "عرض",
+  "history.delete":         "حذف",
+  "history.pdf":            "PDF",
+  "history.selectAll":      "تحديد الكل",
+  "history.deleteSelected": "حذف المحدد",
+  "history.loading":        "جارٍ تحميل أحلامك...",
+  "history.firstDream":     "فسّر حلمك الأول →",
+  "history.prev":           "← السابق",
+  "history.next":           "التالي →",
+  "history.detail.yourDream":      "حلمك",
+  "history.detail.emotionalTone":  "النبرة العاطفية",
+  "history.detail.symbols":        "الرموز",
+  "history.detail.personalInsight":"البصيرة الشخصية",
+  "history.detail.guidance":       "الإرشاد",
+
+  "paywall.title":    "قم بالترقية للمتابعة",
+  "paywall.subtitle": "لقد استخدمت جميع تفسيراتك المجانية هذا الشهر.",
+  "paywall.cta":      "عرض الخطط",
+
+  "plan.free":  "الخطة المجانية",
+  "plan.basic": "الخطة الأساسية",
+  "plan.pro":   "الخطة الاحترافية",
+
+  "credits.balance": "رصيد النقاط",
+  "credits.buy":     "شراء نقاط",
+
+  "addon.life_season":   "موسم الحياة",
+  "addon.recurring":     "الأحلام المتكررة",
+  "addon.couples":       "الأزواج",
+  "addon.therapist_pdf": "تصدير المعالج",
+  "addon.ad_removal":    "إزالة الإعلانات",
+
+  "settings.language": "اللغة",
+  "settings.save":     "حفظ",
+  "settings.saved":    "تم الحفظ!",
+
+  "dash.title":                   "قاموس الأحلام",
+  "dash.logout":                  "تسجيل الخروج",
+  "dash.profile.heading":         "معلومات الملف الشخصي",
+  "dash.profile.userId":          "معرف المستخدم",
+  "dash.profile.email":           "البريد الإلكتروني",
+  "dash.profile.displayName":     "الاسم المعروض",
+  "dash.profile.role":            "الدور",
+  "dash.profile.emailVerified":   "تحقق البريد الإلكتروني",
+  "dash.profile.language":        "اللغة",
+  "dash.sub.heading":             "حالة الاشتراك",
+  "dash.sub.plan":                "الخطة",
+  "dash.sub.credits":             "النقاط",
+  "dash.sub.monthlyLimit":        "الحد الشهري",
+  "dash.sub.monthlyUsage":        "الاستخدام هذا الشهر",
+  "dash.sub.creditBalance":       "رصيد النقاط",
+  "dash.sub.upgradeBtn":          "💳 ترقية / نقاط",
+  "dash.sub.addonsBtn":           "✨ الإضافات",
+  "dash.stats.heading":           "إحصائيات الأحلام",
+  "dash.stats.total":             "إجمالي الأحلام",
+  "dash.stats.interpretations":   "التفسيرات",
+  "dash.stats.thisMonth":         "هذا الشهر",
+  "dash.stats.creditsUsed":       "النقاط المستخدمة",
+  "dash.quick.heading":           "إدخال حلم سريع",
+  "dash.quick.placeholder":       "صف حلمك...",
+  "dash.quick.btn":               "الحصول على التفسير الكامل",
+  "dash.quick.link":              "الانتقال إلى صفحة التفسير →",
+  "dash.recent.heading":          "الأحلام الأخيرة",
+  "dash.recent.viewAll":          "عرض السجل الكامل →",
+  "dash.analytics.heading":       "تحليل الأحلام",
+  "dash.analytics.loading":       "جارٍ تحميل التحليلات…",
+  "dash.analytics.error":         "تعذر تحميل التحليلات.",
+  "dash.analytics.locked.title":  "ميزة احترافية",
+  "dash.analytics.locked.desc":   "افتح تتبع التسلسل والمواضيع الرئيسية والأنماط العاطفية والتردد الشهري باشتراك احترافي.",
+  "dash.analytics.locked.btn":    "الترقية إلى الاحترافي",
+  "dash.analytics.streak":        "التسلسل الحالي",
+  "dash.analytics.monthlyFreq":   "التردد الشهري",
+  "dash.analytics.topThemes":     "المواضيع الرئيسية",
+  "dash.analytics.emotionalTones":"النبرات العاطفية",
+  "dash.noRecentDreams":          "لا توجد أحلام مسجلة بعد. ابدأ بإدخال حلمك الأول أعلاه!",
+
+  "settings.pageTitle":                   "إعدادات الحساب",
+  "settings.back":                        "← رجوع",
+  "settings.notLoggedIn":                 "تحتاج إلى تسجيل الدخول للوصول إلى إعدادات الحساب.",
+  "settings.goLogin":                     "الانتقال إلى تسجيل الدخول",
+  "settings.nav.profile":                 "الملف الشخصي",
+  "settings.nav.security":                "الأمان",
+  "settings.nav.billing":                 "الفواتير",
+  "settings.nav.addons":                  "الإضافات",
+  "settings.nav.preferences":             "التفضيلات",
+  "settings.nav.history":                 "التاريخ",
+  "settings.profile.heading":             "تفاصيل الملف الشخصي",
+  "settings.profile.desc":               "تحديث اسمك المعروض وعنوان بريدك الإلكتروني",
+  "settings.profile.displayName":         "الاسم المعروض",
+  "settings.profile.displayNamePlaceholder": "اسمك المعروض",
+  "settings.profile.email":              "عنوان البريد الإلكتروني",
+  "settings.profile.emailPlaceholder":    "your@email.com",
+  "settings.profile.saveBtn":            "حفظ التغييرات",
+  "settings.security.heading":            "تغيير كلمة المرور",
+  "settings.security.desc":              "حافظ على أمان حسابك بكلمة مرور قوية",
+  "settings.security.currentPw":          "كلمة المرور الحالية",
+  "settings.security.currentPwPlaceholder": "أدخل كلمة مرورك الحالية",
+  "settings.security.newPw":             "كلمة المرور الجديدة",
+  "settings.security.newPwPlaceholder":   "8 أحرف على الأقل",
+  "settings.security.confirmPw":          "تأكيد كلمة المرور",
+  "settings.security.confirmPwPlaceholder": "كرر كلمة المرور الجديدة",
+  "settings.security.updateBtn":          "تحديث كلمة المرور",
+  "settings.billing.heading":            "الاشتراك والفواتير",
+  "settings.billing.desc":               "إدارة خطتك ومعلومات الدفع",
+  "settings.addons.heading":             "إضافاتك",
+  "settings.addons.desc":               "الإضافات النشطة التي تحسن تجربة أحلامك",
+  "settings.preferences.heading":        "اللغة والتفضيلات",
+  "settings.preferences.desc":           "تخصيص تجربة التفسير",
+  "settings.preferences.emailOptIn":     "إرسال تفسيرات أحلامي عبر البريد الإلكتروني",
+  "settings.preferences.emailOptIn.sub": "بالموافقة فقط. يتطلب إعداد البريد الإلكتروني عبر Resend.",
+  "settings.preferences.saveBtn":        "حفظ التفضيلات",
+  "settings.history.heading":            "سجل المشتريات",
+  "settings.history.desc":              "معاملاتك السابقة ونشاط النقاط",
+
+  "error.generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+  "error.network": "خطأ في الشبكة. يرجى التحقق من اتصالك."
+}

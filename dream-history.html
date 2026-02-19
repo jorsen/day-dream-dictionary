@@ -307,8 +307,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <button class="back-btn" onclick="history.back()">← Back</button>
-            <h1>📚 Dream History</h1>
+            <button class="back-btn" onclick="history.back()" data-i18n="history.back">← Back</button>
+            <h1>📚 <span data-i18n="history.title">Dream History</span></h1>
         </div>
 
         <div class="ad-banner" id="adBanner">
@@ -321,21 +321,22 @@
             <div class="toolbar">
                 <div class="toolbar-left">
                     <label class="select-all-label">
-                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"> Select all
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                        <span data-i18n="history.selectAll">Select all</span>
                     </label>
                     <span class="selected-count" id="selectedCount" style="display:none;"></span>
-                    <button class="btn-danger-sm" id="bulkDeleteBtn" onclick="bulkDelete()" disabled style="display:none;">
+                    <button class="btn-danger-sm" id="bulkDeleteBtn" onclick="bulkDelete()" disabled style="display:none;" data-i18n="history.deleteSelected">
                         Delete selected
                     </button>
                 </div>
             </div>
 
-            <div id="dreamsList"><div class="loading">Loading your dreams...</div></div>
+            <div id="dreamsList"><div class="loading" data-i18n="history.loading">Loading your dreams...</div></div>
 
             <div class="pagination" id="pagination" style="display:none;">
-                <button class="page-btn" id="prevBtn" onclick="loadPage(currentPage - 1)">← Prev</button>
+                <button class="page-btn" id="prevBtn" onclick="loadPage(currentPage - 1)" data-i18n="history.prev">← Prev</button>
                 <span class="page-info" id="pageInfo"></span>
-                <button class="page-btn" id="nextBtn" onclick="loadPage(currentPage + 1)">Next →</button>
+                <button class="page-btn" id="nextBtn" onclick="loadPage(currentPage + 1)" data-i18n="history.next">Next →</button>
             </div>
         </div>
     </div>
@@ -419,10 +420,11 @@
             const list = document.getElementById('dreamsList');
 
             if (!dreams || dreams.length === 0) {
+                const _t = window.t || (k => k);
                 list.innerHTML = `
                     <div class="empty-state">
-                        <p>No dreams recorded yet.</p>
-                        <a href="dream-interpretation.html">Interpret your first dream →</a>
+                        <p>${_t('history.empty', 'No dreams recorded yet.')}</p>
+                        <a href="dream-interpretation.html">${_t('history.firstDream', 'Interpret your first dream →')}</a>
                     </div>`;
                 document.getElementById('pagination').style.display = 'none';
                 return;
@@ -455,12 +457,12 @@
                         </div>
                     </div>
                     <div class="dream-actions">
-                        <button class="action-btn btn-view" onclick="toggleDetail('${id}')">View</button>
+                        <button class="action-btn btn-view" onclick="toggleDetail('${id}')">${(window.t||(_=>_))('history.view','View')}</button>
                         <button class="action-btn ${pdfClass}" title="${pdfTitle}"
                             onclick="${canPdf ? `downloadPdf('${id}')` : `showToast('PDF requires Basic/Pro plan or Therapist Export add-on')`}">
-                            PDF
+                            ${(window.t||(_=>_))('history.pdf','PDF')}
                         </button>
-                        <button class="action-btn btn-del" onclick="deleteDream('${id}', event)">Delete</button>
+                        <button class="action-btn btn-del" onclick="deleteDream('${id}', event)">${(window.t||(_=>_))('history.delete','Delete')}</button>
                     </div>
                     <div class="detail-panel" id="detail-${id}">
                         ${renderDetail(d)}
@@ -471,37 +473,38 @@
 
         function renderDetail(d) {
             const interp = d.interpretation || {};
+            const _t = window.t || (k => k);
             const symbols = (interp.symbols || []).map(s =>
                 `<li><strong>${escHtml(s.symbol)}:</strong> ${escHtml(s.meaning)}</li>`
             ).join('');
 
             let extra = '';
             if (interp.lifeSeason)
-                extra += `<div class="detail-section"><h4>Life Season</h4><p>${escHtml(interp.lifeSeason)}</p></div>`;
+                extra += `<div class="detail-section"><h4>${_t('section.lifeSeason','Life Season')}</h4><p>${escHtml(interp.lifeSeason)}</p></div>`;
             if (interp.recurringPatterns)
-                extra += `<div class="detail-section"><h4>Recurring Patterns</h4><p>${escHtml(interp.recurringPatterns)}</p></div>`;
+                extra += `<div class="detail-section"><h4>${_t('section.recurring','Recurring Patterns')}</h4><p>${escHtml(interp.recurringPatterns)}</p></div>`;
             if (interp.relationshipInsight)
-                extra += `<div class="detail-section"><h4>Relationship Insight</h4><p>${escHtml(interp.relationshipInsight)}</p></div>`;
+                extra += `<div class="detail-section"><h4>${_t('section.relationship','Relationship Insight')}</h4><p>${escHtml(interp.relationshipInsight)}</p></div>`;
 
             return `
                 <div class="detail-section">
-                    <h4>Your Dream</h4>
+                    <h4>${_t('history.detail.yourDream','Your Dream')}</h4>
                     <p>${escHtml(d.dreamText || '')}</p>
                 </div>
                 <div class="detail-section">
-                    <h4>Emotional Tone</h4>
+                    <h4>${_t('history.detail.emotionalTone','Emotional Tone')}</h4>
                     <p>${escHtml(interp.emotionalTone || '')}</p>
                 </div>
                 <div class="detail-section">
-                    <h4>Symbols</h4>
+                    <h4>${_t('history.detail.symbols','Symbols')}</h4>
                     <ul class="symbol-list">${symbols}</ul>
                 </div>
                 <div class="detail-section">
-                    <h4>Personal Insight</h4>
+                    <h4>${_t('history.detail.personalInsight','Personal Insight')}</h4>
                     <p>${escHtml(interp.personalInsight || '')}</p>
                 </div>
                 <div class="detail-section">
-                    <h4>Guidance</h4>
+                    <h4>${_t('history.detail.guidance','Guidance')}</h4>
                     <p>${escHtml(interp.guidance || '')}</p>
                 </div>
                 ${extra}`;
