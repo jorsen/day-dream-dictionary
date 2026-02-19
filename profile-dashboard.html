@@ -329,6 +329,31 @@
             padding: 20px;
             color: #666;
         }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        .password-wrapper input {
+            padding-right: 44px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #888;
+            line-height: 1;
+            padding: 0;
+            width: auto;
+        }
+
+        .toggle-password:hover { color: #667eea; }
     </style>
 </head>
 <body>
@@ -346,7 +371,10 @@
             
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" required placeholder="Enter your password">
+                <div class="password-wrapper">
+                    <input type="password" id="password" required placeholder="Enter your password">
+                    <button type="button" class="toggle-password" onclick="togglePw('password', this)" aria-label="Show password">👁️</button>
+                </div>
             </div>
             
             <div class="form-group hidden" id="displayNameGroup">
@@ -979,6 +1007,20 @@
 
             // You can uncomment and modify this when you have payment integration ready:
             // window.location.href = 'payment.html?plan=pro';
+        }
+
+        // Toggle password visibility
+        function togglePw(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '🙈';
+                btn.setAttribute('aria-label', 'Hide password');
+            } else {
+                input.type = 'password';
+                btn.textContent = '👁️';
+                btn.setAttribute('aria-label', 'Show password');
+            }
         }
 
         // Logout
