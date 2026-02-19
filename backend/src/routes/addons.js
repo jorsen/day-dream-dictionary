@@ -122,6 +122,36 @@ router.post('/purchase', authenticate, async (req, res) => {
       },
     });
 
+    // If payment succeeded immediately (no 3DS), record the add-on now.
+    // The webhook acts as a redundancy safety net for 3DS flows.
+    if (pi.status === 'succeeded') {
+      await db.collection('user_addons').updateOne(
+        { userId: req.user._id, addonKey },
+        {
+          $set: {
+            userId:                req.user._id,
+            addonKey,
+            active:                true,
+            stripePaymentIntentId: pi.id,
+            expiresAt:             null,
+            updatedAt:             new Date(),
+          },
+          $setOnInsert: { purchasedAt: new Date() },
+        },
+        { upsert: true },
+      );
+
+      // Idempotency record so the webhook skips re-processing
+      await db.collection('creditTransactions').insertOne({
+        userId:                req.user._id,
+        delta:                 0,
+        reason:                'addon_purchase',
+        addonKey,
+        stripePaymentIntentId: pi.id,
+        createdAt:             new Date(),
+      });
+    }
+
     return res.json({
       paymentIntentId: pi.id,
       status:          pi.status,

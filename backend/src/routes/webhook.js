@@ -149,9 +149,9 @@ router.post('/', async (req, res) => {
         const meta = pi.metadata ?? {};
         const { type, userId, pack, credits, addonKey, email } = meta;
 
-        if (!type || !userId || !ObjectId.isValid(userId)) break;
+        if (!type || !userId) break;
 
-        const userOid = new ObjectId(userId);
+        const userOid = ObjectId.isValid(userId) ? new ObjectId(userId) : userId;
 
         // ── Idempotency guard ──────────────────────────────────────────────
         const alreadyDone = await db.collection('creditTransactions').findOne({
