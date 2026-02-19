@@ -100,7 +100,25 @@ router.post('/purchase', authenticate, async (req, res) => {
       },
     });
 
-    // Credits are granted via webhook (payment_intent.succeeded)
+    // If payment succeeded immediately (no 3DS), grant credits now.
+    // The webhook acts as a redundancy safety net for 3DS flows.
+    if (pi.status === 'succeeded') {
+      await db.collection('users').updateOne(
+        { _id: req.user._id },
+        { $inc: { creditBalance: packInfo.credits, totalCreditsEarned: packInfo.credits } },
+      );
+
+      // Idempotency record so the webhook skips re-processing
+      await db.collection('creditTransactions').insertOne({
+        userId:                req.user._id,
+        delta:                 packInfo.credits,
+        reason:                'purchase',
+        pack,
+        stripePaymentIntentId: pi.id,
+        createdAt:             new Date(),
+      });
+    }
+
     return res.json({
       paymentIntentId: pi.id,
       status:          pi.status,
