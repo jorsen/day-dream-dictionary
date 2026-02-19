@@ -297,6 +297,16 @@
       }
 
       accessToken = data.accessToken || data.token;
+      console.log('[admin] login OK, token prefix:', accessToken?.substring(0, 30));
+      // Verify token works before loading admin data
+      const meRes = await authFetch(`${API_URL}/auth/me`);
+      const meData = await meRes.json();
+      console.log('[admin] /auth/me status:', meRes.status, meData);
+      if (!meRes.ok) {
+        showLoginError(`Token verification failed (${meData.error}) — please try again`);
+        accessToken = null;
+        return;
+      }
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('adminApp').style.display    = 'flex';
       loadStats();
@@ -340,7 +350,11 @@
     try {
       const res  = await authFetch(`${API_URL}/admin/stats`);
       const data = await res.json();
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.error('[admin] stats error', res.status, data);
+        if (res.status === 401) { doLogout(); showLoginError(`Session error (${data.error || 'unauthorized'}) — please sign in again`); }
+        return;
+      }
       const s = data.stats;
       document.getElementById('statTotalUsers').textContent  = s.totalUsers;
       document.getElementById('statActiveSubs').textContent  = s.activeSubs;
@@ -468,6 +482,8 @@
 
   // ── Helpers ───────────────────────────────────────────────────────────
   function authFetch(url, opts = {}) {
+    const tokenOk = accessToken && accessToken !== 'null' && accessToken !== 'undefined';
+    if (!tokenOk) console.warn('[admin] authFetch called with bad token:', accessToken);
     return fetch(url, {
       ...opts,
       headers: { 'Authorization': `Bearer ${accessToken}`, ...(opts.headers || {}) },
