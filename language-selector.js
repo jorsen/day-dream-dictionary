@@ -1,5 +1,5 @@
 /**
- * Global language selector — injects a sticky bottom bar on every page.
+ * Global language selector — floating globe icon at bottom right.
  *
  * Usage: <script src="language-selector.js"></script>  (before </body>)
  *
@@ -52,7 +52,7 @@
 
   function applyLang(code, skipBackend) {
     localStorage.setItem(LS_KEY, code);
-    renderTrigger(code);
+    renderBtn(code);
     renderOptions(code);
 
     if (!skipBackend) {
@@ -72,15 +72,13 @@
 
   /* ── UI helpers ─────────────────────────────────────── */
 
-  function renderTrigger(code) {
-    const lang    = findLang(code);
-    const trigger = document.getElementById('_ls_trigger');
-    if (trigger) {
-      trigger.innerHTML =
-        `<span class="_ls_globe">🌐</span>` +
-        `<span class="_ls_flag">${lang.flag}</span>` +
-        `<span class="_ls_label">${lang.label}</span>` +
-        `<span class="_ls_caret">▲</span>`;
+  function renderBtn(code) {
+    const lang = findLang(code);
+    const btn  = document.getElementById('_ls_btn');
+    if (btn) {
+      btn.title = lang.label;
+      // Show the active flag as a small badge inside the button
+      btn.querySelector('._ls_btn_flag').textContent = lang.flag;
     }
   }
 
@@ -113,54 +111,50 @@
     const style = document.createElement('style');
     style.id = '_ls_style';
     style.textContent = `
-      #_ls_bar {
+      /* Floating globe button */
+      #_ls_btn {
         position: fixed;
-        bottom: 0; left: 0; right: 0;
+        bottom: 20px;
+        right: 20px;
         z-index: 99999;
-        background: rgba(10, 10, 20, 0.88);
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(10, 10, 20, 0.82);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border-top: 1px solid rgba(255,255,255,0.08);
-        height: 46px;
+        border: 1px solid rgba(255,255,255,0.14);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.35);
+        cursor: pointer;
         display: flex;
         align-items: center;
-        justify-content: flex-end;
-        padding: 0 20px;
-        gap: 8px;
-      }
-
-      #_ls_bar ._ls_sep {
-        color: rgba(255,255,255,0.2);
-        font-size: 13px;
-        margin-right: 4px;
-      }
-
-      #_ls_trigger {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        color: rgba(255,255,255,0.75);
-        background: rgba(255,255,255,0.07);
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 8px;
-        padding: 6px 12px;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background 0.15s, color 0.15s;
+        justify-content: center;
+        transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+        padding: 0;
         font-family: inherit;
+      }
+      #_ls_btn:hover {
+        background: rgba(30, 30, 50, 0.92);
+        transform: scale(1.08);
+        box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+      }
+      #_ls_btn ._ls_globe {
+        font-size: 20px;
         line-height: 1;
+        position: absolute;
+        opacity: 0.55;
       }
-      #_ls_trigger:hover {
-        background: rgba(255,255,255,0.14);
-        color: white;
+      #_ls_btn ._ls_btn_flag {
+        font-size: 14px;
+        line-height: 1;
+        position: relative;
+        z-index: 1;
       }
-      ._ls_globe { font-size: 15px; }
-      ._ls_caret { font-size: 9px; opacity: 0.5; }
 
+      /* Dropdown */
       #_ls_dropdown {
         position: fixed;
-        bottom: 54px;
+        bottom: 72px;
         right: 16px;
         background: white;
         border-radius: 14px;
@@ -217,9 +211,6 @@
         border-bottom: 1px solid #f1f5f9;
         margin-bottom: 4px;
       }
-
-      /* Push page content up so the bar doesn't cover the last line */
-      body { padding-bottom: 46px !important; }
     `;
     document.head.appendChild(style);
   }
@@ -234,24 +225,26 @@
       `</button>`
     ).join('');
 
-    const bar = document.createElement('div');
-    bar.id = '_ls_bar';
-    bar.innerHTML =
-      `<span class="_ls_sep">Interpretation Language</span>` +
-      `<button id="_ls_trigger" onclick="window._lsToggle()"></button>`;
+    const btn = document.createElement('button');
+    btn.id = '_ls_btn';
+    btn.setAttribute('aria-label', 'Select language');
+    btn.onclick = () => window._lsToggle();
+    btn.innerHTML =
+      `<span class="_ls_globe">🌐</span>` +
+      `<span class="_ls_btn_flag"></span>`;
 
     const dropdown = document.createElement('div');
     dropdown.id = '_ls_dropdown';
     dropdown.innerHTML =
-      `<div class="_ls_dropdown_header">Select language</div>` +
+      `<div class="_ls_dropdown_header">Interpretation Language</div>` +
       optionsHTML;
 
-    document.body.appendChild(bar);
+    document.body.appendChild(btn);
     document.body.appendChild(dropdown);
 
     // Close when clicking outside
     document.addEventListener('click', function (e) {
-      if (!e.target.closest('#_ls_bar') && !e.target.closest('#_ls_dropdown')) {
+      if (!e.target.closest('#_ls_btn') && !e.target.closest('#_ls_dropdown')) {
         closeDropdown();
       }
     });
@@ -289,7 +282,7 @@
     injectStyles();
     injectHTML();
     const code = currentCode();
-    renderTrigger(code);
+    renderBtn(code);
     renderOptions(code);
     syncFromBackend();
   }

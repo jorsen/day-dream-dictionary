@@ -114,6 +114,16 @@ router.post('/create', authenticate, async (req, res) => {
       { upsert: true },
     );
 
+    // Record in purchase history so the account-settings page can display it
+    await db.collection('creditTransactions').insertOne({
+      userId:        req.user._id,
+      reason:        'subscription_created',
+      plan,
+      billingPeriod: billingPeriod ?? 'monthly',
+      delta:         0,
+      createdAt:     now,
+    });
+
     return res.status(201).json({
       subscriptionId: subscription.id,
       status: subscription.status,
@@ -223,6 +233,8 @@ router.post('/upgrade', authenticate, async (req, res) => {
       proration_behavior: 'create_prorations',
     });
 
+    const upgradeNow = new Date();
+
     // Sync MongoDB record
     await db.collection('subscriptions').updateOne(
       { _id: sub._id },
@@ -232,10 +244,20 @@ router.post('/upgrade', authenticate, async (req, res) => {
           status:           updatedStripeSub.status,
           monthlyDeepLimit: PLAN_LIMITS[targetPlan],
           currentPeriodEnd: new Date(updatedStripeSub.current_period_end * 1000),
-          updatedAt:        new Date(),
+          updatedAt:        upgradeNow,
         },
       },
     );
+
+    // Record in purchase history
+    await db.collection('creditTransactions').insertOne({
+      userId:    req.user._id,
+      reason:    'subscription_changed',
+      planFrom:  sub.plan,
+      planTo:    targetPlan,
+      delta:     0,
+      createdAt: upgradeNow,
+    });
 
     return res.json({
       message:          `Subscription updated to ${targetPlan}`,

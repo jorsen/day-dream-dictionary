@@ -225,6 +225,12 @@
         .toggle-switch.annual::after { transform: translateX(22px); }
         .save-badge { font-size: 11px; font-weight: 700; color: #4CAF50; background: #e8f5e9; padding: 2px 7px; border-radius: 20px; margin-left: 4px; }
 
+        /* Plans loading state — disabled until currentPlan is known */
+        .plans.loading .plan { opacity: 0.55; pointer-events: none; cursor: wait; }
+
+        /* Upgrade / downgrade note — shown instead of card input */
+        .upgrade-note { font-size: 13px; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+
         /* Current-plan badge on plan cards */
         .plan-current-badge {
             display: none;
@@ -339,6 +345,8 @@
                 <div class="selected-plan-banner">
                     Subscribing to <strong id="selected-plan-label">Basic — $4.99/month</strong>
                 </div>
+
+                <div id="upgrade-note" class="upgrade-note" style="display:none;">✓ Your saved payment method will be charged — no new card needed.</div>
 
                 <div id="card-input-wrapper">
                     <label for="card-element">Card details</label>
@@ -487,6 +495,9 @@
         };
 
         async function init() {
+            // Disable plan cards until currentPlan is known — prevents race condition
+            document.querySelector('.plans').classList.add('loading');
+
             try {
                 const res  = await fetch(`${API_URL}/config/stripe-key`);
                 const data = await res.json();
@@ -519,6 +530,7 @@
 
             // Load current plan state after Stripe is ready
             await loadCurrentPlan();
+            document.querySelector('.plans').classList.remove('loading');
         }
 
         // ── Billing toggle ────────────────────────────────────────────────────
@@ -613,12 +625,15 @@
             bannerEl.innerHTML = `${bannerText.split(p.label)[0].trim()} <strong id="selected-plan-label">${p.label}</strong>`;
             document.getElementById('subscribe-btn').textContent = buttonText;
 
-            // For upgrades/downgrades, no new card needed — hide card input
-            const cardWrapper = document.getElementById('card-input-wrapper');
+            // For upgrades/downgrades, no new card needed — hide card input, show note
+            const cardWrapper   = document.getElementById('card-input-wrapper');
+            const upgradeNote   = document.getElementById('upgrade-note');
             if (isExistingSub) {
-                cardWrapper.style.display = 'none';
+                cardWrapper.style.display  = 'none';
+                upgradeNote.style.display  = 'block';
             } else {
-                cardWrapper.style.display = 'block';
+                cardWrapper.style.display  = 'block';
+                upgradeNote.style.display  = 'none';
             }
 
             document.getElementById('payment-section').style.display = 'block';

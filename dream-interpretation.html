@@ -516,7 +516,7 @@
 
             try {
                 // AUTHENTICATED: Include Bearer token in headers
-                const body = { dreamText, language: userLanguage, tags };
+                const body = { dreamText, language: localStorage.getItem('preferredLanguage') || 'en', tags };
 
                 // Include active add-on fields
                 if (activeAddons.has('life_season')) {
