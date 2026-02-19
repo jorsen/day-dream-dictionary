@@ -162,6 +162,45 @@ router.patch('/users/:id/role', ...guard, async (req, res) => {
   }
 });
 
+// ── POST /api/v1/admin/users/:id/addons — manually grant an add-on ───────────
+const VALID_ADDON_KEYS = ['life_season', 'recurring', 'couples', 'therapist_pdf', 'ad_removal'];
+
+router.post('/users/:id/addons', ...guard, async (req, res) => {
+  const { addonKey } = req.body;
+  if (!addonKey || !VALID_ADDON_KEYS.includes(addonKey)) {
+    return res.status(400).json({ error: `addonKey must be one of: ${VALID_ADDON_KEYS.join(', ')}` });
+  }
+
+  const db  = getDB();
+  const uid = userIdQuery(req.params.id);
+
+  try {
+    const user = await db.collection('users').findOne({ _id: uid }, { projection: { email: 1 } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    await db.collection('user_addons').updateOne(
+      { userId: user._id, addonKey },
+      {
+        $set: {
+          userId:    user._id,
+          addonKey,
+          active:    true,
+          expiresAt: null,
+          grantedBy: 'admin',
+          updatedAt: new Date(),
+        },
+        $setOnInsert: { purchasedAt: new Date() },
+      },
+      { upsert: true },
+    );
+
+    return res.json({ message: `Add-on "${addonKey}" granted to ${user.email}` });
+  } catch (err) {
+    console.error('[admin/users/:id/addons]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── DELETE /api/v1/admin/users/:id ───────────────────────────────────────────
 router.delete('/users/:id', ...guard, async (req, res) => {
   // Prevent self-deletion

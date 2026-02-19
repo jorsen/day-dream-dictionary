@@ -448,8 +448,22 @@
         <div class="modal-row"><span class="key">Joined</span><span class="val">${fmtDate(u.createdAt)}</span></div>
         <div class="modal-row"><span class="key">Dreams</span><span class="val">${data.recentDreams?.length ? data.recentDreams.length + ' recent shown' : '0'}</span></div>
         <div class="modal-row"><span class="key">Add-Ons</span><span class="val">${data.addons?.map(a=>a.addonKey).join(', ') || 'None'}</span></div>
+        <div style="margin-top:20px;border-top:1px solid #2a2a4a;padding-top:16px;">
+          <div style="font-size:11px;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Grant Add-On Manually</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <select id="grantAddonSelect" style="background:#0f0f1a;border:1px solid #2a2a4a;color:#e0e0e0;padding:7px 12px;border-radius:8px;font-size:13px;outline:none;cursor:pointer;flex:1;min-width:180px;">
+              <option value="">Select add-on to grant…</option>
+              <option value="therapist_pdf">🩺 Therapist Export (PDF)</option>
+              <option value="life_season">🌱 Life Season</option>
+              <option value="recurring">🔄 Recurring Dreams</option>
+              <option value="couples">💑 Couples</option>
+              <option value="ad_removal">🚫 Ad Removal</option>
+            </select>
+            <button class="action-btn" onclick='grantAddon("${u._id}")'>Grant</button>
+          </div>
+        </div>
         ${u.role !== 'superadmin' ? `
-        <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="action-btn" onclick='changeRole("${u._id}","admin")'>Make Admin</button>
           <button class="action-btn" onclick='changeRole("${u._id}","user")'>Reset to User</button>
           <button class="action-btn danger" onclick='deleteUser("${u._id}","${esc(u.email)}");closeModal()'>Delete Account</button>
@@ -458,6 +472,19 @@
     } catch {
       content.innerHTML = '<p style="color:#f87171;">Failed to load user</p>';
     }
+  }
+
+  async function grantAddon(id) {
+    const addonKey = document.getElementById('grantAddonSelect')?.value;
+    if (!addonKey) { showToast('Select an add-on first', 'error'); return; }
+    const res = await authFetch(`${API_URL}/admin/users/${id}/addons`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ addonKey }),
+    });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message || 'Add-on granted', 'success'); viewUser(id); }
+    else showToast(data.error || 'Failed to grant add-on', 'error');
   }
 
   async function changeRole(id, role) {
