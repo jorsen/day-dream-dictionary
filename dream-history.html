@@ -276,6 +276,32 @@
             pointer-events: none;
         }
         .toast.show { opacity: 1; }
+
+        .ad-banner {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 10px 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #777;
+        }
+        .ad-banner::before {
+            content: 'Ad';
+            display: inline-block;
+            font-size: 10px;
+            color: #bbb;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid #ddd;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .ad-banner a { color: #667eea; font-weight: 600; text-decoration: none; }
+        .ad-banner a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -283,6 +309,10 @@
         <div class="header">
             <button class="back-btn" onclick="history.back()">← Back</button>
             <h1>📚 Dream History</h1>
+        </div>
+
+        <div class="ad-banner" id="adBanner">
+            Unlock deeper dream insights with <a href="payment.html#addons">Recurring Dreams, Couples & Therapist add-ons</a> — or <a href="payment.html">upgrade to Pro</a> for full history.
         </div>
 
         <div class="card">
@@ -323,6 +353,7 @@
         let totalPages   = 1;
         let isPaid       = false;
         let hasPdfAddon  = false;
+        let hasAdRemoval = false;
         let dreams       = [];
         let selectedIds  = new Set();
         let openDetailId = null;
@@ -337,9 +368,15 @@
                 fetch(`${API_URL}/addons`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 }).then(r => r.json()).then(d => {
-                    hasPdfAddon = (d.addons || []).some(a => a.key === 'therapist_pdf');
+                    const keys = (d.addons || []).map(a => a.key);
+                    hasPdfAddon  = keys.includes('therapist_pdf');
+                    hasAdRemoval = keys.includes('ad_removal');
                 }).catch(() => {}),
             ]);
+
+            if (hasAdRemoval) {
+                document.getElementById('adBanner').style.display = 'none';
+            }
 
             if (!isPaid) {
                 const pdfLine = hasPdfAddon

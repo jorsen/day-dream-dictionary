@@ -278,6 +278,32 @@
         .nav-link:hover {
             text-decoration: underline;
         }
+
+        .ad-banner {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 10px 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #777;
+        }
+        .ad-banner::before {
+            content: 'Ad';
+            display: inline-block;
+            font-size: 10px;
+            color: #bbb;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid #ddd;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .ad-banner a { color: #667eea; font-weight: 600; text-decoration: none; }
+        .ad-banner a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -288,6 +314,10 @@
         <div class="credits-info">
             <div>🎉 <strong>COMPLETELY FREE</strong> - Unlimited Dream Interpretations!</div>
             <small>✨ Powered by AI - No credits required</small>
+        </div>
+
+        <div class="ad-banner" id="adBanner">
+            Deepen your dream journey with <a href="payment.html#addons">Life Season, Couples & Therapist add-ons</a> — or <a href="payment.html">upgrade to Pro</a> for unlimited insights.
         </div>
 
         <div class="message" id="message"></div>
@@ -406,6 +436,9 @@
             if (authToken) {
                 await loadActiveAddons();
                 renderAddonFields();
+                if (activeAddons.has('ad_removal')) {
+                    document.getElementById('adBanner').style.display = 'none';
+                }
             }
 
             const pendingDream = localStorage.getItem('pendingDream');

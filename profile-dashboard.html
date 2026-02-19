@@ -160,6 +160,32 @@
             gap: 30px;
         }
 
+        .ad-banner {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 10px 20px;
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: #777;
+        }
+        .ad-banner::before {
+            content: 'Ad';
+            display: inline-block;
+            font-size: 10px;
+            color: #bbb;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid #ddd;
+            padding: 1px 5px;
+            border-radius: 3px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .ad-banner a { color: #667eea; font-weight: 600; text-decoration: none; }
+        .ad-banner a:hover { text-decoration: underline; }
+
         .card {
             background: white;
             padding: 30px;
@@ -405,6 +431,10 @@
                     <button class="btn-logout" style="background:#667eea;margin-right:8px;" onclick="window.location.href='account-settings.html'">⚙️ Settings</button>
                     <button class="btn-logout" onclick="logout()">Logout</button>
                 </div>
+            </div>
+
+            <div class="ad-banner" id="adBanner">
+                Enhance your dreams with <a href="payment.html#addons">Life Season, Couples & Therapist add-ons</a> — or <a href="payment.html">upgrade to Pro</a> for unlimited insights.
             </div>
 
             <div class="grid">
@@ -657,6 +687,7 @@
             loadUserSubscription();
             loadUserStats();
             loadRecentDreams();
+            loadAddonFlags();
         }
 
         // Load user profile data
@@ -982,6 +1013,21 @@
             }
 
             dreamsList.innerHTML = html;
+        }
+
+        // Hide ads for users who own the ad_removal addon
+        async function loadAddonFlags() {
+            try {
+                const r = await fetch(`${API_URL}/addons`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const d = await r.json();
+                const keys = (d.addons || []).map(a => a.key);
+                if (keys.includes('ad_removal')) {
+                    const banner = document.getElementById('adBanner');
+                    if (banner) banner.style.display = 'none';
+                }
+            } catch { /* non-critical */ }
         }
 
         // Go to dream interpretation page with pre-filled content
