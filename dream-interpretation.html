@@ -354,13 +354,6 @@
                 >
             </div>
 
-            <div class="form-group">
-                <label>
-                    <input type="checkbox" id="isRecurring" name="isRecurring">
-                    This is a recurring dream
-                </label>
-            </div>
-
             <!-- ── Add-On fields (shown only if user owns the add-on) ── -->
             <div id="addonFields"></div>
 
@@ -511,8 +504,6 @@
                 .split(',')
                 .map(tag => tag.trim())
                 .filter(tag => tag);
-            const isRecurring = document.getElementById('isRecurring').checked;
-
             // FREE MODE: No credit checks needed
 
             // Show loading
@@ -522,7 +513,7 @@
 
             try {
                 // AUTHENTICATED: Include Bearer token in headers
-                const body = { dreamText, language: 'en', isRecurring, tags };
+                const body = { dreamText, language: 'en', tags };
 
                 // Include active add-on fields
                 if (activeAddons.has('life_season')) {
