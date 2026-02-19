@@ -21,16 +21,20 @@ export async function authenticate(req, res, next) {
     return res.status(401).json({ error: message });
   }
 
-  if (!ObjectId.isValid(payload.sub)) {
+  if (!payload.sub) {
     return res.status(401).json({ error: 'Invalid token subject' });
   }
 
   let user;
   try {
     const db = getDB();
+    // Try ObjectId first; fall back to plain string _id (e.g. manually-created admin accounts)
+    const query = ObjectId.isValid(payload.sub)
+      ? { _id: new ObjectId(payload.sub) }
+      : { _id: payload.sub };
     user = await db
       .collection('users')
-      .findOne({ _id: new ObjectId(payload.sub) }, { projection: { passwordHash: 0 } });
+      .findOne(query, { projection: { passwordHash: 0 } });
   } catch {
     return res.status(500).json({ error: 'Internal server error' });
   }
