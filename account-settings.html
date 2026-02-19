@@ -326,7 +326,7 @@
             btn.disabled = true;
             btn.textContent = 'Saving...';
             try {
-                const response = await fetch(`${API_URL}/user`, {
+                const response = await fetch(`${API_URL}/account/profile`, {
                     method: 'PATCH',
                     headers: {
                         'Authorization': `Bearer ${accessToken}`,

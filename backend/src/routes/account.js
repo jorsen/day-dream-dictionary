@@ -67,6 +67,34 @@ router.patch('/preferences', authenticate, async (req, res) => {
   }
 });
 
+// ── PATCH /api/account/profile ────────────────────────────────────────────────
+router.patch('/profile', authenticate, async (req, res) => {
+  const { displayName, email } = req.body;
+  if (!displayName && !email) {
+    return res.status(400).json({ error: 'No fields to update' });
+  }
+
+  const db = getDB();
+  const $set = { updatedAt: new Date() };
+  if (displayName?.trim()) $set.displayName = displayName.trim();
+  if (email?.trim())       $set.email       = email.trim().toLowerCase();
+
+  try {
+    await db.collection('users').updateOne({ _id: req.user._id }, { $set });
+    const updated = await db.collection('users').findOne(
+      { _id: req.user._id },
+      { projection: { passwordHash: 0 } },
+    );
+    return res.json({ user: updated });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ error: 'That email is already in use' });
+    }
+    console.error('[account/profile]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── DELETE /api/account ───────────────────────────────────────────────────────
 router.delete('/', authenticate, async (req, res) => {
   const db = getDB();

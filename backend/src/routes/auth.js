@@ -126,6 +126,35 @@ router.post('/login', authLimiter, async (req, res) => {
   }
 });
 
+// ── POST /api/auth/change-password ───────────────────────────────────────────
+router.post('/change-password', authenticate, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'currentPassword and newPassword are required' });
+  }
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  }
+
+  const db = getDB();
+  try {
+    const user = await db.collection('users').findOne({ _id: req.user._id });
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await db.collection('users').updateOne(
+      { _id: req.user._id },
+      { $set: { passwordHash, updatedAt: new Date() } },
+    );
+    return res.json({ message: 'Password changed successfully' });
+  } catch (err) {
+    console.error('[auth/change-password]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
 router.get('/me', authenticate, (req, res) => {
   res.json({ user: safeUser(req.user) });
