@@ -523,6 +523,12 @@
 
         init();
 
+        // ── Shared state — declared before any function or IIFE that reads them ─
+        let selectedPack       = null;
+        let cardElementCredits = null;
+        let selectedAddon      = null;
+        let cardElementAddons  = null;
+
         // ── Tab switching ─────────────────────────────────────────────────────
         function switchTab(tabId, btn) {
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -545,9 +551,6 @@
         })();
 
         // ── Credit pack elements ───────────────────────────────────────────────
-        let selectedPack       = null;
-        let cardElementCredits = null;
-
         function initCreditCard() {
             if (!stripe || cardElementCredits) return;
             const elements = stripe.elements();
@@ -615,9 +618,6 @@
         }
 
         // ── Add-on elements ───────────────────────────────────────────────────
-        let selectedAddon     = null;
-        let cardElementAddons = null;
-
         const ADDON_META = {
             life_season:   { label:'Life Season',     price:'$4.99' },
             recurring:     { label:'Recurring Dreams', price:'$2.99' },
