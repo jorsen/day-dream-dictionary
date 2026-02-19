@@ -260,10 +260,18 @@
 
 <script>
   const API_URL = '/api/v1';
-  let accessToken = null;
+  let accessToken = sessionStorage.getItem('adminToken') || null;
   let currentPage = 1;
   let currentSearch = '';
   let totalPages = 1;
+
+  // ── Auto-restore session ───────────────────────────────────────────────
+  if (accessToken) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminApp').style.display    = 'flex';
+    loadStats();
+    loadUsers();
+  }
 
   // ── Quick demo login ──────────────────────────────────────────────────
   function quickLogin() {
@@ -296,17 +304,21 @@
       });
       const data = await res.json();
 
+      console.log('[admin] login response:', res.status, data.user?.role);
+
       if (!res.ok) {
         showLoginError(data.error || 'Login failed');
         return;
       }
 
       if (data.user?.role !== 'superadmin') {
-        showLoginError('Access denied — superadmin only');
+        showLoginError(`Access denied — your role is "${data.user?.role}", superadmin required`);
         return;
       }
 
       accessToken = data.accessToken || data.token;
+      sessionStorage.setItem('adminToken', accessToken);
+      console.log('[admin] token set, loading dashboard...');
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('adminApp').style.display    = 'flex';
       loadStats();
@@ -327,6 +339,7 @@
 
   function doLogout() {
     accessToken = null;
+    sessionStorage.removeItem('adminToken');
     document.getElementById('adminApp').style.display    = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
   }
