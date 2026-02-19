@@ -434,12 +434,12 @@ function computeStreak(dates) {
 router.get('/analytics', authenticate, async (req, res) => {
   const db = getDB();
 
-  // Pro-only gate
+  // Pro-only gate — accept active and past_due (grace period) subscriptions
   const sub = await db.collection('subscriptions').findOne({
-    userId:          req.user._id,
-    status:          'active',
+    userId:           req.user._id,
+    status:           { $in: ['active', 'past_due', 'trialing'] },
     currentPeriodEnd: { $gt: new Date() },
-    plan:            'pro',
+    plan:             'pro',
   });
   if (!sub) {
     return res.status(403).json({

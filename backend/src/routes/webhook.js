@@ -24,8 +24,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const PLAN_LIMITS = { basic: 20, pro: 100 };
 
 function planFromPriceId(priceId) {
-  if (priceId === process.env.STRIPE_PRICE_BASIC) return 'basic';
-  if (priceId === process.env.STRIPE_PRICE_PRO)   return 'pro';
+  if (priceId === process.env.STRIPE_PRICE_BASIC)        return 'basic';
+  if (priceId === process.env.STRIPE_PRICE_PRO)          return 'pro';
+  if (priceId === process.env.STRIPE_PRICE_BASIC_ANNUAL) return 'basic';
+  if (priceId === process.env.STRIPE_PRICE_PRO_ANNUAL)   return 'pro';
   return null;
 }
 

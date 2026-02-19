@@ -43,12 +43,16 @@ router.get('/history', authenticate, async (req, res) => {
 
     return res.json({
       transactions: transactions.map((t) => ({
-        id:        t._id,
-        reason:    t.reason,
-        delta:     t.delta,
-        pack:      t.pack      ?? null,
-        addonKey:  t.addonKey  ?? null,
-        createdAt: t.createdAt,
+        id:            t._id,
+        reason:        t.reason,
+        delta:         t.delta,
+        pack:          t.pack          ?? null,
+        addonKey:      t.addonKey      ?? null,
+        plan:          t.plan          ?? null,
+        billingPeriod: t.billingPeriod ?? null,
+        planFrom:      t.planFrom      ?? null,
+        planTo:        t.planTo        ?? null,
+        createdAt:     t.createdAt,
       })),
     });
   } catch (err) {
