@@ -1,0 +1,52 @@
+{
+  "nav.dashboard":       "Panel de Control",
+  "nav.history":         "Historial de Sueños",
+  "nav.settings":        "Configuración",
+  "nav.logout":          "Cerrar Sesión",
+
+  "dream.placeholder":   "Describe tu sueño con tanto detalle como recuerdes...",
+  "dream.submit":        "Interpretar Mi Sueño",
+  "dream.interpreting":  "Interpretando...",
+
+  "history.title":       "Historial de Sueños",
+  "history.empty":       "Aún no hay sueños registrados.",
+  "history.view":        "Ver",
+  "history.delete":      "Eliminar",
+  "history.pdf":         "PDF",
+  "history.selectAll":   "Seleccionar todo",
+  "history.deleteSelected": "Eliminar seleccionados",
+
+  "section.themes":      "Temas Principales",
+  "section.tone":        "Tono Emocional",
+  "section.symbols":     "Símbolos y Significados",
+  "section.insight":     "Perspectiva Personal",
+  "section.guidance":    "Orientación",
+  "section.lifeSeason":  "Temporada de Vida",
+  "section.recurring":   "Patrones Recurrentes",
+  "section.relationship":"Perspectiva de Pareja",
+  "section.therapeutic": "Puntos Terapéuticos",
+
+  "paywall.title":       "Mejora Para Continuar",
+  "paywall.subtitle":    "Has usado todas tus interpretaciones gratuitas este mes.",
+  "paywall.cta":         "Ver Planes",
+
+  "plan.free":           "Plan Gratuito",
+  "plan.basic":          "Plan Básico",
+  "plan.pro":            "Plan Pro",
+
+  "credits.balance":     "Saldo de Créditos",
+  "credits.buy":         "Comprar Créditos",
+
+  "addon.life_season":   "Temporada de Vida",
+  "addon.recurring":     "Sueños Recurrentes",
+  "addon.couples":       "Pareja",
+  "addon.therapist_pdf": "Exportación para Terapeuta",
+  "addon.ad_removal":    "Eliminar Anuncios",
+
+  "settings.language":   "Idioma",
+  "settings.save":       "Guardar",
+  "settings.saved":      "¡Guardado!",
+
+  "error.generic":       "Algo salió mal. Por favor, inténtalo de nuevo.",
+  "error.network":       "Error de red. Por favor, verifica tu conexión."
+}

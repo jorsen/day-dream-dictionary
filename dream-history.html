@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dream History - Day Dream Dictionary</title>
+    <script src="config.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 860px; margin: 0 auto; }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.35); }
+
+        .header h1 { color: white; font-size: 22px; font-weight: 700; flex: 1; }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .toolbar-left { flex: 1; display: flex; gap: 8px; align-items: center; }
+
+        .select-all-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #555;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .btn-danger-sm {
+            padding: 7px 14px;
+            background: white;
+            color: #dc3545;
+            border: 1.5px solid #dc3545;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .btn-danger-sm:hover:not(:disabled) { background: #dc3545; color: white; }
+        .btn-danger-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .selected-count {
+            font-size: 13px;
+            color: #888;
+            padding: 4px 0;
+        }
+
+        /* Dream list */
+        .dream-item {
+            border: 1.5px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .dream-item:hover { border-color: #667eea; box-shadow: 0 4px 12px rgba(102,126,234,0.15); }
+        .dream-item.selected { border-color: #667eea; background: #f8f9ff; }
+
+        .dream-item-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .dream-checkbox { margin-top: 3px; width: 16px; height: 16px; accent-color: #667eea; flex-shrink: 0; }
+
+        .dream-content { flex: 1; min-width: 0; }
+
+        .dream-text-preview {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 6px;
+            line-height: 1.4;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dream-meta {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .dream-date { font-size: 12px; color: #aaa; }
+
+        .dream-themes {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .theme-pill {
+            background: #f0f2ff;
+            color: #667eea;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .lang-badge {
+            background: #f0fff4;
+            color: #276749;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 20px;
+        }
+
+        .dream-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .action-btn {
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .btn-view { color: #667eea; border-color: #667eea; background: white; }
+        .btn-view:hover { background: #667eea; color: white; }
+
+        .btn-pdf { color: #764ba2; border-color: #764ba2; background: white; }
+        .btn-pdf:hover { background: #764ba2; color: white; }
+        .btn-pdf.locked { color: #aaa; border-color: #ddd; background: white; cursor: default; }
+
+        .btn-del { color: #dc3545; border-color: #dc3545; background: white; }
+        .btn-del:hover { background: #dc3545; color: white; }
+
+        /* Dream detail panel */
+        .detail-panel {
+            display: none;
+            background: #fafbff;
+            border: 1.5px solid #e0e4ff;
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 10px;
+        }
+
+        .detail-panel.open { display: block; }
+
+        .detail-section { margin-bottom: 14px; }
+        .detail-section h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: #764ba2; margin-bottom: 4px; }
+        .detail-section p { font-size: 14px; color: #444; line-height: 1.6; }
+
+        .symbol-list { list-style: none; }
+        .symbol-list li { font-size: 13px; color: #444; padding: 3px 0; }
+        .symbol-list li strong { color: #333; }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .page-btn {
+            padding: 7px 14px;
+            border: 1.5px solid #667eea;
+            border-radius: 7px;
+            background: white;
+            color: #667eea;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .page-btn:hover:not(:disabled) { background: #667eea; color: white; }
+        .page-btn:disabled { border-color: #ddd; color: #bbb; cursor: default; }
+        .page-info { font-size: 13px; color: #888; }
+
+        /* Empty / error states */
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: #aaa;
+        }
+        .empty-state p { margin-bottom: 16px; font-size: 15px; }
+        .empty-state a {
+            display: inline-block;
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .free-notice {
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #7a6300;
+            margin-bottom: 16px;
+        }
+        .free-notice a { color: #667eea; font-weight: 600; }
+
+        .loading { text-align: center; padding: 32px; color: #aaa; font-size: 14px; }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 10px 22px;
+            border-radius: 20px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 999;
+            pointer-events: none;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="back-btn" onclick="history.back()">← Back</button>
+            <h1>📚 Dream History</h1>
+        </div>
+
+        <div class="card">
+            <div id="freeNotice" class="free-notice" style="display:none;">
+                Free plan shows your last 10 dreams.
+                <a href="payment.html">Upgrade to Basic or Pro</a> for unlimited history + PDF export.
+            </div>
+
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <label class="select-all-label">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"> Select all
+                    </label>
+                    <span class="selected-count" id="selectedCount" style="display:none;"></span>
+                    <button class="btn-danger-sm" id="bulkDeleteBtn" onclick="bulkDelete()" disabled style="display:none;">
+                        Delete selected
+                    </button>
+                </div>
+            </div>
+
+            <div id="dreamsList"><div class="loading">Loading your dreams...</div></div>
+
+            <div class="pagination" id="pagination" style="display:none;">
+                <button class="page-btn" id="prevBtn" onclick="loadPage(currentPage - 1)">← Prev</button>
+                <span class="page-info" id="pageInfo"></span>
+                <button class="page-btn" id="nextBtn" onclick="loadPage(currentPage + 1)">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_URL      = API_CONFIG.API_BASE_URL;
+        const accessToken  = localStorage.getItem('accessToken');
+
+        if (!accessToken) window.location.href = 'login.html';
+
+        let currentPage  = 1;
+        const PAGE_LIMIT = 10;
+        let totalPages   = 1;
+        let isPaid       = false;
+        let dreams       = [];
+        let selectedIds  = new Set();
+        let openDetailId = null;
+
+        // ── Init ──────────────────────────────────────────────────────────────
+        async function init() {
+            // Check subscription (to show/hide PDF + free notice)
+            try {
+                const r = await fetch(`${API_URL}/subscriptions/status`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const s = await r.json();
+                isPaid = s?.status === 'active';
+            } catch { isPaid = false; }
+
+            if (!isPaid) document.getElementById('freeNotice').style.display = 'block';
+            loadPage(1);
+        }
+
+        async function loadPage(page) {
+            currentPage = page;
+            selectedIds.clear();
+            updateBulkUI();
+            document.getElementById('selectAll').checked = false;
+
+            const list = document.getElementById('dreamsList');
+            list.innerHTML = '<div class="loading">Loading...</div>';
+
+            try {
+                const r = await fetch(
+                    `${API_URL}/dreams?page=${page}&limit=${PAGE_LIMIT}`,
+                    { headers: { 'Authorization': `Bearer ${accessToken}` } }
+                );
+                const data = await r.json();
+                dreams = data.dreams || [];
+                const pagination = data.pagination || {};
+                totalPages = pagination.totalPages || 1;
+
+                renderDreams();
+                renderPagination(pagination);
+            } catch (err) {
+                list.innerHTML = '<div class="empty-state"><p>Failed to load dreams. Please try again.</p></div>';
+            }
+        }
+
+        function renderDreams() {
+            const list = document.getElementById('dreamsList');
+
+            if (!dreams || dreams.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <p>No dreams recorded yet.</p>
+                        <a href="dream-interpretation.html">Interpret your first dream →</a>
+                    </div>`;
+                document.getElementById('pagination').style.display = 'none';
+                return;
+            }
+
+            list.innerHTML = dreams.map((d, i) => {
+                const id       = d._id;
+                const preview  = (d.dreamText || '').slice(0, 120) + (d.dreamText?.length > 120 ? '...' : '');
+                const date     = new Date(d.createdAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+                const themes   = (d.interpretation?.mainThemes || []).slice(0,3).map(t =>
+                    `<span class="theme-pill">${escHtml(t)}</span>`).join('');
+                const langBadge = d.language === 'es'
+                    ? '<span class="lang-badge">ES</span>' : '';
+                const pdfClass = isPaid ? 'btn-pdf' : 'btn-pdf locked';
+                const pdfTitle = isPaid ? 'Download PDF' : 'PDF requires Basic/Pro plan';
+
+                return `
+                <div class="dream-item" id="item-${id}" data-id="${id}">
+                    <div class="dream-item-header">
+                        <input type="checkbox" class="dream-checkbox" id="chk-${id}"
+                            onchange="toggleSelect('${id}', this)" onclick="event.stopPropagation()">
+                        <div class="dream-content" onclick="toggleDetail('${id}')">
+                            <div class="dream-text-preview">${escHtml(preview)}</div>
+                            <div class="dream-meta">
+                                <span class="dream-date">${date}</span>
+                                <div class="dream-themes">${themes}</div>
+                                ${langBadge}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dream-actions">
+                        <button class="action-btn btn-view" onclick="toggleDetail('${id}')">View</button>
+                        <button class="action-btn ${pdfClass}" title="${pdfTitle}"
+                            onclick="${isPaid ? `downloadPdf('${id}')` : `showToast('Upgrade to download PDF')`}">
+                            PDF
+                        </button>
+                        <button class="action-btn btn-del" onclick="deleteDream('${id}', event)">Delete</button>
+                    </div>
+                    <div class="detail-panel" id="detail-${id}">
+                        ${renderDetail(d)}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderDetail(d) {
+            const interp = d.interpretation || {};
+            const symbols = (interp.symbols || []).map(s =>
+                `<li><strong>${escHtml(s.symbol)}:</strong> ${escHtml(s.meaning)}</li>`
+            ).join('');
+
+            let extra = '';
+            if (interp.lifeSeason)
+                extra += `<div class="detail-section"><h4>Life Season</h4><p>${escHtml(interp.lifeSeason)}</p></div>`;
+            if (interp.recurringPatterns)
+                extra += `<div class="detail-section"><h4>Recurring Patterns</h4><p>${escHtml(interp.recurringPatterns)}</p></div>`;
+            if (interp.relationshipInsight)
+                extra += `<div class="detail-section"><h4>Relationship Insight</h4><p>${escHtml(interp.relationshipInsight)}</p></div>`;
+
+            return `
+                <div class="detail-section">
+                    <h4>Your Dream</h4>
+                    <p>${escHtml(d.dreamText || '')}</p>
+                </div>
+                <div class="detail-section">
+                    <h4>Emotional Tone</h4>
+                    <p>${escHtml(interp.emotionalTone || '')}</p>
+                </div>
+                <div class="detail-section">
+                    <h4>Symbols</h4>
+                    <ul class="symbol-list">${symbols}</ul>
+                </div>
+                <div class="detail-section">
+                    <h4>Personal Insight</h4>
+                    <p>${escHtml(interp.personalInsight || '')}</p>
+                </div>
+                <div class="detail-section">
+                    <h4>Guidance</h4>
+                    <p>${escHtml(interp.guidance || '')}</p>
+                </div>
+                ${extra}`;
+        }
+
+        function renderPagination(pagination) {
+            const pag = document.getElementById('pagination');
+            if (totalPages <= 1) { pag.style.display = 'none'; return; }
+            pag.style.display = 'flex';
+            document.getElementById('prevBtn').disabled = currentPage <= 1;
+            document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+            document.getElementById('pageInfo').textContent =
+                `Page ${currentPage} of ${totalPages}`;
+        }
+
+        // ── Detail toggle ─────────────────────────────────────────────────────
+        function toggleDetail(id) {
+            const panel = document.getElementById(`detail-${id}`);
+            const isOpen = panel.classList.contains('open');
+            // Close previous
+            if (openDetailId && openDetailId !== id) {
+                document.getElementById(`detail-${openDetailId}`)?.classList.remove('open');
+            }
+            panel.classList.toggle('open', !isOpen);
+            openDetailId = !isOpen ? id : null;
+        }
+
+        // ── Selection ─────────────────────────────────────────────────────────
+        function toggleSelect(id, checkbox) {
+            if (checkbox.checked) selectedIds.add(id);
+            else selectedIds.delete(id);
+            document.getElementById(`item-${id}`).classList.toggle('selected', checkbox.checked);
+            updateBulkUI();
+        }
+
+        function toggleSelectAll(masterChk) {
+            dreams.forEach((d) => {
+                const id  = d._id;
+                const chk = document.getElementById(`chk-${id}`);
+                const item = document.getElementById(`item-${id}`);
+                if (chk) {
+                    chk.checked = masterChk.checked;
+                    item?.classList.toggle('selected', masterChk.checked);
+                    if (masterChk.checked) selectedIds.add(id);
+                    else selectedIds.delete(id);
+                }
+            });
+            updateBulkUI();
+        }
+
+        function updateBulkUI() {
+            const count    = selectedIds.size;
+            const countEl  = document.getElementById('selectedCount');
+            const bulkBtn  = document.getElementById('bulkDeleteBtn');
+            if (count > 0) {
+                countEl.textContent = `${count} selected`;
+                countEl.style.display = 'inline';
+                bulkBtn.style.display = 'inline-block';
+                bulkBtn.disabled = false;
+            } else {
+                countEl.style.display = 'none';
+                bulkBtn.style.display = 'none';
+                bulkBtn.disabled = true;
+            }
+        }
+
+        // ── Delete ────────────────────────────────────────────────────────────
+        async function deleteDream(id, e) {
+            e.stopPropagation();
+            if (!confirm('Delete this dream? This cannot be undone.')) return;
+            try {
+                const r = await fetch(`${API_URL}/dreams/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (r.ok) {
+                    showToast('Dream deleted');
+                    loadPage(currentPage);
+                } else {
+                    showToast('Failed to delete dream');
+                }
+            } catch { showToast('Network error'); }
+        }
+
+        async function bulkDelete() {
+            if (selectedIds.size === 0) return;
+            if (!confirm(`Delete ${selectedIds.size} dream(s)? This cannot be undone.`)) return;
+
+            try {
+                const r = await fetch(`${API_URL}/dreams`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ids: [...selectedIds] })
+                });
+                const data = await r.json();
+                if (r.ok) {
+                    showToast(`${data.deleted} dream(s) deleted`);
+                    loadPage(currentPage);
+                } else {
+                    showToast(data.error || 'Failed to delete');
+                }
+            } catch { showToast('Network error'); }
+        }
+
+        // ── PDF download ──────────────────────────────────────────────────────
+        async function downloadPdf(dreamId, therapistMode = false) {
+            showToast('Generating PDF...');
+            const url = `${API_URL}/reports/pdf/${dreamId}${therapistMode ? '?mode=therapist' : ''}`;
+            try {
+                const r = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (!r.ok) {
+                    const err = await r.json();
+                    showToast(err.error || 'PDF generation failed');
+                    return;
+                }
+                const blob = await r.blob();
+                const a    = document.createElement('a');
+                a.href     = URL.createObjectURL(blob);
+                a.download = `dream-${dreamId}.pdf`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+                showToast('PDF downloaded!');
+            } catch { showToast('Failed to download PDF'); }
+        }
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        let toastTimer;
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+        }
+
+        init();
+    </script>
+</body>
+</html>

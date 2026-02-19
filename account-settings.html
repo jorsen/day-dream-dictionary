@@ -244,6 +244,28 @@
                 <div class="msg" id="cancelMsg"></div>
             </div>
 
+            <!-- Language & Preferences -->
+            <div class="card">
+                <h2>🌐 Language & Preferences</h2>
+                <div class="form-group">
+                    <label for="langSelect">Interpretation Language</label>
+                    <select id="langSelect" style="width:100%;padding:11px 14px;border:2px solid #e0e0e0;border-radius:8px;font-size:15px;font-family:inherit;background:white;cursor:pointer;transition:border-color 0.2s;" onchange="">
+                        <option value="en">🇺🇸 English</option>
+                        <option value="es">🇪🇸 Español</option>
+                    </select>
+                    <p style="margin-top:6px;font-size:12px;color:#aaa;">Interpretations will be returned in the selected language.</p>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                        <input type="checkbox" id="emailResultsToggle" style="width:18px;height:18px;accent-color:#667eea;">
+                        <span>Email me my dream interpretations</span>
+                    </label>
+                    <p style="margin-top:4px;font-size:12px;color:#aaa;margin-left:28px;">Requires email configured via Resend. Opt-in only.</p>
+                </div>
+                <button class="btn" id="savePrefsBtn" onclick="savePreferences()">Save Preferences</button>
+                <div class="msg" id="prefsMsg"></div>
+            </div>
+
             <!-- Change Password -->
             <div class="card">
                 <h2>🔒 Change Password</h2>
@@ -499,9 +521,64 @@
             }
         }
 
+        // ── Preferences ───────────────────────────────────────────────────────
+        async function loadPreferences() {
+            try {
+                const res  = await fetch(`${API_URL}/account/me`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+                if (res.ok && data.user) {
+                    const lang = data.user.preferredLanguage || 'en';
+                    document.getElementById('langSelect').value = lang;
+                    document.getElementById('emailResultsToggle').checked = !!data.user.emailResultsOptIn;
+                }
+            } catch (err) {
+                console.error('[account-settings] load preferences error:', err);
+            }
+        }
+
+        async function savePreferences() {
+            const lang            = document.getElementById('langSelect').value;
+            const emailResultsOptIn = document.getElementById('emailResultsToggle').checked;
+            const msg             = document.getElementById('prefsMsg');
+            const btn             = document.getElementById('savePrefsBtn');
+
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const res  = await fetch(`${API_URL}/account/preferences`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ language: lang, emailResultsOptIn })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    // Update stored user locale
+                    if (currentUser) {
+                        currentUser.preferredLanguage = lang;
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    }
+                    showMsg(msg, 'Preferences saved!', 'success');
+                } else {
+                    showMsg(msg, data.error || 'Failed to save preferences.', 'error');
+                }
+            } catch {
+                showMsg(msg, 'Network error. Please try again.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Preferences';
+            }
+        }
+
         // Load subscription on page init (only if logged in)
         if (accessToken && currentUser) {
             loadSubscriptionDetails();
+            loadPreferences();
         }
 
         function togglePw(inputId, btn) {

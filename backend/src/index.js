@@ -7,8 +7,11 @@ import { authenticate } from './middleware/auth.js';
 import authRouter from './routes/auth.js';
 import dreamsRouter from './routes/dreams.js';
 import subscriptionsRouter from './routes/subscriptions.js';
-import accountRouter from './routes/account.js';
-import webhookRouter from './routes/webhook.js';
+import accountRouter      from './routes/account.js';
+import webhookRouter      from './routes/webhook.js';
+import creditsRouter      from './routes/credits.js';
+import addonsRouter       from './routes/addons.js';
+import reportsRouter      from './routes/reports.js';
 
 // ── Static file root (two levels up from backend/src/) ────────────────────────
 const __filename = fileURLToPath(import.meta.url);
@@ -86,6 +89,9 @@ app.use(`${v1}/auth`,          authRouter);
 app.use(`${v1}/dreams`,        dreamsRouter);
 app.use(`${v1}/subscriptions`, subscriptionsRouter);
 app.use(`${v1}/account`,       accountRouter);
+app.use(`${v1}/credits`,       creditsRouter);
+app.use(`${v1}/addons`,        addonsRouter);
+app.use(`${v1}/reports`,       reportsRouter);
 
 // ── GET /api/v1/profile ───────────────────────────────────────────────────────
 // Consumed by dream-interpretation.html and other pages to get user + plan data.
@@ -101,7 +107,7 @@ app.get(`${v1}/profile`, authenticate, async (req, res) => {
       ),
       db.collection('users').findOne(
         { _id: req.user._id },
-        { projection: { freeUsedThisMonth: 1, freeMonthStart: 1, displayName: 1 } },
+        { projection: { freeUsedThisMonth: 1, freeMonthStart: 1, displayName: 1, creditBalance: 1, preferredLanguage: 1 } },
       ),
     ]);
 
@@ -113,10 +119,11 @@ app.get(`${v1}/profile`, authenticate, async (req, res) => {
     return res.json({
       profile: {
         display_name:  req.user.displayName,
-        locale:        'en',
+        locale:        user?.preferredLanguage ?? 'en',
         preferences:   {},
         credits:       plan === 'free' ? null : 'unlimited',
-        dream_count:   0, // populated from dreams collection if needed later
+        creditBalance: user?.creditBalance ?? 0,
+        dream_count:   0,
         subscription: {
           plan,
           planName:         planLabels[plan] ?? 'Free Plan',

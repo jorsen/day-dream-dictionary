@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upgrade - Day Dream Dictionary</title>
+    <title>Upgrade & Credits - Day Dream Dictionary</title>
     <!-- Allow Stripe.js scripts and iframes -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline'; frame-src https://js.stripe.com; connect-src 'self' https://day-dream-dictionary.onrender.com https://api.stripe.com https://r.stripe.com https://merchant-ui-api.stripe.com; img-src 'self' data: https:; font-src 'self' https:;">
     <script src="https://js.stripe.com/v3/"></script>
@@ -141,6 +141,74 @@
         .back-link a { color: #667eea; text-decoration: none; font-weight: 500; }
         .back-link a:hover { text-decoration: underline; }
 
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 28px;
+        }
+        .tab-btn {
+            padding: 10px 22px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 15px;
+            font-weight: 600;
+            color: #888;
+            cursor: pointer;
+            margin-bottom: -2px;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .tab-btn.active { color: #667eea; border-bottom-color: #667eea; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Credit packs */
+        .packs { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 24px; }
+        @media(max-width:540px){ .packs { grid-template-columns: 1fr; } }
+        .pack {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .pack:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(102,126,234,.18); }
+        .pack.selected { border-color: #667eea; background: #f8f9ff; }
+        .pack.best-value::before {
+            content: 'Best Value';
+            position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+            background: #667eea; color: white; font-size: 11px; font-weight: 700;
+            padding: 2px 10px; border-radius: 20px; white-space: nowrap;
+        }
+        .pack-credits { font-size: 28px; font-weight: 800; color: #667eea; }
+        .pack-credits span { font-size: 14px; color: #888; font-weight: 400; }
+        .pack-price { font-size: 17px; font-weight: 700; color: #333; margin-top: 4px; }
+        .pack-per { font-size: 12px; color: #aaa; margin-top: 2px; }
+
+        /* Add-ons */
+        .addons-grid { display: grid; gap: 12px; margin-bottom: 24px; }
+        .addon-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .addon-item:hover { border-color: #667eea; }
+        .addon-item.selected { border-color: #667eea; background: #f8f9ff; }
+        .addon-icon { font-size: 24px; }
+        .addon-info { flex: 1; }
+        .addon-name { font-weight: 700; color: #333; font-size: 15px; }
+        .addon-desc { font-size: 13px; color: #777; margin-top: 2px; }
+        .addon-price { font-size: 15px; font-weight: 700; color: #667eea; white-space: nowrap; }
+
         .spinner {
             display: inline-block;
             width: 14px;
@@ -160,7 +228,17 @@
     <div class="container">
         <div class="card">
             <h1>Upgrade Your Dream Experience</h1>
-            <p class="subtitle">Unlock unlimited interpretations and premium insights</p>
+            <p class="subtitle">Subscriptions · Credit Packs · Add-Ons</p>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('subscription', this)">Subscription</button>
+                <button class="tab-btn" onclick="switchTab('credits', this)">Credit Packs</button>
+                <button class="tab-btn" onclick="switchTab('addons', this)">Add-Ons</button>
+            </div>
+
+            <!-- ── Subscription tab ───────────────────────────────────────── -->
+            <div class="tab-panel active" id="tab-subscription">
 
             <!-- Plan selection -->
             <div class="plans">
@@ -209,6 +287,101 @@
             </div>
 
             <div id="status" class="status"></div>
+
+            </div><!-- end tab-subscription -->
+
+            <!-- ── Credit Packs tab ───────────────────────────────────────── -->
+            <div class="tab-panel" id="tab-credits">
+                <p class="subtitle" style="margin-bottom:20px;">Each deep interpretation costs 3 credits. Credits never expire.</p>
+                <div class="packs">
+                    <div class="pack" id="pack-10" onclick="selectPack('10')">
+                        <div class="pack-credits">10<span> credits</span></div>
+                        <div class="pack-price">$9.99</div>
+                        <div class="pack-per">$1.00 / credit</div>
+                    </div>
+                    <div class="pack best-value" id="pack-25" onclick="selectPack('25')">
+                        <div class="pack-credits">25<span> credits</span></div>
+                        <div class="pack-price">$19.99</div>
+                        <div class="pack-per">$0.80 / credit</div>
+                    </div>
+                    <div class="pack" id="pack-60" onclick="selectPack('60')">
+                        <div class="pack-credits">60<span> credits</span></div>
+                        <div class="pack-price">$39.99</div>
+                        <div class="pack-per">$0.67 / credit</div>
+                    </div>
+                </div>
+
+                <div id="credit-payment-section" style="display:none;">
+                    <div class="selected-plan-banner">
+                        Purchasing <strong id="selected-pack-label">10 Credits — $9.99</strong>
+                    </div>
+                    <label>Card details</label>
+                    <div id="card-element-credits"></div>
+                    <div id="card-errors-credits"></div>
+                    <button class="btn" id="buy-credits-btn" onclick="handleCreditPurchase()">Buy Credits</button>
+                    <div class="stripe-badge">Secured by Stripe.</div>
+                </div>
+                <div id="status-credits" class="status"></div>
+            </div><!-- end tab-credits -->
+
+            <!-- ── Add-Ons tab ────────────────────────────────────────────── -->
+            <div class="tab-panel" id="tab-addons">
+                <p class="subtitle" style="margin-bottom:20px;">Unlock powerful features. One-time purchase, permanent access.</p>
+                <div class="addons-grid" id="addonsList">
+                    <div class="addon-item" id="addon-life_season" onclick="selectAddon('life_season')">
+                        <div class="addon-icon">🌱</div>
+                        <div class="addon-info">
+                            <div class="addon-name">Life Season</div>
+                            <div class="addon-desc">Interpretation contextualized to your current life phase</div>
+                        </div>
+                        <div class="addon-price">$4.99</div>
+                    </div>
+                    <div class="addon-item" id="addon-recurring" onclick="selectAddon('recurring')">
+                        <div class="addon-icon">🔄</div>
+                        <div class="addon-info">
+                            <div class="addon-name">Recurring Dreams</div>
+                            <div class="addon-desc">Pattern & repetition analysis across your dream history</div>
+                        </div>
+                        <div class="addon-price">$2.99</div>
+                    </div>
+                    <div class="addon-item" id="addon-couples" onclick="selectAddon('couples')">
+                        <div class="addon-icon">💑</div>
+                        <div class="addon-info">
+                            <div class="addon-name">Couples</div>
+                            <div class="addon-desc">Shared dream interpretation for you and your partner</div>
+                        </div>
+                        <div class="addon-price">$6.99</div>
+                    </div>
+                    <div class="addon-item" id="addon-therapist_pdf" onclick="selectAddon('therapist_pdf')">
+                        <div class="addon-icon">🩺</div>
+                        <div class="addon-info">
+                            <div class="addon-name">Therapist Export</div>
+                            <div class="addon-desc">Professional PDF with clinical focal points</div>
+                        </div>
+                        <div class="addon-price">$9.99</div>
+                    </div>
+                    <div class="addon-item" id="addon-ad_removal" onclick="selectAddon('ad_removal')">
+                        <div class="addon-icon">🚫</div>
+                        <div class="addon-info">
+                            <div class="addon-name">Ad Removal</div>
+                            <div class="addon-desc">Permanently remove all ads from your experience</div>
+                        </div>
+                        <div class="addon-price">$2.99</div>
+                    </div>
+                </div>
+
+                <div id="addon-payment-section" style="display:none;">
+                    <div class="selected-plan-banner">
+                        Purchasing <strong id="selected-addon-label">Life Season</strong>
+                    </div>
+                    <label>Card details</label>
+                    <div id="card-element-addons"></div>
+                    <div id="card-errors-addons"></div>
+                    <button class="btn" id="buy-addon-btn" onclick="handleAddonPurchase()">Purchase Add-On</button>
+                    <div class="stripe-badge">Secured by Stripe. One-time charge.</div>
+                </div>
+                <div id="status-addons" class="status"></div>
+            </div><!-- end tab-addons -->
 
             <div class="back-link">
                 <a href="profile-dashboard.html">← Back to Dashboard</a>
@@ -349,6 +522,187 @@
         }
 
         init();
+
+        // ── Tab switching ─────────────────────────────────────────────────────
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            btn.classList.add('active');
+
+            // Init Stripe elements for new tabs on first open
+            if (tabId === 'credits' && !cardElementCredits && stripe) initCreditCard();
+            if (tabId === 'addons'  && !cardElementAddons  && stripe) initAddonCard();
+        }
+
+        // Check hash on load to open the correct tab (e.g. payment.html#addons)
+        (function() {
+            const hash = window.location.hash.replace('#', '');
+            if (['credits','addons'].includes(hash)) {
+                const btn = document.querySelector(`.tab-btn[onclick*="${hash}"]`);
+                if (btn) switchTab(hash, btn);
+            }
+        })();
+
+        // ── Credit pack elements ───────────────────────────────────────────────
+        let selectedPack       = null;
+        let cardElementCredits = null;
+
+        function initCreditCard() {
+            if (!stripe || cardElementCredits) return;
+            const elements = stripe.elements();
+            cardElementCredits = elements.create('card', {
+                style: { base: { fontSize:'16px', color:'#32325d', '::placeholder':{ color:'#aab7c4' } }, invalid:{ color:'#e53e3e' } }
+            });
+            cardElementCredits.mount('#card-element-credits');
+            cardElementCredits.on('change', ({error}) => {
+                document.getElementById('card-errors-credits').textContent = error ? error.message : '';
+            });
+        }
+
+        function selectPack(pack) {
+            selectedPack = pack;
+            ['10','25','60'].forEach(p => document.getElementById(`pack-${p}`).classList.toggle('selected', p === pack));
+            const labels = { '10':'10 Credits — $9.99', '25':'25 Credits — $19.99', '60':'60 Credits — $39.99' };
+            document.getElementById('selected-pack-label').textContent = labels[pack];
+            const section = document.getElementById('credit-payment-section');
+            section.style.display = 'block';
+            section.scrollIntoView({ behavior:'smooth' });
+            if (!cardElementCredits && stripe) initCreditCard();
+        }
+
+        async function handleCreditPurchase() {
+            if (!selectedPack) { showStatus('Please select a credit pack.', 'error', 'credits'); return; }
+            if (!stripe || !cardElementCredits) { showStatus('Payment not ready.', 'error', 'credits'); return; }
+
+            const btn = document.getElementById('buy-credits-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Processing...';
+
+            try {
+                const { paymentMethod, error } = await stripe.createPaymentMethod({ type:'card', card:cardElementCredits });
+                if (error) {
+                    document.getElementById('card-errors-credits').textContent = error.message;
+                    btn.disabled = false; btn.textContent = 'Buy Credits'; return;
+                }
+
+                const res  = await fetch(`${API_URL}/credits/purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+                    body: JSON.stringify({ pack: selectedPack, paymentMethodId: paymentMethod.id })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showStatus(data.error || 'Purchase failed.', 'error', 'credits');
+                    btn.disabled = false; btn.textContent = 'Buy Credits'; return;
+                }
+
+                if (data.clientSecret) {
+                    const { error: confirmError } = await stripe.confirmCardPayment(data.clientSecret);
+                    if (confirmError) {
+                        showStatus(confirmError.message, 'error', 'credits');
+                        btn.disabled = false; btn.textContent = 'Buy Credits'; return;
+                    }
+                }
+
+                showStatus(`Credits purchased! ${data.credits} credits will appear in your account shortly.`, 'success', 'credits');
+                setTimeout(() => window.location.href = 'profile-dashboard.html', 2500);
+            } catch {
+                showStatus('Something went wrong. Please try again.', 'error', 'credits');
+                btn.disabled = false; btn.textContent = 'Buy Credits';
+            }
+        }
+
+        // ── Add-on elements ───────────────────────────────────────────────────
+        let selectedAddon     = null;
+        let cardElementAddons = null;
+
+        const ADDON_META = {
+            life_season:   { label:'Life Season',     price:'$4.99' },
+            recurring:     { label:'Recurring Dreams', price:'$2.99' },
+            couples:       { label:'Couples',          price:'$6.99' },
+            therapist_pdf: { label:'Therapist Export', price:'$9.99' },
+            ad_removal:    { label:'Ad Removal',       price:'$2.99' },
+        };
+
+        function initAddonCard() {
+            if (!stripe || cardElementAddons) return;
+            const elements = stripe.elements();
+            cardElementAddons = elements.create('card', {
+                style: { base: { fontSize:'16px', color:'#32325d', '::placeholder':{ color:'#aab7c4' } }, invalid:{ color:'#e53e3e' } }
+            });
+            cardElementAddons.mount('#card-element-addons');
+            cardElementAddons.on('change', ({error}) => {
+                document.getElementById('card-errors-addons').textContent = error ? error.message : '';
+            });
+        }
+
+        function selectAddon(key) {
+            selectedAddon = key;
+            document.querySelectorAll('.addon-item').forEach(el => el.classList.remove('selected'));
+            document.getElementById(`addon-${key}`).classList.add('selected');
+            const meta = ADDON_META[key];
+            document.getElementById('selected-addon-label').textContent = `${meta.label} — ${meta.price}`;
+            const section = document.getElementById('addon-payment-section');
+            section.style.display = 'block';
+            section.scrollIntoView({ behavior:'smooth' });
+            if (!cardElementAddons && stripe) initAddonCard();
+        }
+
+        async function handleAddonPurchase() {
+            if (!selectedAddon) { showStatus('Please select an add-on.', 'error', 'addons'); return; }
+            if (!stripe || !cardElementAddons) { showStatus('Payment not ready.', 'error', 'addons'); return; }
+
+            const btn = document.getElementById('buy-addon-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Processing...';
+
+            try {
+                const { paymentMethod, error } = await stripe.createPaymentMethod({ type:'card', card:cardElementAddons });
+                if (error) {
+                    document.getElementById('card-errors-addons').textContent = error.message;
+                    btn.disabled = false; btn.textContent = 'Purchase Add-On'; return;
+                }
+
+                const res  = await fetch(`${API_URL}/addons/purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+                    body: JSON.stringify({ addonKey: selectedAddon, paymentMethodId: paymentMethod.id })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showStatus(data.error || 'Purchase failed.', 'error', 'addons');
+                    btn.disabled = false; btn.textContent = 'Purchase Add-On'; return;
+                }
+
+                if (data.clientSecret) {
+                    const { error: confirmError } = await stripe.confirmCardPayment(data.clientSecret);
+                    if (confirmError) {
+                        showStatus(confirmError.message, 'error', 'addons');
+                        btn.disabled = false; btn.textContent = 'Purchase Add-On'; return;
+                    }
+                }
+
+                const meta = ADDON_META[selectedAddon];
+                showStatus(`${meta.label} add-on activated! Redirecting...`, 'success', 'addons');
+                setTimeout(() => window.location.href = 'profile-dashboard.html', 2500);
+            } catch {
+                showStatus('Something went wrong. Please try again.', 'error', 'addons');
+                btn.disabled = false; btn.textContent = 'Purchase Add-On';
+            }
+        }
+
+        // ── Override showStatus to support tab namespacing ────────────────────
+        const _origShowStatus = showStatus;
+        function showStatus(msg, type, tab) {
+            const elId = tab ? `status-${tab}` : 'status';
+            const el = document.getElementById(elId) || document.getElementById('status');
+            el.textContent = msg;
+            el.className = `status ${type}`;
+            el.style.display = 'block';
+        }
     </script>
 </body>
 </html>

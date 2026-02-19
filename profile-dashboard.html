@@ -430,7 +430,14 @@
                         <span class="info-label">Usage This Month</span>
                         <span class="info-value" id="monthlyUsage">0 / 5</span>
                     </div>
-                    <button class="btn" style="margin-top: 20px;" onclick="goToPayment()">💳 Buy Credits & Upgrade</button>
+                    <div class="info-row" id="creditBalanceRow" style="display:none;">
+                        <span class="info-label">Credit Balance</span>
+                        <span class="info-value" id="creditBalance">0 credits</span>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:20px;">
+                        <button class="btn" style="flex:1;" onclick="goToPayment()">💳 Upgrade / Credits</button>
+                        <button class="btn" style="flex:1;background:linear-gradient(135deg,#764ba2,#667eea);" onclick="window.location.href='payment.html#addons'">✨ Add-Ons</button>
+                    </div>
                 </div>
 
                 <!-- Dream Statistics Card -->
@@ -473,7 +480,10 @@
 
                 <!-- Recent Dreams Card -->
                 <div class="card" style="grid-column: span 2;">
-                    <h3><span class="card-icon">📚</span> Recent Dreams</h3>
+                    <h3 style="justify-content:space-between;">
+                        <span><span class="card-icon">📚</span> Recent Dreams</span>
+                        <a href="dream-history.html" style="font-size:13px;font-weight:600;color:#667eea;text-decoration:none;">View Full History →</a>
+                    </h3>
                     <div class="dreams-list" id="dreamsList">
                         <div class="loading">No dreams recorded yet. Start by entering your first dream above!</div>
                     </div>
@@ -648,16 +658,20 @@
         // Update subscription display based on plan
         // sub = response from GET /api/subscriptions/status (or null on error)
         function updateSubscriptionDisplay(sub) {
-            const planBadge       = document.getElementById('planBadge');
-            const creditsRow      = document.getElementById('creditsRow');
-            const monthlyLimitRow = document.getElementById('monthlyLimitRow');
-            const monthlyUsageRow = document.getElementById('monthlyUsageRow');
-            const userCredits     = document.getElementById('userCredits');
+            const planBadge        = document.getElementById('planBadge');
+            const creditsRow       = document.getElementById('creditsRow');
+            const creditBalanceRow = document.getElementById('creditBalanceRow');
+            const monthlyLimitRow  = document.getElementById('monthlyLimitRow');
+            const monthlyUsageRow  = document.getElementById('monthlyUsageRow');
+            const userCredits      = document.getElementById('userCredits');
 
             // Remove any previously injected feature blocks
             ['proFeatures', 'basicFeatures'].forEach(id => {
                 document.getElementById(id)?.remove();
             });
+
+            // Load credit balance separately
+            loadCreditBalance();
 
             const plan = sub?.plan || 'free';
 
@@ -801,6 +815,27 @@
                     alertBox.style.display = 'none';
                 }, 10000);
             }
+        }
+
+        // Load credit balance
+        async function loadCreditBalance() {
+            try {
+                const r = await fetch(`${API_URL}/credits`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                if (r.ok) {
+                    const data = await r.json();
+                    const balance = data.creditBalance ?? 0;
+                    const row = document.getElementById('creditBalanceRow');
+                    if (balance > 0) {
+                        document.getElementById('creditBalance').textContent =
+                            `${balance} credit${balance !== 1 ? 's' : ''}`;
+                        if (row) row.style.display = 'flex';
+                    } else {
+                        if (row) row.style.display = 'none';
+                    }
+                }
+            } catch { /* ignore */ }
         }
 
         // Refresh subscription data (call this after purchase)

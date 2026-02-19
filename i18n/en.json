@@ -1,0 +1,52 @@
+{
+  "nav.dashboard":       "Dashboard",
+  "nav.history":         "Dream History",
+  "nav.settings":        "Settings",
+  "nav.logout":          "Logout",
+
+  "dream.placeholder":   "Describe your dream in as much detail as you remember...",
+  "dream.submit":        "Interpret My Dream",
+  "dream.interpreting":  "Interpreting...",
+
+  "history.title":       "Dream History",
+  "history.empty":       "No dreams recorded yet.",
+  "history.view":        "View",
+  "history.delete":      "Delete",
+  "history.pdf":         "PDF",
+  "history.selectAll":   "Select all",
+  "history.deleteSelected": "Delete selected",
+
+  "section.themes":      "Main Themes",
+  "section.tone":        "Emotional Tone",
+  "section.symbols":     "Symbols & Meanings",
+  "section.insight":     "Personal Insight",
+  "section.guidance":    "Guidance",
+  "section.lifeSeason":  "Life Season",
+  "section.recurring":   "Recurring Patterns",
+  "section.relationship":"Relationship Insight",
+  "section.therapeutic": "Therapeutic Focal Points",
+
+  "paywall.title":       "Upgrade to Continue",
+  "paywall.subtitle":    "You've used all your free interpretations this month.",
+  "paywall.cta":         "View Plans",
+
+  "plan.free":           "Free Plan",
+  "plan.basic":          "Basic Plan",
+  "plan.pro":            "Pro Plan",
+
+  "credits.balance":     "Credit Balance",
+  "credits.buy":         "Buy Credits",
+
+  "addon.life_season":   "Life Season",
+  "addon.recurring":     "Recurring Dreams",
+  "addon.couples":       "Couples",
+  "addon.therapist_pdf": "Therapist Export",
+  "addon.ad_removal":    "Ad Removal",
+
+  "settings.language":   "Language",
+  "settings.save":       "Save",
+  "settings.saved":      "Saved!",
+
+  "error.generic":       "Something went wrong. Please try again.",
+  "error.network":       "Network error. Please check your connection."
+}

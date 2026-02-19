@@ -31,6 +31,12 @@ export const dreamTextSchema = z.object({
     .min(10, 'Dream text must be at least 10 characters')
     .max(5000, 'Dream text must be 5000 characters or fewer')
     .transform((v) => v.trim()),
+  language: z.enum(['en', 'es']).default('en'),
+  // Add-on fields (ignored unless user has the add-on unlocked)
+  lifeSeason: z.string().max(100).optional(),
+  enableRecurringAnalysis: z.boolean().default(false),
+  partnerDreamText: z.string().min(10).max(5000).optional(), // couples add-on
+  pdfMode: z.enum(['standard', 'therapist']).default('standard'),
 });
 
 // ── Claude AI response ────────────────────────────────────────────────────────
@@ -52,6 +58,11 @@ export const interpretationSchema = z.object({
     .max(10),
   personalInsight: z.string().min(1).max(2000),
   guidance: z.string().min(1).max(2000),
+  // Optional add-on fields
+  lifeSeason: z.string().max(1000).optional(),
+  recurringPatterns: z.string().max(1000).optional(),
+  relationshipInsight: z.string().max(1000).optional(),
+  therapeuticFocalPoints: z.array(z.string().max(500)).max(10).optional(),
 });
 
 // ── Subscriptions ─────────────────────────────────────────────────────────────
@@ -64,4 +75,42 @@ export const createSubscriptionSchema = z.object({
   paymentMethodId: z
     .string({ required_error: 'paymentMethodId is required' })
     .min(1, 'paymentMethodId is required'),
+});
+
+// ── Credit Packs ──────────────────────────────────────────────────────────────
+
+export const creditPurchaseSchema = z.object({
+  pack: z.enum(['10', '25', '60'], {
+    required_error: 'pack is required',
+    invalid_type_error: "pack must be '10', '25', or '60'",
+  }),
+  paymentMethodId: z
+    .string({ required_error: 'paymentMethodId is required' })
+    .min(1, 'paymentMethodId is required'),
+});
+
+// ── Add-Ons ───────────────────────────────────────────────────────────────────
+
+export const ADDON_KEYS = [
+  'life_season',
+  'recurring',
+  'couples',
+  'therapist_pdf',
+  'ad_removal',
+];
+
+export const addonPurchaseSchema = z.object({
+  addonKey: z.enum(ADDON_KEYS, {
+    required_error: 'addonKey is required',
+  }),
+  paymentMethodId: z
+    .string({ required_error: 'paymentMethodId is required' })
+    .min(1, 'paymentMethodId is required'),
+});
+
+// ── Account preferences ───────────────────────────────────────────────────────
+
+export const preferencesSchema = z.object({
+  language: z.enum(['en', 'es']).optional(),
+  emailResultsOptIn: z.boolean().optional(),
 });
