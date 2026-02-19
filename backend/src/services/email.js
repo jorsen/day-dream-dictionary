@@ -7,7 +7,7 @@
  * Install: npm install resend
  */
 
-const FROM = 'Day Dream Dictionary <noreply@daydreamdictionary.com>';
+const FROM = process.env.RESEND_FROM_EMAIL || 'Day Dream Dictionary <onboarding@resend.dev>';
 
 let resend = null;
 
