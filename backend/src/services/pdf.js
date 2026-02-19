@@ -43,8 +43,8 @@ export async function generateDreamPdf(dream, user, opts = {}) {
     doc.on('error', reject);
 
     const { interpretation } = dream;
-    const date = new Date(dream.createdAt).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric',
+    const date = new Date(dream.createdAt).toLocaleString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
 
     const PURPLE = '#764ba2';

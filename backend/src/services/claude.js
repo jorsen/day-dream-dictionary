@@ -27,6 +27,12 @@ const BASE_SCHEMA = `{
   "guidance": "string"
 }`;
 
+// Human-readable names for languages other than en/es (which have full native prompts)
+const LANG_NAMES = {
+  fr: 'French', pt: 'Portuguese', de: 'German', it: 'Italian',
+  zh: 'Chinese (Simplified)', ja: 'Japanese', ko: 'Korean', ar: 'Arabic',
+};
+
 function buildSystemPrompt(language = 'en', addonConfig = {}) {
   const isES = language === 'es';
 
@@ -116,6 +122,12 @@ Add to your JSON:
 "therapeuticFocalPoints": ["array de 3-5 observaciones que un terapeuta podría usar como puntos de entrada en sesión. Lenguaje clínico pero accesible. Sin diagnóstico."]`
       : `\n\nADD-ON — Therapist Mode: Add accessible clinical observations. Add to your JSON:
 "therapeuticFocalPoints": ["array of 3-5 observations a therapist could use as session entry points. Clinical but accessible language. No diagnosis."]`;
+  }
+
+  // For languages other than English and Spanish, instruct Claude to translate all output
+  if (language !== 'en' && language !== 'es' && LANG_NAMES[language]) {
+    const langName = LANG_NAMES[language];
+    prompt += `\n\nCRITICAL: Write ALL text values in the JSON response in ${langName}. This includes mainThemes, emotionalTone, all symbol meanings, personalInsight, guidance, and any add-on fields. Do not use English in any JSON value.`;
   }
 
   return prompt;

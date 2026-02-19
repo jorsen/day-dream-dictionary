@@ -31,7 +31,7 @@ export const dreamTextSchema = z.object({
     .min(10, 'Dream text must be at least 10 characters')
     .max(5000, 'Dream text must be 5000 characters or fewer')
     .transform((v) => v.trim()),
-  language: z.enum(['en', 'es']).default('en'),
+  language: z.enum(['en', 'es', 'fr', 'pt', 'de', 'it', 'zh', 'ja', 'ko', 'ar']).default('en'),
   // Core fields (free for all users)
   isRecurring: z.boolean().default(false),
   tags: z.array(z.string().min(1).max(50)).max(10).default([]),
@@ -114,6 +114,6 @@ export const addonPurchaseSchema = z.object({
 // ── Account preferences ───────────────────────────────────────────────────────
 
 export const preferencesSchema = z.object({
-  language: z.enum(['en', 'es']).optional(),
+  language: z.enum(['en', 'es', 'fr', 'pt', 'de', 'it', 'zh', 'ja', 'ko', 'ar']).optional(),
   emailResultsOptIn: z.boolean().optional(),
 });
