@@ -30,9 +30,10 @@ async function send({ to, subject, html }) {
   if (!client) return; // silently skip when not configured
 
   try {
-    await client.emails.send({ from: FROM, to, subject, html });
+    const result = await client.emails.send({ from: FROM, to, subject, html });
+    console.log('[email] sent ok, id:', result?.data?.id ?? result?.id ?? JSON.stringify(result));
   } catch (err) {
-    console.error('[email] send error:', err.message);
+    console.error('[email] send error:', err.message, err.statusCode ?? '');
     // Do not throw — email failure should never block the main flow
   }
 }
