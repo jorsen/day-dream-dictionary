@@ -294,8 +294,8 @@
         return;
       }
 
-      if (data.user?.role !== 'superadmin') {
-        showLoginError(`Access denied — your role is "${data.user?.role}", superadmin required`);
+      if (!['admin', 'superadmin'].includes(data.user?.role)) {
+        showLoginError(`Access denied — your role is "${data.user?.role}", admin or superadmin required`);
         return;
       }
 

@@ -21,10 +21,10 @@ function userIdQuery(id) {
   return ObjectId.isValid(id) ? new ObjectId(id) : id;
 }
 
-// ── Middleware: superadmin only ───────────────────────────────────────────────
+// ── Middleware: admin or superadmin only ─────────────────────────────────────
 function requireSuperAdmin(req, res, next) {
-  if (req.user?.role !== 'superadmin') {
-    return res.status(403).json({ error: 'Superadmin access required' });
+  if (!['admin', 'superadmin'].includes(req.user?.role)) {
+    return res.status(403).json({ error: 'Admin access required' });
   }
   next();
 }
