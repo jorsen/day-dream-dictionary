@@ -434,14 +434,34 @@ function computeStreak(dates) {
 router.get('/analytics', authenticate, async (req, res) => {
   const db = getDB();
 
-  // Pro-only gate — accept active and past_due (grace period) subscriptions
+  // Pro-only gate — mirrors /subscriptions/status (no status filter so that
+  // 'incomplete', 'trialing', 'past_due', etc. don't block a paying Pro user).
+  // Period-end is validated in JS to handle Date objects, Unix-second ints, and
+  // Unix-millisecond ints that may exist in older subscription documents.
   const sub = await db.collection('subscriptions').findOne({
-    userId:           req.user._id,
-    status:           { $in: ['active', 'past_due', 'trialing'] },
-    currentPeriodEnd: { $gt: new Date() },
-    plan:             'pro',
+    userId: req.user._id,
+    plan:   'pro',
   });
+
+  if (sub) {
+    const rawEnd = sub.currentPeriodEnd;
+    let periodEndMs = 0;
+    if (rawEnd instanceof Date) {
+      periodEndMs = rawEnd.getTime();
+    } else if (typeof rawEnd === 'number') {
+      // Heuristic: values below ~year 2100 in seconds vs ms
+      periodEndMs = rawEnd < 1_000_000_000_000 ? rawEnd * 1000 : rawEnd;
+    } else if (rawEnd) {
+      periodEndMs = new Date(rawEnd).getTime();
+    }
+    if (periodEndMs < Date.now()) {
+      console.warn('[analytics] Pro sub found but period expired:', { userId: req.user._id, currentPeriodEnd: rawEnd });
+      return res.status(403).json({ error: 'Advanced analytics require a Pro subscription', upgradeRequired: true });
+    }
+  }
+
   if (!sub) {
+    console.warn('[analytics] No Pro subscription found for user:', req.user._id);
     return res.status(403).json({
       error:           'Advanced analytics require a Pro subscription',
       upgradeRequired: true,
