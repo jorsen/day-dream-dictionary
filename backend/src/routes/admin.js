@@ -16,6 +16,11 @@ import { authenticate } from '../middleware/auth.js';
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+// Returns a MongoDB query value that works for both ObjectId and plain-string _ids
+function userIdQuery(id) {
+  return ObjectId.isValid(id) ? new ObjectId(id) : id;
+}
+
 // ── Middleware: superadmin only ───────────────────────────────────────────────
 function requireSuperAdmin(req, res, next) {
   if (req.user?.role !== 'superadmin') {
@@ -115,11 +120,8 @@ router.get('/users', ...guard, async (req, res) => {
 
 // ── GET /api/v1/admin/users/:id ───────────────────────────────────────────────
 router.get('/users/:id', ...guard, async (req, res) => {
-  if (!ObjectId.isValid(req.params.id)) {
-    return res.status(400).json({ error: 'Invalid user ID' });
-  }
   const db  = getDB();
-  const uid = new ObjectId(req.params.id);
+  const uid = userIdQuery(req.params.id);
 
   try {
     const [user, sub, dreams, addons, credits] = await Promise.all([
@@ -142,9 +144,6 @@ router.get('/users/:id', ...guard, async (req, res) => {
 
 // ── PATCH /api/v1/admin/users/:id/role ───────────────────────────────────────
 router.patch('/users/:id/role', ...guard, async (req, res) => {
-  if (!ObjectId.isValid(req.params.id)) {
-    return res.status(400).json({ error: 'Invalid user ID' });
-  }
   const { role } = req.body;
   if (!['user', 'admin', 'superadmin'].includes(role)) {
     return res.status(400).json({ error: 'role must be user, admin, or superadmin' });
@@ -153,7 +152,7 @@ router.patch('/users/:id/role', ...guard, async (req, res) => {
   const db = getDB();
   try {
     await db.collection('users').updateOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: userIdQuery(req.params.id) },
       { $set: { role, updatedAt: new Date() } },
     );
     return res.json({ message: 'Role updated' });
@@ -165,17 +164,13 @@ router.patch('/users/:id/role', ...guard, async (req, res) => {
 
 // ── DELETE /api/v1/admin/users/:id ───────────────────────────────────────────
 router.delete('/users/:id', ...guard, async (req, res) => {
-  if (!ObjectId.isValid(req.params.id)) {
-    return res.status(400).json({ error: 'Invalid user ID' });
-  }
-
   // Prevent self-deletion
   if (req.params.id === req.user._id.toString()) {
     return res.status(400).json({ error: 'Cannot delete your own account from admin panel' });
   }
 
   const db  = getDB();
-  const uid = new ObjectId(req.params.id);
+  const uid = userIdQuery(req.params.id);
 
   try {
     const sub = await db.collection('subscriptions').findOne({
