@@ -613,8 +613,8 @@
                     }
                 }
 
-                showStatus(`Credits purchased! ${data.credits} credits will appear in your account shortly.`, 'success', 'credits');
-                setTimeout(() => window.location.href = 'profile-dashboard.html', 2500);
+                showStatus(`✓ ${data.credits} credits added to your account!`, 'success', 'credits');
+                setTimeout(() => window.location.href = 'account-settings.html', 2000);
             } catch {
                 showStatus('Something went wrong. Please try again.', 'error', 'credits');
                 btn.disabled = false; btn.textContent = 'Buy Credits';
@@ -708,8 +708,8 @@
                 }
 
                 const meta = ADDON_META[selectedAddon];
-                showStatus(`${meta.label} add-on activated! Redirecting...`, 'success', 'addons');
-                setTimeout(() => window.location.href = 'profile-dashboard.html', 2500);
+                showStatus(`✓ ${meta.label} add-on activated!`, 'success', 'addons');
+                setTimeout(() => window.location.href = 'account-settings.html', 2000);
             } catch {
                 showStatus('Something went wrong. Please try again.', 'error', 'addons');
                 btn.disabled = false; btn.textContent = 'Purchase Add-On';

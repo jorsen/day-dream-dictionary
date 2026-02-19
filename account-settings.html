@@ -223,6 +223,41 @@
 
         .addon-chip-date { font-weight: 400; color: #4ade80; font-size: 12px; }
 
+        .history-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        .history-row:last-of-type { border-bottom: none; }
+
+        .history-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .history-icon.purchase  { background: #d4edda; }
+        .history-icon.addon     { background: #e0f0ff; }
+        .history-icon.spend     { background: #f8f0ff; }
+
+        .history-desc { flex: 1; color: #333; font-weight: 500; }
+        .history-sub  { font-size: 12px; color: #aaa; font-weight: 400; }
+
+        .history-delta {
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .history-delta.positive { color: #155724; }
+        .history-delta.negative { color: #764ba2; }
+        .history-delta.neutral  { color: #667eea; }
+
     </style>
 </head>
 <body>
@@ -264,6 +299,12 @@
             <div class="card" id="addonsCard">
                 <h2>🧩 Your Add-Ons</h2>
                 <div id="addonsList" style="color:#666;font-size:14px;">Loading...</div>
+            </div>
+
+            <!-- Purchase History -->
+            <div class="card" id="historyCard">
+                <h2>🧾 Purchase History</h2>
+                <div id="historyList" style="color:#666;font-size:14px;">Loading...</div>
             </div>
 
             <!-- Language & Preferences -->
@@ -629,11 +670,81 @@
             }
         }
 
+        // ── Purchase History ──────────────────────────────────────────────────
+        const ADDON_LABELS_H = {
+            life_season:   'Life Season',
+            recurring:     'Recurring Dreams',
+            couples:       'Couples',
+            therapist_pdf: 'Therapist Export',
+            ad_removal:    'Ad Removal',
+        };
+        const PACK_LABELS = { '10': '10 Credits', '25': '25 Credits', '60': '60 Credits' };
+
+        async function loadPurchaseHistory() {
+            const el = document.getElementById('historyList');
+            try {
+                const res  = await fetch(`${API_URL}/credits/history`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.transactions?.length) {
+                    el.innerHTML = `<p style="color:#aaa;font-size:13px;">No transactions yet. <a href="payment.html" style="color:#667eea;font-weight:600;">Browse plans & add-ons →</a></p>`;
+                    return;
+                }
+
+                el.innerHTML = data.transactions.map((t) => {
+                    let icon, iconClass, desc, sub, deltaText, deltaClass;
+                    const date = t.createdAt
+                        ? new Date(t.createdAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })
+                        : '';
+
+                    if (t.reason === 'purchase') {
+                        icon      = '✦';
+                        iconClass = 'purchase';
+                        const packLabel = PACK_LABELS[t.pack] ?? `${t.delta} Credits`;
+                        desc      = `${packLabel} Pack`;
+                        sub       = 'Credit purchase';
+                        deltaText = `+${t.delta} credits`;
+                        deltaClass = 'positive';
+                    } else if (t.reason === 'addon_purchase') {
+                        icon      = '🧩';
+                        iconClass = 'addon';
+                        desc      = ADDON_LABELS_H[t.addonKey] ?? t.addonKey;
+                        sub       = 'Add-on activated';
+                        deltaText = 'Lifetime';
+                        deltaClass = 'neutral';
+                    } else if (t.reason === 'interpretation') {
+                        icon      = '✦';
+                        iconClass = 'spend';
+                        desc      = 'Dream Interpretation';
+                        sub       = 'Credits used';
+                        deltaText = `${t.delta} credits`;
+                        deltaClass = 'negative';
+                    } else {
+                        return '';
+                    }
+
+                    return `<div class="history-row">
+                        <div class="history-icon ${iconClass}">${icon}</div>
+                        <div class="history-desc">
+                            ${desc}
+                            <div class="history-sub">${sub} · ${date}</div>
+                        </div>
+                        <div class="history-delta ${deltaClass}">${deltaText}</div>
+                    </div>`;
+                }).join('');
+            } catch {
+                el.textContent = 'Unable to load purchase history.';
+            }
+        }
+
         // Load subscription on page init (only if logged in)
         if (accessToken && currentUser) {
             loadSubscriptionDetails();
             loadPreferences();
             loadAddons();
+            loadPurchaseHistory();
         }
 
         function togglePw(inputId, btn) {

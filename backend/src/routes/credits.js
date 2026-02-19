@@ -31,6 +31,32 @@ const PACKS = {
   '60': { credits: 60, amountCents: 3999, label: '60 Credits — $39.99' },
 };
 
+// ── GET /api/v1/credits/history ───────────────────────────────────────────────
+router.get('/history', authenticate, async (req, res) => {
+  const db = getDB();
+  try {
+    const transactions = await db.collection('creditTransactions')
+      .find({ userId: req.user._id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .toArray();
+
+    return res.json({
+      transactions: transactions.map((t) => ({
+        id:        t._id,
+        reason:    t.reason,
+        delta:     t.delta,
+        pack:      t.pack      ?? null,
+        addonKey:  t.addonKey  ?? null,
+        createdAt: t.createdAt,
+      })),
+    });
+  } catch (err) {
+    console.error('[credits/history]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── GET /api/v1/credits ────────────────────────────────────────────────────────
 router.get('/', authenticate, async (req, res) => {
   const db = getDB();
