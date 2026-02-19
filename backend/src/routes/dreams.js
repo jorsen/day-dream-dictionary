@@ -307,7 +307,9 @@ router.post('/interpret', authenticate, async (req, res) => {
     { projection: { emailResultsOptIn: 1 } },
   );
   if (user?.emailResultsOptIn) {
-    sendDreamResult({ to: req.user.email, dreamText, interpretation }).catch(() => {});
+    console.log('[email] sending dream result to:', req.user.email);
+    sendDreamResult({ to: req.user.email, dreamText, interpretation })
+      .catch((e) => console.error('[email] dream result send failed:', e.message));
   }
 
   return res.status(201).json({
