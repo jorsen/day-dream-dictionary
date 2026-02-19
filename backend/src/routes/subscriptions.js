@@ -1,27 +1,34 @@
 /**
  * Subscription routes
  *
- * POST /api/subscriptions/create  — create a Stripe subscription
+ * POST /api/subscriptions/create  — create a Stripe subscription (monthly or annual)
+ * POST /api/subscriptions/upgrade — upgrade or downgrade between Basic and Pro
  * POST /api/subscriptions/cancel  — cancel at period end
  * GET  /api/subscriptions/status  — current subscription state for the user
+ * GET  /api/subscriptions/details — plan + Stripe payment method details
  */
 
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { getDB } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
-import { createSubscriptionSchema } from '../validation/schemas.js';
+import { createSubscriptionSchema, upgradeSubscriptionSchema } from '../validation/schemas.js';
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Per-plan monthly deep-interpretation limits
+// Per-plan monthly deep-interpretation limits (same regardless of billing period)
 const PLAN_LIMITS = {
   basic: 20,
   pro:  100,
 };
 
-function priceIdForPlan(plan) {
+function priceIdForPlan(plan, billingPeriod = 'monthly') {
+  if (billingPeriod === 'annual') {
+    return plan === 'basic'
+      ? process.env.STRIPE_PRICE_BASIC_ANNUAL
+      : process.env.STRIPE_PRICE_PRO_ANNUAL;
+  }
   return plan === 'basic'
     ? process.env.STRIPE_PRICE_BASIC
     : process.env.STRIPE_PRICE_PRO;
@@ -34,8 +41,8 @@ router.post('/create', authenticate, async (req, res) => {
     return res.status(400).json({ error: parsed.error.errors[0].message });
   }
 
-  const { plan, paymentMethodId } = parsed.data;
-  const priceId = priceIdForPlan(plan);
+  const { plan, paymentMethodId, billingPeriod } = parsed.data;
+  const priceId = priceIdForPlan(plan, billingPeriod);
 
   if (!priceId) {
     return res.status(500).json({ error: `Stripe price not configured for plan: ${plan}` });
@@ -98,6 +105,7 @@ router.post('/create', authenticate, async (req, res) => {
           monthlyFreeLimit: 3,
           monthlyDeepLimit: PLAN_LIMITS[plan],
           monthlyDeepUsed: 0,
+          billingPeriod: billingPeriod ?? 'monthly',
           cancelAtPeriodEnd: false,
           updatedAt: now,
         },
@@ -166,6 +174,85 @@ router.post('/cancel', authenticate, async (req, res) => {
       return res.status(502).json({ error: 'Payment provider error — please try again' });
     }
     console.error('[subscriptions/cancel]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── POST /api/subscriptions/upgrade ──────────────────────────────────────────
+router.post('/upgrade', authenticate, async (req, res) => {
+  const parsed = upgradeSubscriptionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
+  }
+
+  const { plan: targetPlan } = parsed.data;
+  const db = getDB();
+
+  try {
+    const sub = await db.collection('subscriptions').findOne({
+      userId: req.user._id,
+      status: { $in: ['active', 'past_due'] },
+    });
+
+    if (!sub) {
+      return res.status(404).json({ error: 'No active subscription found. Use /create to subscribe.' });
+    }
+
+    if (sub.plan === targetPlan) {
+      return res.status(409).json({ error: `You are already on the ${targetPlan} plan` });
+    }
+
+    // Inherit billing period from existing subscription
+    const billingPeriod = sub.billingPeriod ?? 'monthly';
+    const newPriceId = priceIdForPlan(targetPlan, billingPeriod);
+
+    if (!newPriceId) {
+      return res.status(500).json({ error: `Stripe price not configured for plan: ${targetPlan} (${billingPeriod})` });
+    }
+
+    // Retrieve current Stripe subscription to get the item ID to replace
+    const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubId);
+    const itemId = stripeSub.items.data[0]?.id;
+    if (!itemId) {
+      return res.status(500).json({ error: 'Could not identify subscription item to update' });
+    }
+
+    // Update the Stripe subscription — prorate charges/credits automatically
+    const updatedStripeSub = await stripe.subscriptions.update(sub.stripeSubId, {
+      items: [{ id: itemId, price: newPriceId }],
+      proration_behavior: 'create_prorations',
+    });
+
+    // Sync MongoDB record
+    await db.collection('subscriptions').updateOne(
+      { _id: sub._id },
+      {
+        $set: {
+          plan:             targetPlan,
+          status:           updatedStripeSub.status,
+          monthlyDeepLimit: PLAN_LIMITS[targetPlan],
+          currentPeriodEnd: new Date(updatedStripeSub.current_period_end * 1000),
+          updatedAt:        new Date(),
+        },
+      },
+    );
+
+    return res.json({
+      message:          `Subscription updated to ${targetPlan}`,
+      plan:             targetPlan,
+      status:           updatedStripeSub.status,
+      monthlyDeepLimit: PLAN_LIMITS[targetPlan],
+      currentPeriodEnd: new Date(updatedStripeSub.current_period_end * 1000),
+    });
+  } catch (err) {
+    if (err.type === 'StripeCardError') {
+      return res.status(402).json({ error: err.message });
+    }
+    if (err.type?.startsWith('Stripe')) {
+      console.error('[subscriptions/upgrade] Stripe error:', err.message);
+      return res.status(502).json({ error: 'Payment provider error — please try again' });
+    }
+    console.error('[subscriptions/upgrade]', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

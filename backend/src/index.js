@@ -37,6 +37,13 @@ for (const key of REQUIRED_ENV) {
   }
 }
 
+// Optional env vars — warn but don't crash; features degrade gracefully
+['STRIPE_PRICE_BASIC_ANNUAL', 'STRIPE_PRICE_PRO_ANNUAL'].forEach((key) => {
+  if (!process.env[key]) {
+    console.warn(`[startup] Optional env var not set: ${key} — annual billing will be unavailable`);
+  }
+});
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 

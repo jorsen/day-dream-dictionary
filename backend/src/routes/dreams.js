@@ -393,6 +393,135 @@ router.get('/stats', authenticate, async (req, res) => {
   }
 });
 
+// ── Streak computation helper ─────────────────────────────────────────────────
+/**
+ * Counts consecutive calendar days (UTC) with at least one dream, working
+ * backwards from today (or yesterday if no dream today).
+ * @param {Date[]} dates - dream createdAt dates, any order
+ * @returns {number} streak length in days
+ */
+function computeStreak(dates) {
+  if (!dates.length) return 0;
+
+  const toDay = (d) => {
+    const dt = new Date(d);
+    return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+  };
+
+  const daySet = new Set(dates.map(toDay));
+
+  const now = new Date();
+  const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const cursorDay = () => toDay(cursor);
+
+  // If no dream today, start streak check from yesterday
+  if (!daySet.has(cursorDay())) {
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+    if (!daySet.has(cursorDay())) return 0;
+  }
+
+  let streak = 0;
+  while (daySet.has(cursorDay())) {
+    streak++;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return streak;
+}
+
+// ── GET /api/dreams/analytics ─────────────────────────────────────────────────
+// Pro-gated: returns top themes, symbols, emotional tones, monthly frequency,
+// and current dream streak for the authenticated user.
+router.get('/analytics', authenticate, async (req, res) => {
+  const db = getDB();
+
+  // Pro-only gate
+  const sub = await db.collection('subscriptions').findOne({
+    userId:          req.user._id,
+    status:          'active',
+    currentPeriodEnd: { $gt: new Date() },
+    plan:            'pro',
+  });
+  if (!sub) {
+    return res.status(403).json({
+      error:           'Advanced analytics require a Pro subscription',
+      upgradeRequired: true,
+    });
+  }
+
+  try {
+    const userId = req.user._id;
+
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setUTCMonth(threeMonthsAgo.getUTCMonth() - 3);
+    threeMonthsAgo.setUTCDate(1);
+    threeMonthsAgo.setUTCHours(0, 0, 0, 0);
+
+    const [themesResult, symbolsResult, tonesResult, monthlyResult, allDates] = await Promise.all([
+      // Top 5 recurring themes
+      db.collection('dreams').aggregate([
+        { $match: { userId } },
+        { $unwind: '$interpretation.mainThemes' },
+        { $group: { _id: '$interpretation.mainThemes', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]).toArray(),
+
+      // Top 5 symbols
+      db.collection('dreams').aggregate([
+        { $match: { userId } },
+        { $unwind: '$interpretation.symbols' },
+        { $group: { _id: '$interpretation.symbols.symbol', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+      ]).toArray(),
+
+      // Top 8 emotional tones
+      db.collection('dreams').aggregate([
+        { $match: { userId } },
+        { $group: { _id: '$interpretation.emotionalTone', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+        { $limit: 8 },
+      ]).toArray(),
+
+      // Dream count per month (last 3 months)
+      db.collection('dreams').aggregate([
+        { $match: { userId, createdAt: { $gte: threeMonthsAgo } } },
+        {
+          $group: {
+            _id:   { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { '_id.year': 1, '_id.month': 1 } },
+      ]).toArray(),
+
+      // All dream dates for streak calculation
+      db.collection('dreams')
+        .find({ userId })
+        .project({ createdAt: 1 })
+        .toArray()
+        .then((docs) => docs.map((d) => d.createdAt)),
+    ]);
+
+    return res.json({
+      analytics: {
+        streak:           computeStreak(allDates),
+        topThemes:        themesResult.map((r) => ({ theme: r._id,  count: r.count })),
+        topSymbols:       symbolsResult.map((r) => ({ symbol: r._id, count: r.count })),
+        emotionalTones:   tonesResult.map((r) => ({ tone: r._id,   count: r.count })),
+        monthlyFrequency: monthlyResult.map((r) => ({
+          year:  r._id.year,
+          month: r._id.month,
+          count: r.count,
+        })),
+      },
+    });
+  } catch (err) {
+    console.error('[dreams/analytics]', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ── GET /api/dreams ───────────────────────────────────────────────────────────
 router.get('/', authenticate, async (req, res) => {
   const db = getDB();

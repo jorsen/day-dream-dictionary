@@ -188,6 +188,61 @@
         .pack-credits span { font-size: 14px; color: #888; font-weight: 400; }
         .pack-price { font-size: 17px; font-weight: 700; color: #333; margin-top: 4px; }
         .pack-per { font-size: 12px; color: #aaa; margin-top: 2px; }
+        .pack-interp { font-size: 11px; color: #888; margin-top: 4px; }
+
+        /* Billing toggle */
+        .billing-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .toggle-label { font-size: 14px; font-weight: 600; color: #555; }
+        .toggle-switch {
+            width: 48px;
+            height: 26px;
+            background: #e0e0e0;
+            border: none;
+            border-radius: 13px;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.25s;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: transform 0.25s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+        .toggle-switch.annual { background: #667eea; }
+        .toggle-switch.annual::after { transform: translateX(22px); }
+        .save-badge { font-size: 11px; font-weight: 700; color: #4CAF50; background: #e8f5e9; padding: 2px 7px; border-radius: 20px; margin-left: 4px; }
+
+        /* Current-plan badge on plan cards */
+        .plan-current-badge {
+            display: none;
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4CAF50;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .plan.current-plan { border-color: #4CAF50; background: #f0fdf4; cursor: default; pointer-events: none; }
+        .plan.current-plan:hover { transform: none; box-shadow: none; }
+        .plan.current-plan .plan-current-badge { display: block; }
 
         /* Add-ons */
         .addons-grid { display: grid; gap: 12px; margin-bottom: 24px; }
@@ -243,21 +298,30 @@
             <!-- ── Subscription tab ───────────────────────────────────────── -->
             <div class="tab-panel active" id="tab-subscription">
 
+            <!-- Billing period toggle -->
+            <div class="billing-toggle">
+                <span class="toggle-label">Monthly</span>
+                <button class="toggle-switch" id="billingToggleBtn" onclick="toggleBilling()" role="switch" aria-checked="false" aria-label="Toggle annual billing"></button>
+                <span class="toggle-label">Annual <em class="save-badge">Save 20%</em></span>
+            </div>
+
             <!-- Plan selection -->
             <div class="plans">
                 <div class="plan" id="plan-basic" onclick="selectPlan('basic')">
+                    <div class="plan-current-badge">✓ Current Plan</div>
                     <div class="plan-name">Basic</div>
                     <div class="plan-price">$4.99<span>/month</span></div>
                     <div class="plan-desc">For casual dreamers</div>
                     <ul class="plan-features">
                         <li>20 deep interpretations/month</li>
-                        <li>Full dream history</li>
-                        <li>Symbol insights</li>
+                        <li>Unlimited dream history</li>
+                        <li>Priority email support</li>
                         <li>Cancel anytime</li>
                     </ul>
                 </div>
 
                 <div class="plan popular" id="plan-pro" onclick="selectPlan('pro')">
+                    <div class="plan-current-badge">✓ Current Plan</div>
                     <div class="plan-name">Pro</div>
                     <div class="plan-price">$12.99<span>/month</span></div>
                     <div class="plan-desc">For dedicated journalers</div>
@@ -276,7 +340,7 @@
                     Subscribing to <strong id="selected-plan-label">Basic — $4.99/month</strong>
                 </div>
 
-                <div>
+                <div id="card-input-wrapper">
                     <label for="card-element">Card details</label>
                     <div id="card-element"></div>
                     <div id="card-errors"></div>
@@ -301,16 +365,19 @@
                         <div class="pack-credits">10<span> credits</span></div>
                         <div class="pack-price">$9.99</div>
                         <div class="pack-per">$1.00 / credit</div>
+                        <div class="pack-interp">≈ 3 interpretations · $3.33 each</div>
                     </div>
                     <div class="pack best-value" id="pack-25" onclick="selectPack('25')">
                         <div class="pack-credits">25<span> credits</span></div>
                         <div class="pack-price">$19.99</div>
                         <div class="pack-per">$0.80 / credit</div>
+                        <div class="pack-interp">≈ 8 interpretations · $2.50 each</div>
                     </div>
                     <div class="pack" id="pack-60" onclick="selectPack('60')">
                         <div class="pack-credits">60<span> credits</span></div>
                         <div class="pack-price">$39.99</div>
                         <div class="pack-per">$0.67 / credit</div>
+                        <div class="pack-interp">≈ 20 interpretations · $2.00 each</div>
                     </div>
                 </div>
 
@@ -399,11 +466,25 @@
         let stripe        = null;
         let cardElement   = null;
         let selectedPlan  = null;
+        let billingPeriod = 'monthly';
+        let currentPlan   = null; // 'free' | 'basic' | 'pro'
 
         // Redirect to login if not authenticated
         if (!token) {
             window.location.href = 'login.html';
         }
+
+        // Price labels per billing period
+        const PRICES = {
+            monthly: {
+                basic: { price: '$4.99',   period: '/month',          label: 'Basic — $4.99/month'                       },
+                pro:   { price: '$12.99',  period: '/month',          label: 'Pro — $12.99/month'                        },
+            },
+            annual: {
+                basic: { price: '$47.88',  period: '/year',           label: 'Basic — $47.88/year ($3.99/mo)'            },
+                pro:   { price: '$124.70', period: '/year',           label: 'Pro — $124.70/year ($10.39/mo)'            },
+            },
+        };
 
         async function init() {
             try {
@@ -435,50 +516,151 @@
                 showStatus('Payment system unavailable. Please try again later.', 'error');
                 console.error('[payment] init error:', err);
             }
+
+            // Load current plan state after Stripe is ready
+            await loadCurrentPlan();
         }
 
+        // ── Billing toggle ────────────────────────────────────────────────────
+        function toggleBilling() {
+            billingPeriod = billingPeriod === 'monthly' ? 'annual' : 'monthly';
+            const btn = document.getElementById('billingToggleBtn');
+            btn.classList.toggle('annual', billingPeriod === 'annual');
+            btn.setAttribute('aria-checked', billingPeriod === 'annual');
+
+            const p = PRICES[billingPeriod];
+
+            // Update Basic card price display
+            const basicPriceEl = document.querySelector('#plan-basic .plan-price');
+            if (basicPriceEl) {
+                basicPriceEl.innerHTML = billingPeriod === 'annual'
+                    ? `$47.88<span>/year <small style="font-size:11px;color:#4CAF50;font-style:normal;">($3.99/mo)</small></span>`
+                    : `$4.99<span>/month</span>`;
+            }
+
+            // Update Pro card price display
+            const proPriceEl = document.querySelector('#plan-pro .plan-price');
+            if (proPriceEl) {
+                proPriceEl.innerHTML = billingPeriod === 'annual'
+                    ? `$124.70<span>/year <small style="font-size:11px;color:#4CAF50;font-style:normal;">($10.39/mo)</small></span>`
+                    : `$12.99<span>/month</span>`;
+            }
+
+            // Update banner if a plan is already selected
+            if (selectedPlan) {
+                document.getElementById('selected-plan-label').textContent = p[selectedPlan].label;
+            }
+        }
+
+        // ── Current plan state ────────────────────────────────────────────────
+        async function loadCurrentPlan() {
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_URL}/subscriptions/status`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) return;
+                const sub = await res.json();
+                currentPlan = sub.plan ?? 'free';
+                applyPlanState(currentPlan);
+            } catch { /* degrade gracefully */ }
+        }
+
+        function applyPlanState(plan) {
+            const basicCard = document.getElementById('plan-basic');
+            const proCard   = document.getElementById('plan-pro');
+
+            basicCard.classList.remove('current-plan');
+            proCard.classList.remove('current-plan');
+
+            if (plan === 'basic') {
+                basicCard.classList.add('current-plan');
+            } else if (plan === 'pro') {
+                proCard.classList.add('current-plan');
+            }
+        }
+
+        // ── Plan selection ────────────────────────────────────────────────────
         function selectPlan(plan) {
+            if (plan === currentPlan) return; // can't select current plan (also blocked by CSS)
+
             selectedPlan = plan;
 
             document.getElementById('plan-basic').classList.toggle('selected', plan === 'basic');
             document.getElementById('plan-pro').classList.toggle('selected', plan === 'pro');
 
-            const labels = { basic: 'Basic — $4.99/month', pro: 'Pro — $12.99/month' };
-            document.getElementById('selected-plan-label').textContent = labels[plan];
+            const p = PRICES[billingPeriod][plan];
+
+            // Contextual banner label and button text
+            let bannerText, buttonText;
+            const isExistingSub = currentPlan && currentPlan !== 'free';
+
+            if (!isExistingSub) {
+                bannerText = `Subscribing to ${p.label}`;
+                buttonText = 'Subscribe Now';
+            } else if (currentPlan === 'basic' && plan === 'pro') {
+                bannerText = `Upgrading to ${p.label}`;
+                buttonText = 'Upgrade to Pro';
+            } else if (currentPlan === 'pro' && plan === 'basic') {
+                bannerText = `Downgrading to ${p.label}`;
+                buttonText = 'Downgrade to Basic';
+            } else {
+                bannerText = `Switching to ${p.label}`;
+                buttonText = 'Switch Plan';
+            }
+
+            const bannerEl = document.querySelector('#payment-section .selected-plan-banner');
+            bannerEl.innerHTML = `${bannerText.split(p.label)[0].trim()} <strong id="selected-plan-label">${p.label}</strong>`;
+            document.getElementById('subscribe-btn').textContent = buttonText;
+
+            // For upgrades/downgrades, no new card needed — hide card input
+            const cardWrapper = document.getElementById('card-input-wrapper');
+            if (isExistingSub) {
+                cardWrapper.style.display = 'none';
+            } else {
+                cardWrapper.style.display = 'block';
+            }
+
             document.getElementById('payment-section').style.display = 'block';
             document.getElementById('payment-section').scrollIntoView({ behavior: 'smooth' });
         }
 
         async function handleSubscribe() {
             if (!selectedPlan) { showStatus('Please select a plan.', 'error'); return; }
-            if (!stripe || !cardElement) { showStatus('Payment system not ready.', 'error'); return; }
 
+            const isExistingSub = currentPlan && currentPlan !== 'free';
             setLoading(true);
 
             try {
-                // 1. Create payment method from card element
-                const { paymentMethod, error } = await stripe.createPaymentMethod({
-                    type: 'card',
-                    card: cardElement,
-                });
+                let reqBody, endpoint;
 
-                if (error) {
-                    document.getElementById('card-errors').textContent = error.message;
-                    setLoading(false);
-                    return;
+                if (isExistingSub) {
+                    // Upgrade or downgrade — reuse card on file, no new PM needed
+                    endpoint = `${API_URL}/subscriptions/upgrade`;
+                    reqBody  = { plan: selectedPlan };
+                } else {
+                    // New subscription — requires card details
+                    if (!stripe || !cardElement) { showStatus('Payment system not ready.', 'error'); setLoading(false); return; }
+
+                    const { paymentMethod, error } = await stripe.createPaymentMethod({
+                        type: 'card',
+                        card: cardElement,
+                    });
+
+                    if (error) {
+                        document.getElementById('card-errors').textContent = error.message;
+                        setLoading(false);
+                        return;
+                    }
+
+                    endpoint = `${API_URL}/subscriptions/create`;
+                    reqBody  = { plan: selectedPlan, paymentMethodId: paymentMethod.id, billingPeriod };
                 }
 
-                // 2. Send to backend
-                const res = await fetch(`${API_URL}/subscriptions/create`, {
+                const res = await fetch(endpoint, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                        plan: selectedPlan,
-                        paymentMethodId: paymentMethod.id,
-                    }),
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(reqBody),
                 });
 
                 const data = await res.json();
@@ -489,7 +671,7 @@
                     return;
                 }
 
-                // 3. Handle 3-D Secure if required
+                // Handle 3-D Secure if required (new subscriptions only)
                 if (data.clientSecret) {
                     const { error: confirmError } = await stripe.confirmCardPayment(data.clientSecret);
                     if (confirmError) {
@@ -499,7 +681,8 @@
                     }
                 }
 
-                showStatus('Subscription activated! Redirecting to dashboard...', 'success');
+                const verb = isExistingSub ? 'updated' : 'activated';
+                showStatus(`Subscription ${verb}! Redirecting to dashboard...`, 'success');
                 setTimeout(() => { window.location.href = 'profile-dashboard.html'; }, 2000);
 
             } catch (err) {
@@ -512,16 +695,19 @@
         function setLoading(loading) {
             const btn = document.getElementById('subscribe-btn');
             btn.disabled = loading;
-            btn.innerHTML = loading
-                ? '<span class="spinner"></span>Processing...'
-                : 'Subscribe Now';
-        }
-
-        function showStatus(msg, type) {
-            const el = document.getElementById('status');
-            el.textContent = msg;
-            el.className = `status ${type}`;
-            el.style.display = 'block';
+            if (loading) {
+                btn.innerHTML = '<span class="spinner"></span>Processing...';
+            } else {
+                // Restore contextual button text
+                const isExistingSub = currentPlan && currentPlan !== 'free';
+                if (!selectedPlan || !isExistingSub) {
+                    btn.textContent = 'Subscribe Now';
+                } else if (currentPlan === 'basic' && selectedPlan === 'pro') {
+                    btn.textContent = 'Upgrade to Pro';
+                } else {
+                    btn.textContent = 'Downgrade to Basic';
+                }
+            }
         }
 
         init();

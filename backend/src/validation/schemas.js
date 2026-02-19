@@ -78,6 +78,14 @@ export const createSubscriptionSchema = z.object({
   paymentMethodId: z
     .string({ required_error: 'paymentMethodId is required' })
     .min(1, 'paymentMethodId is required'),
+  billingPeriod: z.enum(['monthly', 'annual']).default('monthly'),
+});
+
+export const upgradeSubscriptionSchema = z.object({
+  plan: z.enum(['basic', 'pro'], {
+    required_error: 'plan is required',
+    invalid_type_error: "plan must be 'basic' or 'pro'",
+  }),
 });
 
 // ── Credit Packs ──────────────────────────────────────────────────────────────

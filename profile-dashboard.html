@@ -380,6 +380,50 @@
         }
 
         .toggle-password:hover { color: #667eea; }
+
+        /* ── Analytics card ──────────────────────────────────────── */
+        .analytics-card { grid-column: span 2; }
+
+        .analytics-locked {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, rgba(102,126,234,0.05), rgba(118,75,162,0.05));
+            border-radius: 12px;
+            border: 2px dashed #c7d4ff;
+        }
+        .analytics-locked .lock-icon { font-size: 42px; margin-bottom: 12px; }
+        .analytics-locked h4 { color: #333; font-size: 18px; margin-bottom: 8px; }
+        .analytics-locked p  { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .analytics-locked .btn-upgrade {
+            display: inline-block; padding: 12px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border-radius: 8px; font-weight: 600; font-size: 14px;
+            text-decoration: none; cursor: pointer; border: none;
+        }
+
+        .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 4px; }
+        @media(max-width:600px) { .analytics-grid { grid-template-columns: 1fr; } }
+
+        .analytics-panel { background: #f8f9fa; border-radius: 10px; padding: 16px; }
+        .analytics-panel h4 { font-size: 12px; color: #888; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .streak-display { text-align: center; padding: 8px 0; }
+        .streak-number  { font-size: 52px; font-weight: 800; color: #667eea; line-height: 1; }
+        .streak-label   { font-size: 13px; color: #999; margin-top: 4px; }
+
+        .theme-bar      { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+        .theme-bar-name { font-size: 12px; color: #444; width: 110px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .theme-bar-track{ flex: 1; background: #e8ecf8; border-radius: 4px; height: 7px; }
+        .theme-bar-fill { background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 4px; height: 7px; }
+        .theme-bar-count{ font-size: 11px; color: #aaa; min-width: 18px; text-align: right; }
+
+        .tone-tag { display: inline-block; padding: 4px 10px; margin: 3px; border-radius: 20px; font-size: 12px; font-weight: 600; background: rgba(102,126,234,0.1); color: #667eea; }
+
+        .month-bar-wrap { display: flex; align-items: flex-end; gap: 8px; height: 76px; }
+        .month-col      { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .month-col-bar  { width: 100%; background: linear-gradient(180deg, #667eea, #764ba2); border-radius: 4px 4px 0 0; min-height: 4px; }
+        .month-col-label{ font-size: 10px; color: #aaa; text-align: center; }
+        .month-col-count{ font-size: 11px; color: #555; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -546,6 +590,12 @@
                         <div class="loading">No dreams recorded yet. Start by entering your first dream above!</div>
                     </div>
                 </div>
+
+                <!-- Analytics Card (Pro-gated) -->
+                <div class="card analytics-card">
+                    <h3><span class="card-icon">🔮</span> Dream Analytics</h3>
+                    <div id="analyticsContent"><div class="loading">Loading analytics…</div></div>
+                </div>
             </div>
         </div>
     </div>
@@ -688,6 +738,7 @@
             loadUserStats();
             loadRecentDreams();
             loadAddonFlags();
+            loadAnalytics();
         }
 
         // Load user profile data
@@ -1013,6 +1064,93 @@
             }
 
             dreamsList.innerHTML = html;
+        }
+
+        // ── Dream Analytics (Pro-gated) ───────────────────────────────────────
+        async function loadAnalytics() {
+            const container = document.getElementById('analyticsContent');
+            if (!container || !accessToken) return;
+
+            try {
+                const res = await fetch(`${API_URL}/dreams/analytics`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (res.status === 403) {
+                    container.innerHTML = `
+                        <div class="analytics-locked">
+                            <div class="lock-icon">🔒</div>
+                            <h4>Pro Feature</h4>
+                            <p>Unlock streak tracking, top themes, emotional patterns, and monthly frequency with a Pro subscription.</p>
+                            <a href="payment.html" class="btn-upgrade">Upgrade to Pro</a>
+                        </div>`;
+                    return;
+                }
+
+                if (!res.ok) throw new Error('Analytics unavailable');
+
+                const { analytics } = await res.json();
+                renderAnalytics(analytics, container);
+
+            } catch {
+                container.innerHTML = '<div class="loading" style="color:#e53e3e;">Could not load analytics.</div>';
+            }
+        }
+
+        function renderAnalytics(data, container) {
+            const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const maxCount = Math.max(...(data.monthlyFrequency.map(m => m.count)), 1);
+            const MAX_BAR_PX = 52;
+
+            const monthBars = data.monthlyFrequency.length
+                ? data.monthlyFrequency.map(m => `
+                    <div class="month-col">
+                        <div class="month-col-count">${m.count}</div>
+                        <div class="month-col-bar" style="height:${Math.max(Math.round((m.count / maxCount) * MAX_BAR_PX), 4)}px;"></div>
+                        <div class="month-col-label">${MONTHS[m.month - 1]}</div>
+                    </div>`).join('')
+                : '<span style="color:#bbb;font-size:13px;">No dreams yet</span>';
+
+            const maxTheme = data.topThemes[0]?.count || 1;
+            const themeBars = data.topThemes.length
+                ? data.topThemes.map(t => `
+                    <div class="theme-bar">
+                        <span class="theme-bar-name" title="${t.theme}">${t.theme}</span>
+                        <div class="theme-bar-track"><div class="theme-bar-fill" style="width:${Math.round((t.count / maxTheme) * 100)}%;"></div></div>
+                        <span class="theme-bar-count">${t.count}</span>
+                    </div>`).join('')
+                : '<span style="color:#bbb;font-size:13px;">No themes yet</span>';
+
+            const maxTone = data.emotionalTones[0]?.count || 1;
+            const toneTags = data.emotionalTones.length
+                ? data.emotionalTones.map(t => {
+                    const opacity = (0.45 + (t.count / maxTone) * 0.55).toFixed(2);
+                    return `<span class="tone-tag" style="opacity:${opacity};">${t.tone}</span>`;
+                  }).join('')
+                : '<span style="color:#bbb;font-size:13px;">No tones yet</span>';
+
+            container.innerHTML = `
+                <div class="analytics-grid">
+                    <div class="analytics-panel">
+                        <h4>Current Streak</h4>
+                        <div class="streak-display">
+                            <div class="streak-number">${data.streak}</div>
+                            <div class="streak-label">day${data.streak !== 1 ? 's' : ''} in a row</div>
+                        </div>
+                    </div>
+                    <div class="analytics-panel">
+                        <h4>Monthly Frequency</h4>
+                        <div class="month-bar-wrap">${monthBars}</div>
+                    </div>
+                    <div class="analytics-panel">
+                        <h4>Top Themes</h4>
+                        ${themeBars}
+                    </div>
+                    <div class="analytics-panel">
+                        <h4>Emotional Tones</h4>
+                        <div>${toneTags}</div>
+                    </div>
+                </div>`;
         }
 
         // Hide ads for users who own the ad_removal addon
