@@ -189,11 +189,13 @@ async function ensureSuperAdmin() {
   const existing = await db.collection('users').findOne({ email });
 
   if (existing) {
-    // Promote to superadmin if not already
-    if (existing.role !== 'superadmin') {
-      await db.collection('users').updateOne({ email }, { $set: { role: 'superadmin' } });
-      console.log(`[admin] Promoted ${email} to superadmin`);
-    }
+    // Promote to superadmin and sync password from env var
+    const passwordHash = await bcrypt.hash(password, 12);
+    await db.collection('users').updateOne(
+      { email },
+      { $set: { role: 'superadmin', passwordHash } },
+    );
+    console.log(`[admin] Superadmin promoted + password synced: ${email}`);
     return;
   }
 
