@@ -152,31 +152,6 @@
             background: #e0e0e0;
         }
 
-        .btn-demo {
-            width: 100%;
-            padding: 12px;
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-            margin-top: 12px;
-        }
-
-        .btn-demo:hover {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .btn-demo:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
 
         .test-account {
             background: #f8f9fa;
@@ -261,9 +236,6 @@
             <span id="toggleText">Don't have an account?</span>
             <a href="#" id="toggleLink" onclick="toggleMode(event)">Sign up</a>
         </div>
-
-        <div class="divider">or</div>
-        <button class="btn-demo" id="demoBtn" onclick="demoLogin()">🎯 Quick Test Login (Free Plan)</button>
 
     </div>
 
@@ -433,57 +405,6 @@
                 submitBtn.textContent = isSignup ? 'Sign Up' : 'Login';
             }
         });
-
-        async function demoLogin() {
-            const btn = document.getElementById('demoBtn');
-            btn.disabled = true;
-            btn.textContent = 'Signing in...';
-            showMessage('', '');
-
-            const DEMO_EMAIL    = 'demo@daydreamdictionary.com';
-            const DEMO_PASSWORD = 'DemoFree2024!';
-
-            async function tryLogin() {
-                const r = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: DEMO_EMAIL, password: DEMO_PASSWORD }),
-                    signal: AbortSignal.timeout(10000),
-                });
-                return { ok: r.ok, data: await r.json() };
-            }
-
-            try {
-                let { ok, data } = await tryLogin();
-
-                // Account doesn't exist yet — create it (free plan by default)
-                if (!ok) {
-                    const signup = await fetch(`${API_URL}/auth/signup`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: DEMO_EMAIL, password: DEMO_PASSWORD, displayName: 'Demo User' }),
-                        signal: AbortSignal.timeout(10000),
-                    });
-                    if (!signup.ok && signup.status !== 409) {
-                        const err = await signup.json();
-                        throw new Error(err.error || 'Could not create demo account');
-                    }
-                    // Now login again
-                    ({ ok, data } = await tryLogin());
-                }
-
-                if (!ok) throw new Error(data.error || 'Demo login failed');
-
-                localStorage.setItem('accessToken', data.accessToken);
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-                showMessage('✅ Logged in as demo user (Free Plan). Redirecting...', 'success');
-                setTimeout(() => { window.location.href = 'profile-dashboard.html'; }, 1200);
-            } catch (err) {
-                showMessage('Demo login failed: ' + err.message, 'error');
-                btn.disabled = false;
-                btn.textContent = '🎯 Quick Test Login (Free Plan)';
-            }
-        }
 
         // Check if already logged in
         window.onload = () => {
