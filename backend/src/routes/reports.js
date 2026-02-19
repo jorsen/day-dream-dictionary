@@ -52,7 +52,7 @@ function requireAddon(addonKey) {
 }
 
 // ── GET /api/v1/reports/pdf/:dreamId ─────────────────────────────────────────
-router.get('/:dreamId', authenticate, async (req, res) => {
+router.get('/pdf/:dreamId', authenticate, async (req, res) => {
   if (!ObjectId.isValid(req.params.dreamId)) {
     return res.status(400).json({ error: 'Invalid dream ID' });
   }
