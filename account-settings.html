@@ -207,6 +207,22 @@
         .btn-danger:hover:not(:disabled) { background: #dc3545; color: white; }
         .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        .addon-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            margin: 4px 4px 4px 0;
+        }
+
+        .addon-chip-date { font-weight: 400; color: #4ade80; font-size: 12px; }
+
     </style>
 </head>
 <body>
@@ -242,6 +258,12 @@
                 <h2>💳 Subscription & Billing</h2>
                 <div id="subDetails" style="color:#666;font-size:14px;">Loading...</div>
                 <div class="msg" id="cancelMsg"></div>
+            </div>
+
+            <!-- Add-Ons -->
+            <div class="card" id="addonsCard">
+                <h2>🧩 Your Add-Ons</h2>
+                <div id="addonsList" style="color:#666;font-size:14px;">Loading...</div>
             </div>
 
             <!-- Language & Preferences -->
@@ -575,10 +597,43 @@
             }
         }
 
+        // ── Add-Ons ───────────────────────────────────────────────────────────
+        const ADDON_LABELS = {
+            life_season:   'Life Season',
+            recurring:     'Recurring Dreams',
+            couples:       'Couples',
+            therapist_pdf: 'Therapist Export',
+            ad_removal:    'Ad Removal',
+        };
+
+        async function loadAddons() {
+            const el = document.getElementById('addonsList');
+            try {
+                const res  = await fetch(`${API_URL}/addons`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.addons?.length) {
+                    el.innerHTML = `<p style="color:#aaa;font-size:13px;">No add-ons purchased yet. <a href="payment.html#addons" style="color:#667eea;font-weight:600;">Browse add-ons →</a></p>`;
+                    return;
+                }
+
+                el.innerHTML = data.addons.map(({ key, purchasedAt }) => {
+                    const label = ADDON_LABELS[key] ?? key;
+                    const date  = purchasedAt ? new Date(purchasedAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }) : '';
+                    return `<span class="addon-chip">✓ ${label}${date ? ` <span class="addon-chip-date">· ${date}</span>` : ''}</span>`;
+                }).join('');
+            } catch {
+                el.textContent = 'Unable to load add-ons.';
+            }
+        }
+
         // Load subscription on page init (only if logged in)
         if (accessToken && currentUser) {
             loadSubscriptionDetails();
             loadPreferences();
+            loadAddons();
         }
 
         function togglePw(inputId, btn) {

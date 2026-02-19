@@ -203,11 +203,14 @@
         }
         .addon-item:hover { border-color: #667eea; }
         .addon-item.selected { border-color: #667eea; background: #f8f9ff; }
+        .addon-item.owned { border-color: #4CAF50; background: #f0fdf4; cursor: default; pointer-events: none; }
+        .addon-item.owned:hover { transform: none; box-shadow: none; }
         .addon-icon { font-size: 24px; }
         .addon-info { flex: 1; }
         .addon-name { font-weight: 700; color: #333; font-size: 15px; }
         .addon-desc { font-size: 13px; color: #777; margin-top: 2px; }
         .addon-price { font-size: 15px; font-weight: 700; color: #667eea; white-space: nowrap; }
+        .badge-owned { background: #d4edda; color: #155724; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
         .spinner {
             display: inline-block;
@@ -522,6 +525,7 @@
         }
 
         init();
+        if (token) loadOwnedAddons();
 
         // ── Shared state — declared before any function or IIFE that reads them ─
         let selectedPack       = null;
@@ -636,6 +640,24 @@
             cardElementAddons.on('change', ({error}) => {
                 document.getElementById('card-errors-addons').textContent = error ? error.message : '';
             });
+        }
+
+        async function loadOwnedAddons() {
+            try {
+                const res  = await fetch(`${API_URL}/addons`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) return;
+                const { addons } = await res.json();
+                addons.forEach(({ key }) => {
+                    const el = document.getElementById(`addon-${key}`);
+                    if (!el) return;
+                    el.classList.add('owned');
+                    // Replace price with owned badge
+                    const priceEl = el.querySelector('.addon-price');
+                    if (priceEl) priceEl.outerHTML = `<span class="badge-owned">✓ Owned</span>`;
+                });
+            } catch { /* non-critical */ }
         }
 
         function selectAddon(key) {
