@@ -77,6 +77,13 @@ Incorporate this context. Add to your JSON:
 "lifeSeason": "2-3 sentences connecting this life phase to the dream themes"`;
   }
 
+  // Recurring dream flag (free feature — user marked this dream as recurring)
+  if (addonConfig.isRecurring) {
+    prompt += isES
+      ? `\n\nNota: El usuario ha indicado que este es un SUEÑO RECURRENTE — uno que ha tenido varias veces. Presta especial atención a lo que esta repetición podría significar: emociones sin resolver, mensajes persistentes del subconsciente o patrones que el soñador necesita reconocer. Refleja esto en personalInsight y guidance.`
+      : `\n\nNote: The user has flagged this as a RECURRING dream — one they have experienced multiple times. Give special attention to what this repetition signifies: unresolved emotions, persistent subconscious messages, or patterns the dreamer needs to acknowledge. Reflect this meaningfully in personalInsight and guidance.`;
+  }
+
   // Recurring Dreams add-on
   if (addonConfig.recurringThemes && addonConfig.recurringThemes.length > 0) {
     const themes = addonConfig.recurringThemes.join(', ');

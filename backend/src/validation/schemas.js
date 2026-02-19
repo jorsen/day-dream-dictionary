@@ -32,6 +32,9 @@ export const dreamTextSchema = z.object({
     .max(5000, 'Dream text must be 5000 characters or fewer')
     .transform((v) => v.trim()),
   language: z.enum(['en', 'es']).default('en'),
+  // Core fields (free for all users)
+  isRecurring: z.boolean().default(false),
+  tags: z.array(z.string().min(1).max(50)).max(10).default([]),
   // Add-on fields (ignored unless user has the add-on unlocked)
   lifeSeason: z.string().max(100).optional(),
   enableRecurringAnalysis: z.boolean().default(false),

@@ -310,7 +310,6 @@
                 <select id="interpretationType" name="interpretationType">
                     <option value="basic">Basic Analysis</option>
                     <option value="deep">Deep Analysis</option>
-                    <option value="premium">Premium Insights</option>
                 </select>
             </div>
 
@@ -460,12 +459,9 @@
                     },
                     body: JSON.stringify({
                         dreamText,
-                        metadata: {
-                            interpretation_type: interpretationType,
-                            tags,
-                            is_recurring: isRecurring,
-                            locale: 'en'
-                        }
+                        language: 'en',
+                        isRecurring,
+                        tags,
                     })
                 });
 

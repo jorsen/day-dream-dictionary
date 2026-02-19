@@ -205,7 +205,7 @@ router.post('/interpret', authenticate, async (req, res) => {
     return res.status(400).json({ error: parsed.error.errors[0].message });
   }
 
-  const { dreamText, language, lifeSeason, enableRecurringAnalysis, partnerDreamText } = parsed.data;
+  const { dreamText, language, isRecurring, tags, lifeSeason, enableRecurringAnalysis, partnerDreamText } = parsed.data;
   const db = getDB();
 
   // 1. Claim quota
@@ -262,6 +262,11 @@ router.post('/interpret', authenticate, async (req, res) => {
     addonConfig.therapistMode = true;
   }
 
+  // Always pass isRecurring to Claude so the prompt acknowledges it (free feature)
+  if (isRecurring) {
+    addonConfig.isRecurring = true;
+  }
+
   // 3. Check cache (language+addons-aware key)
   const key = cacheKey(dreamText + language + JSON.stringify(addonConfig));
   let interpretation = getFromCache(key);
@@ -287,6 +292,8 @@ router.post('/interpret', authenticate, async (req, res) => {
     dreamText,
     interpretation,
     language,
+    isRecurring,
+    tags,
     type:      quotaInfo.type,
     fromCache,
     createdAt: new Date(),
