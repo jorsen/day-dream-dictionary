@@ -148,6 +148,9 @@
       <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
     </div>
     <button class="btn-primary" id="loginBtn" onclick="doLogin()">Sign In</button>
+    <button type="button" onclick="quickLogin()" style="width:100%;margin-top:8px;background:#1e1e35;color:#a78bfa;border:1px solid #a78bfa44;padding:10px;border-radius:8px;font-size:14px;cursor:pointer;">
+      ⚡ Quick Login (Demo)
+    </button>
     <p id="loginError" class="error-msg hidden"></p>
   </div>
 </div>
@@ -261,6 +264,13 @@
   let currentPage = 1;
   let currentSearch = '';
   let totalPages = 1;
+
+  // ── Quick demo login ──────────────────────────────────────────────────
+  function quickLogin() {
+    document.getElementById('loginEmail').value    = 'jorsenmejia@gmail.com';
+    document.getElementById('loginPassword').value = 'Kd8#mP3@Xv9nT2';
+    doLogin();
+  }
 
   // ── Auth ──────────────────────────────────────────────────────────────
   async function doLogin() {
