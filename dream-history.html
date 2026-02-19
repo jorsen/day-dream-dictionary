@@ -286,10 +286,7 @@
         </div>
 
         <div class="card">
-            <div id="freeNotice" class="free-notice" style="display:none;">
-                Free plan shows your last 10 dreams. <a href="payment.html">Upgrade to Basic or Pro</a> for unlimited history.
-                PDF download requires Basic/Pro plan or the <a href="payment.html#addons">Therapist Export add-on</a>.
-            </div>
+            <div id="freeNotice" class="free-notice" style="display:none;"></div>
 
             <div class="toolbar">
                 <div class="toolbar-left">
@@ -344,7 +341,14 @@
                 }).catch(() => {}),
             ]);
 
-            if (!isPaid) document.getElementById('freeNotice').style.display = 'block';
+            if (!isPaid) {
+                const pdfLine = hasPdfAddon
+                    ? ''
+                    : ' PDF download requires <a href="payment.html">Basic/Pro</a> or the <a href="payment.html#addons">Therapist Export add-on</a>.';
+                document.getElementById('freeNotice').innerHTML =
+                    `Free plan shows your last 10 dreams. <a href="payment.html">Upgrade to Basic or Pro</a> for unlimited history.${pdfLine}`;
+                document.getElementById('freeNotice').style.display = 'block';
+            }
             loadPage(1);
         }
 
