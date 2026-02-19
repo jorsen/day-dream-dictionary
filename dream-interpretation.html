@@ -331,6 +331,9 @@
                 </label>
             </div>
 
+            <!-- ── Add-On fields (shown only if user owns the add-on) ── -->
+            <div id="addonFields"></div>
+
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <p style="margin-top: 15px; color: #666;">Interpreting your dream...</p>
@@ -374,9 +377,17 @@
                 <p id="guidance"></p>
             </div>
 
-            <button class="btn-primary" onclick="interpretAnother()">
-                Interpret Another Dream
-            </button>
+            <!-- Add-on result sections (shown when present) -->
+            <div id="addonResults"></div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
+                <button class="btn-primary" onclick="interpretAnother()">
+                    Interpret Another Dream
+                </button>
+                <button class="btn-primary" id="downloadPdfBtn" style="display:none;background:linear-gradient(135deg,#2d8a6e,#1a5c4a);" onclick="downloadPDF()">
+                    🩺 Download Therapist PDF
+                </button>
+            </div>
         </div>
 
         <a href="profile-dashboard.html" class="nav-link">← Back to Dashboard</a>
@@ -385,19 +396,18 @@
     <script src="config.js"></script>
     <script>
         const API_URL = API_CONFIG.API_BASE_URL;
-        let userCredits = 0;
-        let hasSubscription = false;
         let authToken = null;
+        let activeAddons = new Set();   // set of addonKey strings the user owns
+        let currentDreamId = null;      // id of the last interpreted dream (for PDF)
 
-        // Check for stored authentication token
         window.addEventListener('DOMContentLoaded', async () => {
-            // Check if user is authenticated (optional - allow guests too)
             authToken = localStorage.getItem('authToken') || localStorage.getItem('accessToken');
 
-            // Load user credits and data
-            await loadUserCredits();
+            if (authToken) {
+                await loadActiveAddons();
+                renderAddonFields();
+            }
 
-            // Check if there's a pending dream from the dashboard
             const pendingDream = localStorage.getItem('pendingDream');
             if (pendingDream) {
                 document.getElementById('dreamText').value = pendingDream;
@@ -405,29 +415,57 @@
             }
         });
 
-        async function loadUserCredits() {
+        async function loadActiveAddons() {
             try {
-                const response = await fetch(`${API_URL}/profile`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    }
+                const res = await fetch(`${API_URL}/addons`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
                 });
+                if (!res.ok) return;
+                const data = await res.json();
+                activeAddons = new Set((data.addons || []).map(a => a.key));
+            } catch { /* non-critical */ }
+        }
 
-                if (response.ok) {
-                    const profileData = await response.json();
-                    hasSubscription = true;
-                    userCredits = profileData.profile.credits;
-                    console.log('User profile loaded:', profileData.profile);
-                } else {
-                    console.error('Failed to load profile:', response.statusText);
-                    userCredits = 'unlimited'; // Fallback
-                }
-            } catch (error) {
-                console.error('Profile load error:', error);
-                userCredits = 'unlimited'; // Fallback
+        function renderAddonFields() {
+            const container = document.getElementById('addonFields');
+            let html = '';
+
+            if (activeAddons.has('life_season')) {
+                html += `
+                <div class="form-group" style="border-left:3px solid #667eea;padding-left:12px;">
+                    <label for="lifeSeason">🌱 Life Season <span style="font-size:12px;color:#667eea;font-weight:400;">(Add-On)</span></label>
+                    <select id="lifeSeason" style="width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:10px;font-size:16px;background:white;">
+                        <option value="">Select your current life phase…</option>
+                        <option>Spring — New Beginnings</option>
+                        <option>Summer — Growth &amp; Expansion</option>
+                        <option>Autumn — Harvest &amp; Reflection</option>
+                        <option>Winter — Rest &amp; Renewal</option>
+                        <option>Young Adult — Exploring Identity</option>
+                        <option>Mid-Life — Reassessment &amp; Purpose</option>
+                        <option>Elder — Wisdom &amp; Legacy</option>
+                    </select>
+                </div>`;
             }
+
+            if (activeAddons.has('recurring')) {
+                html += `
+                <div class="form-group" style="border-left:3px solid #667eea;padding-left:12px;">
+                    <label>
+                        <input type="checkbox" id="enableRecurringAnalysis">
+                        🔄 Analyze recurring patterns across my dream history <span style="font-size:12px;color:#667eea;font-weight:400;">(Add-On)</span>
+                    </label>
+                </div>`;
+            }
+
+            if (activeAddons.has('couples')) {
+                html += `
+                <div class="form-group" style="border-left:3px solid #667eea;padding-left:12px;">
+                    <label for="partnerDreamText">💑 Partner's Dream <span style="font-size:12px;color:#667eea;font-weight:400;">(Add-On)</span></label>
+                    <textarea id="partnerDreamText" placeholder="Describe your partner's dream here for a combined interpretation…" style="min-height:100px;"></textarea>
+                </div>`;
+            }
+
+            container.innerHTML = html;
         }
 
         // Handle form submission
@@ -451,18 +489,28 @@
 
             try {
                 // AUTHENTICATED: Include Bearer token in headers
+                const body = { dreamText, language: 'en', isRecurring, tags };
+
+                // Include active add-on fields
+                if (activeAddons.has('life_season')) {
+                    const ls = document.getElementById('lifeSeason')?.value;
+                    if (ls) body.lifeSeason = ls;
+                }
+                if (activeAddons.has('recurring')) {
+                    body.enableRecurringAnalysis = !!document.getElementById('enableRecurringAnalysis')?.checked;
+                }
+                if (activeAddons.has('couples')) {
+                    const pd = document.getElementById('partnerDreamText')?.value.trim();
+                    if (pd) body.partnerDreamText = pd;
+                }
+
                 const response = await fetch(`${API_URL}/dreams/interpret`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${authToken}`
                     },
-                    body: JSON.stringify({
-                        dreamText,
-                        language: 'en',
-                        isRecurring,
-                        tags,
-                    })
+                    body: JSON.stringify(body)
                 });
 
                 const data = await response.json();
@@ -483,6 +531,9 @@
         });
 
         function displayInterpretation(dream) {
+            // Store dream ID for PDF download
+            currentDreamId = dream.dreamId ?? null;
+
             // Hide form and show result
             document.getElementById('dreamForm').style.display = 'none';
             document.getElementById('interpretationResult').style.display = 'block';
@@ -568,14 +619,82 @@
             // Display guidance
             document.getElementById('guidance').textContent =
                 dream.interpretation.guidance || 'Take time to reflect on your dream and consider how it might relate to your waking life.';
+
+            // ── Add-on result sections ────────────────────────────────────────
+            const interp   = dream.interpretation;
+            let addonHtml  = '';
+
+            if (interp.lifeSeason) {
+                addonHtml += `<div class="interpretation-section">
+                    <h3>🌱 Life Season Context</h3>
+                    <p>${interp.lifeSeason}</p>
+                </div>`;
+            }
+            if (interp.recurringPatterns) {
+                addonHtml += `<div class="interpretation-section">
+                    <h3>🔄 Recurring Pattern Analysis</h3>
+                    <p>${interp.recurringPatterns}</p>
+                </div>`;
+            }
+            if (interp.relationshipInsight) {
+                addonHtml += `<div class="interpretation-section">
+                    <h3>💑 Relationship Insight</h3>
+                    <p>${interp.relationshipInsight}</p>
+                </div>`;
+            }
+            if (interp.therapeuticFocalPoints?.length) {
+                addonHtml += `<div class="interpretation-section">
+                    <h3>🩺 Clinical Focal Points</h3>
+                    <ol style="padding-left:20px;line-height:1.8;">
+                        ${interp.therapeuticFocalPoints.map(p => `<li>${p}</li>`).join('')}
+                    </ol>
+                </div>`;
+            }
+            document.getElementById('addonResults').innerHTML = addonHtml;
+
+            // Show PDF button if user owns therapist_pdf and we have a dreamId
+            if (activeAddons.has('therapist_pdf') && currentDreamId) {
+                document.getElementById('downloadPdfBtn').style.display = 'inline-block';
+            }
         }
 
         function interpretAnother() {
-            // Reset form and show it again
+            currentDreamId = null;
+            document.getElementById('downloadPdfBtn').style.display = 'none';
+            document.getElementById('addonResults').innerHTML = '';
             document.getElementById('dreamForm').reset();
             document.getElementById('dreamForm').style.display = 'block';
             document.getElementById('interpretationResult').style.display = 'none';
             hideMessage();
+        }
+
+        async function downloadPDF() {
+            if (!currentDreamId) return;
+            const btn = document.getElementById('downloadPdfBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating PDF…';
+            try {
+                const res = await fetch(`${API_URL}/dreams/${currentDreamId}/pdf`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    showMessage('error', err.error || 'PDF generation failed.');
+                    return;
+                }
+                const blob = await res.blob();
+                const url  = URL.createObjectURL(blob);
+                const a    = document.createElement('a');
+                a.href     = url;
+                a.download = `dream-report-${currentDreamId}.pdf`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch {
+                showMessage('error', 'PDF download failed. Please try again.');
+            } finally {
+                btn.disabled    = false;
+                btn.textContent = '🩺 Download Therapist PDF';
+            }
         }
 
         function showMessage(type, text) {

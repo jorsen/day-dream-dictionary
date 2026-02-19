@@ -16,8 +16,24 @@
         }
 
         .container {
-            max-width: 600px;
+            max-width: 960px;
             margin: 0 auto;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .settings-grid .full-width {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 680px) {
+            .settings-grid { grid-template-columns: 1fr; }
+            .settings-grid .full-width { grid-column: span 1; }
         }
 
         .header {
@@ -273,6 +289,8 @@
         </div>
 
         <div id="settingsContent">
+        <div class="settings-grid">
+
             <!-- Profile Details -->
             <div class="card">
                 <h2>👤 Profile Details</h2>
@@ -296,13 +314,13 @@
             </div>
 
             <!-- Add-Ons -->
-            <div class="card" id="addonsCard">
+            <div class="card full-width" id="addonsCard">
                 <h2>🧩 Your Add-Ons</h2>
                 <div id="addonsList" style="color:#666;font-size:14px;">Loading...</div>
             </div>
 
             <!-- Purchase History -->
-            <div class="card" id="historyCard">
+            <div class="card full-width" id="historyCard">
                 <h2>🧾 Purchase History</h2>
                 <div id="historyList" style="color:#666;font-size:14px;">Loading...</div>
             </div>
@@ -330,7 +348,7 @@
             </div>
 
             <!-- Change Password -->
-            <div class="card">
+            <div class="card full-width">
                 <h2>🔒 Change Password</h2>
                 <div class="form-group">
                     <label for="currentPassword">Current Password</label>
@@ -357,7 +375,9 @@
                 <button class="btn" id="changePasswordBtn" onclick="changePassword()">Change Password</button>
                 <div class="msg" id="passwordMsg"></div>
             </div>
-        </div>
+
+        </div><!-- end settings-grid -->
+        </div><!-- end settingsContent -->
     </div>
 
     <script>

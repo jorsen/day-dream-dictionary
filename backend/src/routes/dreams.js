@@ -20,6 +20,7 @@
  */
 
 import { Router } from 'express';
+import PDFDocument from 'pdfkit';
 import { getDB, ObjectId } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { dreamTextSchema } from '../validation/schemas.js';
@@ -489,6 +490,129 @@ router.delete('/', authenticate, async (req, res) => {
     console.error('[dreams/bulk-delete]', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// ── GET /api/dreams/:id/pdf ───────────────────────────────────────────────────
+router.get('/:id/pdf', authenticate, async (req, res) => {
+  if (!ObjectId.isValid(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid dream ID' });
+  }
+
+  const db = getDB();
+
+  // Verify therapist_pdf add-on ownership
+  const addon = await db.collection('user_addons').findOne({
+    userId:   req.user._id,
+    addonKey: 'therapist_pdf',
+    active:   true,
+    $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
+  });
+  if (!addon) {
+    return res.status(403).json({ error: 'Therapist Export add-on required to download PDFs' });
+  }
+
+  const dream = await db.collection('dreams').findOne({
+    _id:    new ObjectId(req.params.id),
+    userId: req.user._id,
+  });
+  if (!dream) return res.status(404).json({ error: 'Dream not found' });
+
+  const interp = dream.interpretation ?? {};
+  const date   = new Date(dream.createdAt).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+
+  // ── Build PDF ──────────────────────────────────────────────────────────────
+  const doc = new PDFDocument({ margin: 55, size: 'A4' });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="dream-report-${req.params.id}.pdf"`);
+  doc.pipe(res);
+
+  const PURPLE = '#667eea';
+  const DARK   = '#2d2d2d';
+  const GRAY   = '#555555';
+  const LIGHT  = '#888888';
+
+  // Header bar
+  doc.rect(0, 0, doc.page.width, 70).fill(PURPLE);
+  doc.fillColor('white').fontSize(20).font('Helvetica-Bold')
+     .text('Day Dream Dictionary', 55, 20, { align: 'center' });
+  doc.fontSize(11).font('Helvetica')
+     .text('Therapist Export Report', 55, 45, { align: 'center' });
+
+  doc.moveDown(1.5);
+  doc.fillColor(LIGHT).fontSize(10).text(`Date: ${date}`, { align: 'center' });
+  doc.moveDown(1.5);
+
+  // Section helper
+  function section(title, body) {
+    doc.fillColor(PURPLE).fontSize(12).font('Helvetica-Bold').text(title);
+    doc.moveTo(55, doc.y).lineTo(doc.page.width - 55, doc.y).strokeColor('#e0e0e0').lineWidth(1).stroke();
+    doc.moveDown(0.35);
+    if (body) {
+      doc.fillColor(GRAY).fontSize(11).font('Helvetica').text(body, { lineGap: 3 });
+    }
+    doc.moveDown(1);
+  }
+
+  // Dream description
+  section('Dream Description', dream.dreamText);
+
+  // Main themes
+  section('Main Themes', (interp.mainThemes || []).join('  ·  ') || '—');
+
+  // Emotional tone
+  section('Emotional Tone', interp.emotionalTone || '—');
+
+  // Symbols
+  if (interp.symbols?.length) {
+    doc.fillColor(PURPLE).fontSize(12).font('Helvetica-Bold').text('Symbols & Meanings');
+    doc.moveTo(55, doc.y).lineTo(doc.page.width - 55, doc.y).strokeColor('#e0e0e0').lineWidth(1).stroke();
+    doc.moveDown(0.35);
+    interp.symbols.forEach((s) => {
+      doc.fillColor(DARK).fontSize(11).font('Helvetica-Bold').text(`${s.symbol}`, { continued: true });
+      doc.fillColor(GRAY).font('Helvetica').text(`  —  ${s.meaning}`, { lineGap: 3 });
+    });
+    doc.moveDown(1);
+  }
+
+  // Personal insight
+  section('Personal Insight', interp.personalInsight || '—');
+
+  // Guidance
+  section('Guidance', interp.guidance || '—');
+
+  // Add-on sections (only if present in the interpretation)
+  if (interp.lifeSeason) section('Life Season Context', interp.lifeSeason);
+  if (interp.recurringPatterns) section('Recurring Patterns', interp.recurringPatterns);
+  if (interp.relationshipInsight) section('Relationship Insight', interp.relationshipInsight);
+
+  // Clinical focal points — the core therapist add-on value
+  if (interp.therapeuticFocalPoints?.length) {
+    doc.fillColor(PURPLE).fontSize(13).font('Helvetica-Bold').text('Clinical Focal Points');
+    doc.moveTo(55, doc.y).lineTo(doc.page.width - 55, doc.y).strokeColor(PURPLE).lineWidth(1.5).stroke();
+    doc.moveDown(0.4);
+    interp.therapeuticFocalPoints.forEach((point, i) => {
+      doc.fillColor(DARK).fontSize(11).font('Helvetica')
+         .text(`${i + 1}.  ${point}`, { lineGap: 4, indent: 10 });
+      doc.moveDown(0.3);
+    });
+    doc.moveDown(0.5);
+  }
+
+  // Footer disclaimer
+  doc.moveDown(1);
+  const footerY = doc.page.height - 55;
+  doc.moveTo(55, footerY).lineTo(doc.page.width - 55, footerY).strokeColor('#e0e0e0').lineWidth(1).stroke();
+  doc.fillColor(LIGHT).fontSize(8).font('Helvetica')
+     .text(
+       'This report is for personal and supportive use only. It is not a clinical diagnosis or medical advice. Generated by Day Dream Dictionary.',
+       55, footerY + 8,
+       { align: 'center', width: doc.page.width - 110 },
+     );
+
+  doc.end();
 });
 
 // ── DELETE /api/dreams/:id ────────────────────────────────────────────────────
