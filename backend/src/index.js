@@ -121,7 +121,7 @@ app.get(`${v1}/profile`, authenticate, async (req, res) => {
       ),
     ]);
 
-    const isActiveSub = sub && sub.status === 'active' && sub.currentPeriodEnd > new Date();
+    const isActiveSub = sub && sub.plan && (sub.currentPeriodEnd instanceof Date ? sub.currentPeriodEnd > new Date() : (typeof sub.currentPeriodEnd === 'number' ? (sub.currentPeriodEnd < 1e12 ? sub.currentPeriodEnd * 1000 : sub.currentPeriodEnd) > Date.now() : new Date(sub.currentPeriodEnd) > new Date()));
     const plan = isActiveSub ? sub.plan : 'free';
 
     const planLabels = { free: 'Free Plan', basic: 'Basic Plan', pro: 'Pro Plan' };

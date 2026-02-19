@@ -461,10 +461,16 @@ router.get('/analytics', authenticate, async (req, res) => {
   }
 
   if (!sub) {
-    console.warn('[analytics] No Pro subscription found for user:', req.user._id);
+    // Diagnostic: fetch any subscription for this user so we can see what plan/status is stored
+    const anySub = await db.collection('subscriptions').findOne(
+      { userId: req.user._id },
+      { projection: { stripeCustomerId: 0, stripeSubId: 0 } },
+    );
+    console.warn('[analytics] No Pro subscription found. userId:', req.user._id, 'anySub:', JSON.stringify(anySub));
     return res.status(403).json({
       error:           'Advanced analytics require a Pro subscription',
       upgradeRequired: true,
+      _debug: { anySub, userId: req.user._id.toString() },
     });
   }
 
