@@ -173,7 +173,7 @@
         [data-section="security"] .pw-wrap input { padding-right: 48px; }
 
         .pw-wrap { position: relative; }
-        .pw-wrap input { padding-right: 42px; }
+        .pw-wrap input { padding-right: 42px; width: 100%; }
         .pw-toggle {
             position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
             background: none; border: none; cursor: pointer;
@@ -492,21 +492,9 @@
                                 </div>
                             </div>
                             <div class="card-body">
-                                <div class="field" style="margin-bottom:16px;">
-                                    <label for="langSelect">Interpretation Language</label>
-                                    <select id="langSelect">
-                                        <option value="en">🇺🇸 English</option>
-                                        <option value="es">🇪🇸 Español</option>
-                                        <option value="fr">🇫🇷 Français</option>
-                                        <option value="pt">🇧🇷 Português</option>
-                                        <option value="de">🇩🇪 Deutsch</option>
-                                        <option value="it">🇮🇹 Italiano</option>
-                                        <option value="zh">🇨🇳 中文 (简体)</option>
-                                        <option value="ja">🇯🇵 日本語</option>
-                                        <option value="ko">🇰🇷 한국어</option>
-                                        <option value="ar">🇸🇦 العربية</option>
-                                    </select>
-                                    <span class="field-hint">Interpretations will be returned in the selected language.</span>
+                                <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:10px;margin-bottom:16px;font-size:13px;color:var(--text-2);">
+                                    <span style="font-size:18px;">🌐</span>
+                                    <span>Language can be changed from the <strong style="color:var(--brand);">language selector at the bottom of every page</strong>.</span>
                                 </div>
                                 <label class="toggle-row" for="emailResultsToggle">
                                     <input type="checkbox" id="emailResultsToggle">
@@ -788,14 +776,12 @@
                 const res  = await fetch(`${API_URL}/account/me`, { headers: { 'Authorization': `Bearer ${accessToken}` } });
                 const data = await res.json();
                 if (res.ok && data.user) {
-                    document.getElementById('langSelect').value = data.user.preferredLanguage || 'en';
                     document.getElementById('emailResultsToggle').checked = !!data.user.emailResultsOptIn;
                 }
             } catch (err) { console.error('[account-settings] load preferences error:', err); }
         }
 
         async function savePreferences() {
-            const lang             = document.getElementById('langSelect').value;
             const emailResultsOptIn = document.getElementById('emailResultsToggle').checked;
             const msg = document.getElementById('prefsMsg');
             const btn = document.getElementById('savePrefsBtn');
@@ -805,11 +791,10 @@
                 const res  = await fetch(`${API_URL}/account/preferences`, {
                     method: 'PATCH',
                     headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ language: lang, emailResultsOptIn })
+                    body: JSON.stringify({ emailResultsOptIn })
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    if (currentUser) { currentUser.preferredLanguage = lang; localStorage.setItem('currentUser', JSON.stringify(currentUser)); }
                     showMsg(msg, 'Preferences saved!', 'success');
                 } else { showMsg(msg, data.error || 'Failed to save preferences.', 'error'); }
             } catch { showMsg(msg, 'Network error. Please try again.', 'error'); }
@@ -948,5 +933,6 @@
             setTimeout(() => { el.style.display = 'none'; }, 4500);
         }
     </script>
+    <script src="language-selector.js"></script>
 </body>
 </html>

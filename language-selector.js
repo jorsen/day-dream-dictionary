@@ -1,0 +1,302 @@
+/**
+ * Global language selector — injects a sticky bottom bar on every page.
+ *
+ * Usage: <script src="language-selector.js"></script>  (before </body>)
+ *
+ * Reads/writes:
+ *   localStorage key: 'preferredLanguage'
+ *   Backend: PATCH /account/preferences  (when logged in)
+ *
+ * Exposes:
+ *   window.getPreferredLanguage() → current language code string
+ */
+(function () {
+  'use strict';
+
+  const LS_KEY = 'preferredLanguage';
+
+  const LANGUAGES = [
+    { code: 'en', flag: '🇺🇸', label: 'English' },
+    { code: 'es', flag: '🇪🇸', label: 'Español' },
+    { code: 'fr', flag: '🇫🇷', label: 'Français' },
+    { code: 'pt', flag: '🇧🇷', label: 'Português' },
+    { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
+    { code: 'it', flag: '🇮🇹', label: 'Italiano' },
+    { code: 'zh', flag: '🇨🇳', label: '中文 (简体)' },
+    { code: 'ja', flag: '🇯🇵', label: '日本語' },
+    { code: 'ko', flag: '🇰🇷', label: '한국어' },
+    { code: 'ar', flag: '🇸🇦', label: 'العربية' },
+    { code: 'tl', flag: '🇵🇭', label: 'Filipino' },
+    { code: 'th', flag: '🇹🇭', label: 'ภาษาไทย' },
+  ];
+
+  /* ── Helpers ─────────────────────────────────────────── */
+
+  function currentCode() {
+    return localStorage.getItem(LS_KEY) || 'en';
+  }
+
+  function findLang(code) {
+    return LANGUAGES.find(l => l.code === code) || LANGUAGES[0];
+  }
+
+  function getApiBase() {
+    return window.API_CONFIG?.API_BASE_URL || null;
+  }
+
+  function getToken() {
+    return localStorage.getItem('accessToken') || localStorage.getItem('authToken') || null;
+  }
+
+  /* ── Save ────────────────────────────────────────────── */
+
+  function applyLang(code, skipBackend) {
+    localStorage.setItem(LS_KEY, code);
+    renderTrigger(code);
+    renderOptions(code);
+
+    if (!skipBackend) {
+      const token   = getToken();
+      const apiBase = getApiBase();
+      if (token && apiBase) {
+        fetch(`${apiBase}/account/preferences`, {
+          method:  'PATCH',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ language: code }),
+        }).catch(() => {});
+      }
+    }
+
+    closeDropdown();
+  }
+
+  /* ── UI helpers ─────────────────────────────────────── */
+
+  function renderTrigger(code) {
+    const lang    = findLang(code);
+    const trigger = document.getElementById('_ls_trigger');
+    if (trigger) {
+      trigger.innerHTML =
+        `<span class="_ls_globe">🌐</span>` +
+        `<span class="_ls_flag">${lang.flag}</span>` +
+        `<span class="_ls_label">${lang.label}</span>` +
+        `<span class="_ls_caret">▲</span>`;
+    }
+  }
+
+  function renderOptions(activeCode) {
+    document.querySelectorAll('._ls_option').forEach(btn => {
+      btn.classList.toggle('_ls_active', btn.dataset.code === activeCode);
+    });
+  }
+
+  function openDropdown() {
+    const dd = document.getElementById('_ls_dropdown');
+    if (dd) dd.classList.add('_ls_open');
+  }
+
+  function closeDropdown() {
+    const dd = document.getElementById('_ls_dropdown');
+    if (dd) dd.classList.remove('_ls_open');
+  }
+
+  function toggleDropdown() {
+    const dd = document.getElementById('_ls_dropdown');
+    if (!dd) return;
+    if (dd.classList.contains('_ls_open')) closeDropdown();
+    else openDropdown();
+  }
+
+  /* ── Inject CSS ─────────────────────────────────────── */
+
+  function injectStyles() {
+    const style = document.createElement('style');
+    style.id = '_ls_style';
+    style.textContent = `
+      #_ls_bar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 99999;
+        background: rgba(10, 10, 20, 0.88);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(255,255,255,0.08);
+        height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 0 20px;
+        gap: 8px;
+      }
+
+      #_ls_bar ._ls_sep {
+        color: rgba(255,255,255,0.2);
+        font-size: 13px;
+        margin-right: 4px;
+      }
+
+      #_ls_trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: rgba(255,255,255,0.75);
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s;
+        font-family: inherit;
+        line-height: 1;
+      }
+      #_ls_trigger:hover {
+        background: rgba(255,255,255,0.14);
+        color: white;
+      }
+      ._ls_globe { font-size: 15px; }
+      ._ls_caret { font-size: 9px; opacity: 0.5; }
+
+      #_ls_dropdown {
+        position: fixed;
+        bottom: 54px;
+        right: 16px;
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.06);
+        padding: 8px;
+        display: none;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px;
+        z-index: 100000;
+        min-width: 300px;
+        animation: _ls_fadeUp 0.15s ease;
+      }
+      #_ls_dropdown._ls_open { display: grid; }
+
+      @keyframes _ls_fadeUp {
+        from { opacity: 0; transform: translateY(6px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      ._ls_option {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        color: #1a1a2e;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        transition: background 0.12s, color 0.12s;
+        font-family: inherit;
+        line-height: 1.4;
+      }
+      ._ls_option:hover { background: #f0effe; color: #6c63ff; }
+      ._ls_option._ls_active {
+        background: #f0effe;
+        color: #6c63ff;
+        font-weight: 700;
+      }
+      ._ls_option ._ls_flag { font-size: 18px; }
+
+      ._ls_dropdown_header {
+        grid-column: span 2;
+        padding: 6px 12px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: #94a3b8;
+        border-bottom: 1px solid #f1f5f9;
+        margin-bottom: 4px;
+      }
+
+      /* Push page content up so the bar doesn't cover the last line */
+      body { padding-bottom: 46px !important; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  /* ── Inject HTML ────────────────────────────────────── */
+
+  function injectHTML() {
+    const optionsHTML = LANGUAGES.map(l =>
+      `<button class="_ls_option" data-code="${l.code}" onclick="window._lsSelect('${l.code}')">` +
+        `<span class="_ls_flag">${l.flag}</span>` +
+        `<span>${l.label}</span>` +
+      `</button>`
+    ).join('');
+
+    const bar = document.createElement('div');
+    bar.id = '_ls_bar';
+    bar.innerHTML =
+      `<span class="_ls_sep">Interpretation Language</span>` +
+      `<button id="_ls_trigger" onclick="window._lsToggle()"></button>`;
+
+    const dropdown = document.createElement('div');
+    dropdown.id = '_ls_dropdown';
+    dropdown.innerHTML =
+      `<div class="_ls_dropdown_header">Select language</div>` +
+      optionsHTML;
+
+    document.body.appendChild(bar);
+    document.body.appendChild(dropdown);
+
+    // Close when clicking outside
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('#_ls_bar') && !e.target.closest('#_ls_dropdown')) {
+        closeDropdown();
+      }
+    });
+  }
+
+  /* ── Sync from backend ──────────────────────────────── */
+
+  function syncFromBackend() {
+    const token   = getToken();
+    const apiBase = getApiBase();
+    if (!token || !apiBase) return;
+
+    fetch(`${apiBase}/account/me`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const lang = data?.user?.preferredLanguage;
+        if (lang && lang !== currentCode()) {
+          applyLang(lang, true /* skipBackend — already from backend */);
+        }
+      })
+      .catch(() => {});
+  }
+
+  /* ── Public API ─────────────────────────────────────── */
+
+  window._lsSelect  = (code) => applyLang(code);
+  window._lsToggle  = toggleDropdown;
+  window.getPreferredLanguage = currentCode;
+
+  /* ── Bootstrap ──────────────────────────────────────── */
+
+  function init() {
+    injectStyles();
+    injectHTML();
+    const code = currentCode();
+    renderTrigger(code);
+    renderOptions(code);
+    syncFromBackend();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();

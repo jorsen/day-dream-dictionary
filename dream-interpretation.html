@@ -422,7 +422,7 @@
         let authToken = null;
         let activeAddons = new Set();   // set of addonKey strings the user owns
         let currentDreamId = null;      // id of the last interpreted dream (for PDF)
-        let userLanguage = 'en';        // user's preferred interpretation language
+        let userLanguage = localStorage.getItem('preferredLanguage') || 'en'; // synced by language-selector.js
 
         window.addEventListener('DOMContentLoaded', async () => {
             authToken = localStorage.getItem('authToken') || localStorage.getItem('accessToken');
@@ -444,18 +444,14 @@
 
         async function loadActiveAddons() {
             try {
-                const [addonsRes, profileRes] = await Promise.all([
-                    fetch(`${API_URL}/addons`,   { headers: { 'Authorization': `Bearer ${authToken}` } }),
-                    fetch(`${API_URL}/profile`,  { headers: { 'Authorization': `Bearer ${authToken}` } }),
-                ]);
-                if (addonsRes.ok) {
-                    const data = await addonsRes.json();
-                    activeAddons = new Set((data.addons || []).map(a => a.key));
-                }
-                if (profileRes.ok) {
-                    const data = await profileRes.json();
-                    userLanguage = data.profile?.locale ?? 'en';
-                }
+                const res = await fetch(`${API_URL}/addons`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                activeAddons = new Set((data.addons || []).map(a => a.key));
+                // Keep userLanguage in sync with whatever language-selector.js last set
+                userLanguage = localStorage.getItem('preferredLanguage') || 'en';
             } catch { /* non-critical */ }
         }
 
@@ -744,5 +740,6 @@
             messageEl.style.display = 'none';
         }
     </script>
+    <script src="language-selector.js"></script>
 </body>
 </html>

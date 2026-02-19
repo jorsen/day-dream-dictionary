@@ -31,6 +31,8 @@ const BASE_SCHEMA = `{
 const LANG_NAMES = {
   fr: 'French', pt: 'Portuguese', de: 'German', it: 'Italian',
   zh: 'Chinese (Simplified)', ja: 'Japanese', ko: 'Korean', ar: 'Arabic',
+  tl: 'Filipino (Tagalog)',
+  th: 'Thai',
 };
 
 function buildSystemPrompt(language = 'en', addonConfig = {}) {
@@ -129,6 +131,12 @@ Add to your JSON:
     const langName = LANG_NAMES[language];
     prompt += `\n\nCRITICAL: Write ALL text values in the JSON response in ${langName}. This includes mainThemes, emotionalTone, all symbol meanings, personalInsight, guidance, and any add-on fields. Do not use English in any JSON value.`;
   }
+
+  // Universal language-detection rule — appended to ALL prompts.
+  // This ensures that if the user writes their dream in ANY language
+  // (Tagalog, Bisaya, Hindi, etc.) the response always matches that language,
+  // even if it differs from the configured preference above.
+  prompt += `\n\nLANGUAGE DETECTION RULE: Detect the primary language of the user's dream text. Write every text value in the JSON response in that same detected language. If the dream is written in Tagalog, respond in Tagalog. If in Bisaya/Cebuano, respond in Bisaya. If in Hindi, respond in Hindi. Always match the language the user actually used, regardless of any prior instruction.`;
 
   return prompt;
 }
